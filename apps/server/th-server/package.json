@@ -1,0 +1,33 @@
+{
+  "name": "@test-harness/th-server",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "th-server": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@test-harness/th-core": "workspace:*",
+    "@test-harness/th-protocol": "workspace:*",
+    "@test-harness/th-api": "workspace:*",
+    "@test-harness/th-worker": "workspace:*",
+    "@test-harness/th-persistence": "workspace:*",
+    "@test-harness/th-queue": "workspace:*",
+    "@test-harness/th-detection": "workspace:*",
+    "@test-harness/th-llm": "workspace:*"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@test-harness/th-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "th": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "scan": "tsx src/index.ts scan"
+  },
+  "dependencies": {
+    "@test-harness/th-core": "workspace:*",
+    "@test-harness/th-protocol": "workspace:*",
+    "@test-harness/th-llm": "workspace:*",
+    "@test-harness/th-llm-ollama": "workspace:*",
+    "@test-harness/th-crawl": "workspace:*",
+    "@test-harness/th-tools": "workspace:*",
+    "@test-harness/th-detection": "workspace:*",
+    "@test-harness/th-detect-security": "workspace:*",
+    "@test-harness/th-detect-performance": "workspace:*",
+    "@test-harness/th-detect-seo": "workspace:*",
+    "@test-harness/th-detect-a11y": "workspace:*",
+    "@test-harness/th-agent": "workspace:*",
+    "@test-harness/th-report": "workspace:*",
+    "commander": "^13.0.0"
+  }
+}
