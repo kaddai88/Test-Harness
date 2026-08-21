@@ -11,6 +11,8 @@
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+ [中文文档](README.zh.md)
+
 ---
 
 ## Overview
