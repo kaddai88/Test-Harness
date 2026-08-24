@@ -60,15 +60,9 @@ export const useScanStore = create<ScanStore>((set, get) => ({
   fetchScan: async (id: string) => {
     set({ loading: true, error: null });
     try {
-      const [scan, findings, detections] = await Promise.all([
-        api.getScan(id),
-        api.getFindings(id),
-        api.getDetections(id),
-      ]);
+      const scan = await api.getScan(id);
       set({
         currentScan: scan,
-        findings,
-        detections,
         loading: false,
       });
     } catch (error) {
