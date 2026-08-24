@@ -45,8 +45,8 @@ export const useScanStore = create<ScanStore>((set, get) => ({
       const { currentPage, pageSize, statusFilter } = get();
       const result = await api.getScans(currentPage, pageSize, statusFilter);
       set({
-        scans: result.items,
-        totalScans: result.total,
+        scans: result.scans ?? result.items ?? [],
+        totalScans: result.total ?? 0,
         loading: false,
       });
     } catch (error) {
@@ -83,10 +83,10 @@ export const useScanStore = create<ScanStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await api.createScan({
-        url,
+        targetUrl: url,
         scope: scope as 'page' | 'site' | 'domain',
         strategy: strategy as 'sequential' | 'parallel' | 'adaptive',
-        categories: categories as ('security' | 'performance' | 'seo' | 'accessibility')[],
+        categories: categories as ('security' | 'performance' | 'functionality' | 'seo' | 'accessibility')[],
       });
       set({ loading: false });
       return result.id;

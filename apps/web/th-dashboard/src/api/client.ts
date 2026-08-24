@@ -22,8 +22,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const api = {
   getScans: (page = 1, pageSize = 20, status?: string): Promise<PaginatedResponse<Scan>> => {
     const params = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
+      limit: String(pageSize),
+      offset: String((page - 1) * pageSize),
     });
     if (status && status !== 'all') {
       params.set('status', status);
@@ -38,7 +38,14 @@ export const api = {
     fetch(`${API_BASE}/scans`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        targetUrl: data.targetUrl ?? data.url,
+        targetConfig: { scope: data.scope },
+        scanConfig: {
+          strategy: data.strategy,
+          detections: data.categories ?? [],
+        },
+      }),
     }).then(handleResponse<ScanCreateResponse>),
 
   cancelScan: (id: string): Promise<void> =>

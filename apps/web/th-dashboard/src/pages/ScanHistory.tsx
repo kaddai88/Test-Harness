@@ -107,7 +107,7 @@ export const ScanHistory: React.FC = () => {
                     >
                       <td className="px-5 py-3">
                         <span className="block max-w-xs truncate text-sm font-medium text-slate-200">
-                          {scan.url}
+                          {scan.targetUrl}
                         </span>
                       </td>
                       <td className="px-5 py-3">

@@ -225,6 +225,7 @@ export class TestHarnessServer {
     if (dashscopeKey) {
       return new QwenProvider({
         defaultModel: process.env.QWEN_MODEL ?? "qwen-plus",
+        baseUrl: process.env.DASHSCOPE_BASE_URL,
       });
     }
 

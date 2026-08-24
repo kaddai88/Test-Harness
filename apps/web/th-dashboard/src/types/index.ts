@@ -1,27 +1,26 @@
-export type ScanStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type ScanStatus = 'pending' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
 export type ScanScope = 'page' | 'site' | 'domain';
-export type DetectionCategory = 'security' | 'performance' | 'seo' | 'accessibility';
+export type DetectionCategory = 'security' | 'performance' | 'functionality' | 'seo' | 'accessibility';
 export type ScanStrategy = 'sequential' | 'parallel' | 'adaptive';
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
 export interface Scan {
   id: string;
-  url: string;
+  targetUrl: string;
+  url?: string;
+  targetConfig?: Record<string, unknown>;
+  scanConfig?: Record<string, unknown>;
   status: ScanStatus;
-  scope: ScanScope;
-  strategy: ScanStrategy;
-  categories: DetectionCategory[];
-  score: number | null;
-  findings: Finding[];
-  detections: DetectionProgress[];
-  progress: number;
-  phase: string;
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  duration: number | null;
-  maxTurns: number;
-  timeout: number;
+  createdBy?: string | null;
+  metadata?: Record<string, unknown>;
+  score?: number;
+  findings?: Finding[];
+  detections?: DetectionProgress[];
+  progress?: number;
+  phase?: string;
 }
 
 export interface Finding {
@@ -68,10 +67,11 @@ export interface HealthStatus {
 }
 
 export interface ScanCreateRequest {
-  url: string;
+  targetUrl: string;
+  url?: string;
   scope: ScanScope;
   strategy: ScanStrategy;
-  categories: DetectionCategory[];
+  categories?: DetectionCategory[];
   maxTurns?: number;
   timeout?: number;
 }
@@ -89,9 +89,12 @@ export interface DashboardStats {
 }
 
 export interface PaginatedResponse<T> {
-  items: T[];
+  scans: T[];
+  items?: T[];
   total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  limit?: number;
+  offset?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
 }

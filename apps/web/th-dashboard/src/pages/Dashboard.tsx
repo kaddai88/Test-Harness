@@ -37,25 +37,27 @@ export const Dashboard: React.FC = () => {
   }, [fetchScans]);
 
   const stats = useMemo(() => {
-    const total = scans.length;
-    const active = scans.filter((s) => s.status === 'running' || s.status === 'pending').length;
-    const completed = scans.filter((s) => s.status === 'completed');
+    const safeScans = scans ?? [];
+    const total = safeScans.length;
+    const active = safeScans.filter((s) => s.status === 'running' || s.status === 'pending' || s.status === 'crawling' || s.status === 'analyzing').length;
+    const completed = safeScans.filter((s) => s.status === 'completed');
     const avgScore =
       completed.length > 0
         ? completed.reduce((sum, s) => sum + (s.score ?? 0), 0) / completed.length
         : 0;
-    const totalFindings = scans.reduce((sum, s) => sum + (s.findings?.length ?? 0), 0);
+    const totalFindings = safeScans.reduce((sum, s) => sum + (s.findings?.length ?? 0), 0);
     return { total, active, avgScore, totalFindings };
   }, [scans]);
 
   const scoreDistribution = useMemo(() => {
+    const safeScans = scans ?? [];
     const buckets = [
       { name: 'Excellent (90+)', value: 0, color: '#10b981' },
       { name: 'Good (70-89)', value: 0, color: '#3b82f6' },
       { name: 'Fair (50-69)', value: 0, color: '#f59e0b' },
       { name: 'Poor (0-49)', value: 0, color: '#ef4444' },
     ];
-    for (const scan of scans) {
+    for (const scan of safeScans) {
       if (scan.score == null) continue;
       if (scan.score >= 90) buckets[0]!.value++;
       else if (scan.score >= 70) buckets[1]!.value++;
@@ -65,9 +67,9 @@ export const Dashboard: React.FC = () => {
     return buckets;
   }, [scans]);
 
-  const recentScans = scans.slice(0, 5);
+  const recentScans = (scans ?? []).slice(0, 5);
 
-  if (loading && scans.length === 0) {
+  if (loading && (scans?.length ?? 0) === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
@@ -153,7 +155,7 @@ export const Dashboard: React.FC = () => {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-200">
-                      {scan.url}
+                      {scan.targetUrl}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-400">
                       {new Date(scan.createdAt).toLocaleString()}
@@ -252,7 +254,7 @@ export const Dashboard: React.FC = () => {
                           : `Scan created`}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {scan.url} · {new Date(scan.createdAt).toLocaleString()}
+                    {scan.targetUrl} · {new Date(scan.createdAt).toLocaleString()}
                   </p>
                 </div>
               </div>

@@ -22,14 +22,16 @@ import type {
 export interface QwenProviderConfig {
   /** DashScope API key (falls back to DASHSCOPE_API_KEY env var) */
   apiKey?: string;
+  /** Base URL (falls back to DASHSCOPE_BASE_URL env var or default) */
+  baseUrl?: string;
   /** Default model (default: qwen-plus) */
   defaultModel?: string;
   /** Request timeout in ms (default: 120000) */
   timeout?: number;
 }
 
-/** Qwen's OpenAI-compatible base URL */
-const QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+/** Qwen's OpenAI-compatible default base URL */
+const QWEN_DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
 // Reuse the same wire format as OpenAI
 interface QwenMessage {
@@ -116,7 +118,7 @@ export class QwenProvider implements LLMProvider {
   private readonly timeout: number;
 
   constructor(config?: QwenProviderConfig) {
-    this.baseUrl = QWEN_BASE_URL;
+    this.baseUrl = config?.baseUrl ?? getEnvVar("DASHSCOPE_BASE_URL") ?? QWEN_DEFAULT_BASE_URL;
     this.defaultModel = config?.defaultModel ?? "qwen-plus";
     this.apiKey = config?.apiKey ?? getEnvVar("DASHSCOPE_API_KEY") ?? "";
     this.timeout = config?.timeout ?? 120_000;
