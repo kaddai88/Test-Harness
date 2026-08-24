@@ -8,6 +8,7 @@ interface SettingsState {
   llmProvider: string;
   llmModel: string;
   apiKey: string;
+  baseUrl: string;
   maxTurns: string;
   timeout: string;
   strategy: string;
@@ -17,10 +18,10 @@ interface SettingsState {
 }
 
 const providerOptions = [
+  { value: 'qwen', label: 'Qwen (DashScope)' },
   { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'ollama', label: 'Ollama (Local)' },
   { value: 'deepseek', label: 'DeepSeek' },
+  { value: 'ollama', label: 'Ollama (Local)' },
 ];
 
 const strategyOptions = [
@@ -30,9 +31,10 @@ const strategyOptions = [
 ];
 
 const defaultSettings: SettingsState = {
-  llmProvider: 'ollama',
-  llmModel: 'llama3.2',
+  llmProvider: 'qwen',
+  llmModel: 'qwen-plus',
   apiKey: '',
+  baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   maxTurns: '25',
   timeout: '300',
   strategy: 'adaptive',
@@ -47,6 +49,27 @@ export const Settings: React.FC = () => {
 
   const update = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  };
+
+  const getProviderDefaults = (provider: string): { model: string; baseUrl: string } => {
+    const defaults: Record<string, { model: string; baseUrl: string }> = {
+      qwen: { model: 'qwen-plus', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+      openai: { model: 'gpt-4o', baseUrl: 'https://api.openai.com/v1' },
+      deepseek: { model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com/v1' },
+      ollama: { model: 'llama3.1', baseUrl: 'http://localhost:11434' },
+    };
+    return defaults[provider] ?? defaults.ollama!;
+  };
+
+  const handleProviderChange = (provider: string) => {
+    const defaults = getProviderDefaults(provider);
+    setSettings((prev) => ({
+      ...prev,
+      llmProvider: provider,
+      llmModel: defaults.model,
+      baseUrl: defaults.baseUrl,
+    }));
     setSaved(false);
   };
 
@@ -76,14 +99,21 @@ export const Settings: React.FC = () => {
             <Select
               label="Provider"
               value={settings.llmProvider}
-              onChange={(e) => update('llmProvider', e.target.value)}
+              onChange={(e) => handleProviderChange(e.target.value)}
               options={providerOptions}
+            />
+            <Input
+              label="Base URL"
+              value={settings.baseUrl}
+              onChange={(e) => update('baseUrl', e.target.value)}
+              placeholder="https://api.example.com/v1"
+              helperText="API endpoint URL. Auto-filled when switching provider."
             />
             <Input
               label="Model"
               value={settings.llmModel}
               onChange={(e) => update('llmModel', e.target.value)}
-              placeholder="e.g. llama3.2, gpt-4o, claude-3"
+              placeholder="e.g. qwen-plus, gpt-4o, llama3.1"
             />
             <Input
               label="API Key"
