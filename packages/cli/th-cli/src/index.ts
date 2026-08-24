@@ -30,10 +30,10 @@ program
   )
   .option(
     "-p, --provider <provider>",
-    "LLM provider: ollama, openai, deepseek",
-    "ollama"
+    "LLM provider: qwen, openai, deepseek, ollama",
+    "qwen"
   )
-  .option("-m, --model <model>", "LLM model name", "llama3.1")
+  .option("-m, --model <model>", "LLM model name", "qwen-plus")
   .option(
     "--ollama-url <url>",
     "Ollama base URL",

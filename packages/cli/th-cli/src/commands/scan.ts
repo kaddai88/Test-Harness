@@ -7,6 +7,7 @@
 import { THContainer, EventBusImpl, valueProvider } from "@test-harness/th-core";
 import { LLMProviderService } from "@test-harness/th-llm";
 import { OllamaProvider } from "@test-harness/th-llm-ollama";
+import { QwenProvider } from "@test-harness/th-llm-qwen";
 import { CrawlPlugin, CrawlServiceDefinition } from "@test-harness/th-crawl";
 import { ToolsPlugin, ToolRegistry } from "@test-harness/th-tools";
 import {
@@ -95,21 +96,15 @@ export async function runScan(
   detectionRegistry.register(new UIFunctionalityDetector());
 
   // Register LLM provider
-  const llmProvider: LLMProvider = new OllamaProvider({
-    baseUrl: options.ollamaUrl ?? "http://localhost:11434",
-    defaultModel: options.model ?? "llama3.1",
-  });
+  const llmProvider: LLMProvider = createLLMProvider(options);
 
   // Check LLM availability
-  terminal.info("Checking LLM provider...");
+  terminal.info(`Checking LLM provider (${llmProvider.name})...`);
   const llmHealthy = await llmProvider.healthCheck();
   if (!llmHealthy) {
     terminal.warn(
-      "Ollama not available at localhost:11434. " +
-        "Make sure Ollama is running with: ollama serve"
-    );
-    terminal.info(
-      "Falling back to demo mode (simulated LLM responses)..."
+      `LLM provider "${llmProvider.name}" health check failed. ` +
+        "Scan may fail if the provider is unreachable."
     );
   }
 
@@ -241,4 +236,35 @@ export async function runScan(
   // Cleanup
   streamSub.dispose();
   await container.dispose();
+}
+
+/** Create LLM provider based on CLI options */
+function createLLMProvider(options: ScanCommandOptions): LLMProvider {
+  const provider = (options.provider ?? "qwen").toLowerCase();
+  const model = options.model;
+
+  switch (provider) {
+    case "qwen":
+    case "dashscope":
+      return new QwenProvider({
+        defaultModel: model ?? "qwen-plus",
+      });
+
+    case "openai":
+      return new (require("@test-harness/th-llm-openai").OpenAIProvider)({
+        defaultModel: model ?? "gpt-4o",
+      });
+
+    case "deepseek":
+      return new (require("@test-harness/th-llm-deepseek").DeepSeekProvider)({
+        defaultModel: model ?? "deepseek-chat",
+      });
+
+    case "ollama":
+    default:
+      return new OllamaProvider({
+        baseUrl: options.ollamaUrl ?? "http://localhost:11434",
+        defaultModel: model ?? "llama3.1",
+      });
+  }
 }

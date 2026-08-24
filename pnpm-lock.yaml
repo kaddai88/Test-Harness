@@ -181,9 +181,18 @@ importers:
       '@test-harness/th-llm':
         specifier: workspace:*
         version: link:../../llm/th-llm
+      '@test-harness/th-llm-deepseek':
+        specifier: workspace:*
+        version: link:../../llm/th-llm-deepseek
       '@test-harness/th-llm-ollama':
         specifier: workspace:*
         version: link:../../llm/th-llm-ollama
+      '@test-harness/th-llm-openai':
+        specifier: workspace:*
+        version: link:../../llm/th-llm-openai
+      '@test-harness/th-llm-qwen':
+        specifier: workspace:*
+        version: link:../../llm/th-llm-qwen
       '@test-harness/th-protocol':
         specifier: workspace:*
         version: link:../../protocol/th-protocol
@@ -261,6 +270,18 @@ importers:
         version: link:../../protocol/th-protocol
 
   packages/llm/th-llm-openai:
+    dependencies:
+      '@test-harness/th-core':
+        specifier: workspace:*
+        version: link:../../core/th-core
+      '@test-harness/th-llm':
+        specifier: workspace:*
+        version: link:../th-llm
+      '@test-harness/th-protocol':
+        specifier: workspace:*
+        version: link:../../protocol/th-protocol
+
+  packages/llm/th-llm-qwen:
     dependencies:
       '@test-harness/th-core':
         specifier: workspace:*
