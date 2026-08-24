@@ -15,16 +15,6 @@ const statusTabs: { value: string; label: string }[] = [
   { value: 'failed', label: 'Failed' },
 ];
 
-function formatDuration(ms: number | null): string {
-  if (ms == null) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-}
-
 export const ScanHistory: React.FC = () => {
   const navigate = useNavigate();
   const { scans, loading, totalScans, currentPage, pageSize, statusFilter, fetchScans, setPage, setStatusFilter } =
@@ -120,7 +110,12 @@ export const ScanHistory: React.FC = () => {
                         {scan.findings?.length ?? 0}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-300">
-                        {formatDuration(scan.duration)}
+                        {scan.startedAt && scan.completedAt
+                          ? `${Math.round((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000)}s`
+                          : scan.startedAt
+                          ? '—'
+                          : '—'
+                        }
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-400">
                         {new Date(scan.createdAt).toLocaleDateString()}

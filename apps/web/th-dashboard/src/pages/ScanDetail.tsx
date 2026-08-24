@@ -121,7 +121,7 @@ export const ScanDetail: React.FC = () => {
             Progress
           </h2>
           <ProgressBar
-            progress={currentScan.progress}
+            progress={currentScan.progress ?? 0}
             label={currentScan.phase || currentScan.status}
             color={statusColors[currentScan.status] ?? 'blue'}
           />
@@ -135,9 +135,12 @@ export const ScanDetail: React.FC = () => {
             <div>
               <p className="text-xs text-slate-400">Duration</p>
               <p className="text-sm font-medium text-slate-200">
-                {currentScan.duration != null
-                  ? `${Math.round(currentScan.duration / 1000)}s`
-                  : '—'}
+                {currentScan.startedAt && currentScan.completedAt
+                  ? `${Math.round((new Date(currentScan.completedAt).getTime() - new Date(currentScan.startedAt).getTime()) / 1000)}s`
+                  : currentScan.startedAt
+                  ? `${Math.round((Date.now() - new Date(currentScan.startedAt).getTime()) / 1000)}s`
+                  : '—'
+                }
               </p>
             </div>
             <div>

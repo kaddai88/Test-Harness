@@ -118,7 +118,8 @@ export class QwenProvider implements LLMProvider {
   private readonly timeout: number;
 
   constructor(config?: QwenProviderConfig) {
-    this.baseUrl = config?.baseUrl ?? getEnvVar("DASHSCOPE_BASE_URL") ?? QWEN_DEFAULT_BASE_URL;
+    const base = config?.baseUrl ?? getEnvVar("DASHSCOPE_BASE_URL") ?? QWEN_DEFAULT_BASE_URL;
+    this.baseUrl = base.replace(/\/+$/, '');  // Remove trailing slashes
     this.defaultModel = config?.defaultModel ?? "qwen-plus";
     this.apiKey = config?.apiKey ?? getEnvVar("DASHSCOPE_API_KEY") ?? "";
     this.timeout = config?.timeout ?? 120_000;
@@ -152,6 +153,8 @@ export class QwenProvider implements LLMProvider {
 
       if (!response.ok) {
         const text = await response.text();
+        console.error('[Qwen] API error:', response.status, text);
+        console.error('[Qwen] Request body:', JSON.stringify(body, null, 2));
         throw new Error(`Qwen API error ${response.status}: ${text}`);
       }
 
@@ -187,6 +190,8 @@ export class QwenProvider implements LLMProvider {
       });
 
       if (!response.ok) {
+        const text = await response.text();
+        console.error('[Qwen] Stream error:', response.status, text);
         throw new Error(`Qwen streaming error: ${response.status}`);
       }
 

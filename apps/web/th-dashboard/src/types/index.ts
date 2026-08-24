@@ -1,4 +1,4 @@
-export type ScanStatus = 'pending' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
+export type ScanStatus = 'pending' | 'running' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
 export type ScanScope = 'page' | 'site' | 'domain';
 export type DetectionCategory = 'security' | 'performance' | 'functionality' | 'seo' | 'accessibility';
 export type ScanStrategy = 'sequential' | 'parallel' | 'adaptive';
