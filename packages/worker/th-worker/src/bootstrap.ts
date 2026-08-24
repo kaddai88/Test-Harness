@@ -10,11 +10,16 @@ import { DetectionRegistry } from "@test-harness/th-detection";
 import { ScanJobProcessor } from "./processors/scan.js";
 import { DetectionJobProcessor } from "./processors/detection.js";
 
+export interface WebSocketHandlerLike {
+  broadcast(event: { type: string; [key: string]: unknown }): void;
+}
+
 export interface WorkerBootstrapOptions {
   queue: TaskQueue;
   repos: DatabaseRepositories;
   llm: LLMProvider;
   detectionRegistry?: DetectionRegistry;
+  wsHandler?: WebSocketHandlerLike;
 }
 
 export class WorkerBootstrap {
@@ -22,6 +27,7 @@ export class WorkerBootstrap {
   private readonly repos: DatabaseRepositories;
   private readonly llm: LLMProvider;
   private readonly detectionRegistry: DetectionRegistry;
+  private readonly wsHandler?: WebSocketHandlerLike;
   private started = false;
 
   constructor(opts: WorkerBootstrapOptions) {
@@ -29,6 +35,7 @@ export class WorkerBootstrap {
     this.repos = opts.repos;
     this.llm = opts.llm;
     this.detectionRegistry = opts.detectionRegistry ?? new DetectionRegistry();
+    this.wsHandler = opts.wsHandler;
   }
 
   /** Register all processors and begin consuming jobs. */
@@ -39,6 +46,8 @@ export class WorkerBootstrap {
     const scanProcessor = new ScanJobProcessor({
       repos: this.repos,
       llm: this.llm,
+      detectionRegistry: this.detectionRegistry,
+      wsHandler: this.wsHandler,
     });
 
     const detectionProcessor = new DetectionJobProcessor({

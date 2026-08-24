@@ -9,6 +9,7 @@
  *  5. Persist detection results and events
  *  6. Generate a report
  *  7. Mark scan as "completed" or "failed"
+ *  8. Broadcast progress via WebSocket
  */
 import type { Job, JobProcessor } from "@test-harness/th-queue";
 import type { JobData } from "@test-harness/th-queue";
@@ -18,24 +19,40 @@ import type {
 import type { LLMProvider } from "@test-harness/th-protocol";
 import { AgentLoop } from "@test-harness/th-agent";
 import { THContainer, EventBusImpl, valueProvider } from "@test-harness/th-core";
-import { ToolsPlugin } from "@test-harness/th-tools";
-import { CrawlPlugin } from "@test-harness/th-crawl";
-import { DetectionPlugin2, DetectionRegistry, DetectionRunner } from "@test-harness/th-detection";
+import { ToolsPlugin, ToolRegistry } from "@test-harness/th-tools";
+import { CrawlPlugin, CrawlServiceDefinition } from "@test-harness/th-crawl";
+import { DetectionRegistry, DetectionRunner } from "@test-harness/th-detection";
+import { SecurityHeadersDetector, SSLTLSDetector } from "@test-harness/th-detect-security";
+import { PerformanceHeadersDetector, ResourceAnalyzer } from "@test-harness/th-detect-performance";
+import { MetaTagsDetector, RobotsSitemapDetector } from "@test-harness/th-detect-seo";
+import { ImageAccessibilityDetector, FormAccessibilityDetector, HeadingAccessibilityDetector } from "@test-harness/th-detect-a11y";
+import { FormInteractionDetector, NavigationDetector, UIFunctionalityDetector } from "@test-harness/th-detect-functionality";
+import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
 import { ReportGenerator } from "@test-harness/th-report";
-import type { ScanConfig, ScanTarget, Finding } from "@test-harness/th-protocol";
+import type { ScanConfig, ScanTarget, Finding, DetectionPlugin } from "@test-harness/th-protocol";
 
 export interface ScanJobProcessorOptions {
   repos: DatabaseRepositories;
   llm: LLMProvider;
+  detectionRegistry?: DetectionRegistry;
+  wsHandler?: { broadcast(event: { type: string; [key: string]: unknown }): void };
 }
 
 export class ScanJobProcessor implements JobProcessor<JobData> {
   private readonly repos: DatabaseRepositories;
   private readonly llm: LLMProvider;
+  private readonly detectionRegistry: DetectionRegistry;
+  private readonly wsHandler?: { broadcast(event: { type: string; [key: string]: unknown }): void };
 
   constructor(opts: ScanJobProcessorOptions) {
     this.repos = opts.repos;
     this.llm = opts.llm;
+    this.detectionRegistry = opts.detectionRegistry ?? new DetectionRegistry();
+    this.wsHandler = opts.wsHandler;
+  }
+
+  private broadcast(type: string, scanId: string, data: Record<string, unknown>): void {
+    this.wsHandler?.broadcast({ type, scanId, ...data });
   }
 
   async process(job: Job<JobData>): Promise<unknown> {
@@ -50,33 +67,41 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
       throw new Error(`Scan "${scanId}" not found`);
     }
 
-    // Transition to "analyzing"
-    await this.repos.scans.updateStatus(scanId, "analyzing");
+    // Transition to "crawling"
+    await this.repos.scans.updateStatus(scanId, "crawling");
     await this.repos.scans.updateStartedAt(scanId);
+    this.broadcast("scan:progress", scanId, { status: "crawling", progress: 5, message: "Starting scan..." });
 
-    // Emit a status change event
+    // Emit status change event
     const seq = await this.repos.scanEvents.getNextSequence(scanId);
     await this.repos.scanEvents.create({
       scanId,
       eventType: "scan:status_changed",
-      eventData: {
-        scanId,
-        previousStatus: scan.status,
-        newStatus: "analyzing",
-      },
+      eventData: { scanId, previousStatus: scan.status, newStatus: "crawling" },
       sequence: seq,
     });
 
     try {
-      // Build the container with all plugins
+      // Build container with all plugins
       const container = new THContainer();
       const eventBus = container.getEventBus();
 
+      // Crawl service
       const crawlPlugin = new CrawlPlugin();
       crawlPlugin.activate(container);
 
-      const detectionRegistry = new DetectionRegistry();
-      const toolsPlugin = new ToolsPlugin((id) => detectionRegistry.get(id));
+      // Browser driver (optional)
+      try {
+        const browserProvider = new PuppeteerBrowserProvider();
+        container.register(BrowserDriverDefinition, valueProvider(browserProvider));
+        await browserProvider.launch({ headless: true });
+        this.broadcast("scan:progress", scanId, { status: "crawling", progress: 10, message: "Browser ready" });
+      } catch {
+        // Browser not available — continue without it
+      }
+
+      // Tools plugin with detection lookup
+      const toolsPlugin = new ToolsPlugin((id) => this.detectionRegistry.get(id));
       toolsPlugin.activate(container);
 
       const toolRegistry = toolsPlugin.getRegistry();
@@ -84,25 +109,31 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
         throw new Error("ToolRegistry was not initialized");
       }
 
-      // Parse scan/target config from persisted row
+      this.broadcast("scan:progress", scanId, {
+        status: "crawling",
+        progress: 15,
+        message: `Loaded ${toolRegistry.size} tools, ${this.detectionRegistry.size} detections`,
+      });
+
+      // Parse scan/target config
       const target: ScanTarget = {
         url: targetUrl,
         scope: (scan.targetConfig?.scope as ScanTarget["scope"]) ?? "page",
       };
 
       const config: ScanConfig = {
-        detections: job.data.detectionIds ?? (scan.scanConfig?.detections as string[]) ?? [],
+        detections: this.detectionRegistry.listIds(),
         strategy: ((scan.scanConfig?.strategy as ScanConfig["strategy"]) ?? "adaptive") as
-          | "sequential"
-          | "parallel"
-          | "adaptive",
-        llm: { provider: "default", model: "default" },
+          | "sequential" | "parallel" | "adaptive",
+        llm: { provider: this.llm.id, model: this.llm.name },
         crawl: { maxDepth: 3, maxPages: 50, respectRobots: true, rateLimit: 2 },
         maxTurns: 20,
         timeout: 300_000,
       };
 
-      // Run the agent loop
+      // Run agent loop
+      this.broadcast("scan:progress", scanId, { status: "analyzing", progress: 20, message: "Running AI agent..." });
+
       const agent = new AgentLoop();
       const result = await agent.run({
         scanId,
@@ -112,10 +143,19 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
         toolRegistry,
         eventBus,
         container,
-        signal: job.data.config?.abortSignal as AbortSignal | undefined,
       });
 
+      // Close browser
+      try {
+        const browser = container.get(BrowserDriverDefinition);
+        await browser.close();
+      } catch {
+        // Browser not available
+      }
+
       // Generate report
+      this.broadcast("scan:progress", scanId, { status: "reporting", progress: 90, message: "Generating report..." });
+
       const detectionResults = await this.repos.detectionResults.findByScanId(scanId);
       const reportGen = new ReportGenerator();
       const report = await reportGen.generate(
@@ -150,6 +190,13 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
       await this.repos.scans.updateStatus(scanId, finalStatus);
       await this.repos.scans.updateCompletedAt(scanId);
 
+      this.broadcast("scan:completed", scanId, {
+        status: finalStatus,
+        summary: result.summary,
+        progress: 100,
+        message: `Scan ${finalStatus}`,
+      });
+
       return {
         scanId,
         status: result.status,
@@ -157,9 +204,37 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
         summary: result.summary,
       };
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[ScanJobProcessor] Scan ${scanId} failed:`, errorMsg);
       await this.repos.scans.updateStatus(scanId, "failed");
       await this.repos.scans.updateCompletedAt(scanId);
+      this.broadcast("scan:completed", scanId, {
+        status: "failed",
+        error: errorMsg,
+        progress: 100,
+      });
       throw err;
     }
+  }
+
+  /** Register all detection plugins into the registry */
+  private registerAllDetections(registry: DetectionRegistry): void {
+    // Security
+    registry.register(new SecurityHeadersDetector());
+    registry.register(new SSLTLSDetector());
+    // Performance
+    registry.register(new PerformanceHeadersDetector());
+    registry.register(new ResourceAnalyzer());
+    // SEO
+    registry.register(new MetaTagsDetector());
+    registry.register(new RobotsSitemapDetector());
+    // Accessibility
+    registry.register(new ImageAccessibilityDetector());
+    registry.register(new FormAccessibilityDetector());
+    registry.register(new HeadingAccessibilityDetector());
+    // Functionality
+    registry.register(new FormInteractionDetector());
+    registry.register(new NavigationDetector());
+    registry.register(new UIFunctionalityDetector());
   }
 }

@@ -29,9 +29,27 @@ importers:
       '@test-harness/th-api':
         specifier: workspace:*
         version: link:../../../packages/api/th-api
+      '@test-harness/th-browser':
+        specifier: workspace:*
+        version: link:../../../packages/browser/th-browser
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../../packages/core/th-core
+      '@test-harness/th-detect-a11y':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/accessibility/th-detect-a11y
+      '@test-harness/th-detect-functionality':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/functionality/th-detect-functionality
+      '@test-harness/th-detect-performance':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/performance/th-detect-performance
+      '@test-harness/th-detect-security':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/security/th-detect-security
+      '@test-harness/th-detect-seo':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/seo/th-detect-seo
       '@test-harness/th-detection':
         specifier: workspace:*
         version: link:../../../packages/detection/th-detection
@@ -434,12 +452,30 @@ importers:
       '@test-harness/th-agent':
         specifier: workspace:*
         version: link:../../agent/th-agent
+      '@test-harness/th-browser':
+        specifier: workspace:*
+        version: link:../../browser/th-browser
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../core/th-core
       '@test-harness/th-crawl':
         specifier: workspace:*
         version: link:../../crawl/th-crawl
+      '@test-harness/th-detect-a11y':
+        specifier: workspace:*
+        version: link:../../plugins/accessibility/th-detect-a11y
+      '@test-harness/th-detect-functionality':
+        specifier: workspace:*
+        version: link:../../plugins/functionality/th-detect-functionality
+      '@test-harness/th-detect-performance':
+        specifier: workspace:*
+        version: link:../../plugins/performance/th-detect-performance
+      '@test-harness/th-detect-security':
+        specifier: workspace:*
+        version: link:../../plugins/security/th-detect-security
+      '@test-harness/th-detect-seo':
+        specifier: workspace:*
+        version: link:../../plugins/seo/th-detect-seo
       '@test-harness/th-detection':
         specifier: workspace:*
         version: link:../../detection/th-detection

@@ -22,6 +22,11 @@ import { WorkerBootstrap } from "@test-harness/th-worker";
 import { QwenProvider } from "@test-harness/th-llm-qwen";
 import { OpenAIProvider } from "@test-harness/th-llm-openai";
 import { OllamaProvider } from "@test-harness/th-llm-ollama";
+import { SecurityHeadersDetector, SSLTLSDetector } from "@test-harness/th-detect-security";
+import { PerformanceHeadersDetector, ResourceAnalyzer } from "@test-harness/th-detect-performance";
+import { MetaTagsDetector, RobotsSitemapDetector } from "@test-harness/th-detect-seo";
+import { ImageAccessibilityDetector, FormAccessibilityDetector, HeadingAccessibilityDetector } from "@test-harness/th-detect-a11y";
+import { FormInteractionDetector, NavigationDetector, UIFunctionalityDetector } from "@test-harness/th-detect-functionality";
 import type {
   LLMProvider,
   CompletionParams,
@@ -241,6 +246,27 @@ export class TestHarnessServer {
     return ollama;
   }
 
+  /** Register all detection plugins */
+  private registerAllDetections(registry: DetectionRegistry): void {
+    // Security
+    registry.register(new SecurityHeadersDetector());
+    registry.register(new SSLTLSDetector());
+    // Performance
+    registry.register(new PerformanceHeadersDetector());
+    registry.register(new ResourceAnalyzer());
+    // SEO
+    registry.register(new MetaTagsDetector());
+    registry.register(new RobotsSitemapDetector());
+    // Accessibility
+    registry.register(new ImageAccessibilityDetector());
+    registry.register(new FormAccessibilityDetector());
+    registry.register(new HeadingAccessibilityDetector());
+    // Functionality
+    registry.register(new FormInteractionDetector());
+    registry.register(new NavigationDetector());
+    registry.register(new UIFunctionalityDetector());
+  }
+
   async start(options: TestHarnessServerOptions = {}): Promise<void> {
     const port = options.port ?? parseInt(process.env.PORT ?? "3000", 10);
     const dbPath = options.dbPath ?? process.env.DB_PATH;
@@ -269,16 +295,7 @@ export class TestHarnessServer {
       console.log(`[Server] Rate limit: ${options.rateLimit} req/min`);
     }
 
-    // 6. Worker
-    this.worker = new WorkerBootstrap({
-      queue: this.queue,
-      repos: this.db,
-      llm,
-      detectionRegistry: this.detectionRegistry,
-    });
-    this.worker.start();
-
-    // 7. API server
+    // 6. API server (must start before worker so WS handler is available)
     this.api = new APIServer({
       port,
       repos: this.db,
@@ -287,12 +304,26 @@ export class TestHarnessServer {
     });
     await this.api.start();
 
-    // 8. Graceful shutdown
+    // 7. Worker — with WebSocket handler from API server
+    this.worker = new WorkerBootstrap({
+      queue: this.queue,
+      repos: this.db,
+      llm,
+      detectionRegistry: this.detectionRegistry,
+      wsHandler: this.api.getWebSocketHandler(),
+    });
+    this.worker.start();
+
+    // 8. Register detection plugins (so GET /api/v1/detections returns full list)
+    this.registerAllDetections(this.detectionRegistry);
+
+    // 9. Graceful shutdown
     this.registerShutdownHandlers();
 
     console.log(`[Server] Test-Harness is running on port ${port}`);
     console.log(`[Server] API: http://localhost:${port}/api/v1`);
     console.log(`[Server] Health: http://localhost:${port}/api/v1/health`);
+    console.log(`[Server] Detections: ${this.detectionRegistry.size} plugins loaded`);
   }
 
   async stop(): Promise<void> {
