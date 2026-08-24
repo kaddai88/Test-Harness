@@ -20,6 +20,7 @@ const strategyOptions = [
 ];
 
 const categoryOptions: { value: DetectionCategory; label: string; description: string }[] = [
+  { value: 'functionality', label: 'Functionality', description: 'Forms, navigation, broken links, UI interactions' },
   { value: 'security', label: 'Security', description: 'Vulnerabilities, XSS, CSRF, injection' },
   { value: 'performance', label: 'Performance', description: 'Load time, resource usage, metrics' },
   { value: 'seo', label: 'SEO', description: 'Meta tags, crawlability, structured data' },
@@ -33,7 +34,7 @@ export const NewScan: React.FC = () => {
   const [url, setUrl] = useState('');
   const [scope, setScope] = useState<ScanScope>('page');
   const [strategy, setStrategy] = useState<ScanStrategy>('adaptive');
-  const [categories, setCategories] = useState<DetectionCategory[]>(['security']);
+  const [categories, setCategories] = useState<DetectionCategory[]>(['functionality', 'security']);
 
   const toggleCategory = (category: DetectionCategory) => {
     setCategories((prev) =>
@@ -90,15 +91,19 @@ export const NewScan: React.FC = () => {
           {/* Category Checkboxes */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
-              Detection Categories
+              Detection Categories <span className="text-xs text-slate-500">(推荐至少选择 Functionality)</span>
             </label>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {categoryOptions.map((cat) => (
                 <label
                   key={cat.value}
                   className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    cat.value === 'functionality' ? 'sm:col-span-2' : ''
+                  } ${
                     categories.includes(cat.value)
-                      ? 'border-blue-500 bg-blue-500/10'
+                      ? cat.value === 'functionality'
+                        ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20'
+                        : 'border-blue-500 bg-blue-500/10'
                       : 'border-slate-600 bg-slate-800 hover:border-slate-500'
                   }`}
                 >
@@ -109,7 +114,14 @@ export const NewScan: React.FC = () => {
                     className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
                   />
                   <div>
-                    <span className="text-sm font-medium text-slate-200">{cat.label}</span>
+                    <span className="text-sm font-medium text-slate-200">
+                      {cat.label}
+                      {cat.value === 'functionality' && (
+                        <span className="ml-2 rounded bg-emerald-600/20 px-1.5 py-0.5 text-xs font-semibold text-emerald-400">
+                          推荐
+                        </span>
+                      )}
+                    </span>
                     <p className="text-xs text-slate-400">{cat.description}</p>
                   </div>
                 </label>
