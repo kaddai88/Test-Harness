@@ -11,7 +11,7 @@
  *   7. Register graceful shutdown handlers
  */
 import {
-  createSQLiteDatabase,
+  createDatabase,
   createInMemoryDatabase,
   type DatabaseRepositories,
 } from "@test-harness/th-persistence";
@@ -19,6 +19,9 @@ import { createInMemoryQueue, type TaskQueue } from "@test-harness/th-queue";
 import { DetectionRegistry } from "@test-harness/th-detection";
 import { APIServer } from "@test-harness/th-api";
 import { WorkerBootstrap } from "@test-harness/th-worker";
+import { QwenProvider } from "@test-harness/th-llm-qwen";
+import { OpenAIProvider } from "@test-harness/th-llm-openai";
+import { OllamaProvider } from "@test-harness/th-llm-ollama";
 import type {
   LLMProvider,
   CompletionParams,
@@ -201,7 +204,7 @@ export class RateLimiter {
 }
 
 export class TestHarnessServer {
-  private db?: DatabaseRepositories & { close: () => void };
+  private db?: DatabaseRepositories & { close?: () => void };
   private queue?: TaskQueue;
   private api?: APIServer;
   private worker?: WorkerBootstrap;
@@ -210,17 +213,44 @@ export class TestHarnessServer {
   private shuttingDown = false;
   private shutdownHandlers: Array<() => void> = [];
 
+  /** Auto-detect and create LLM provider from environment variables */
+  private createLLMProvider(): LLMProvider {
+    // Priority: Qwen (DashScope) > OpenAI > Ollama > Stub
+    const dashscopeKey = process.env.DASHSCOPE_API_KEY;
+    if (dashscopeKey) {
+      return new QwenProvider({
+        defaultModel: process.env.QWEN_MODEL ?? "qwen-plus",
+      });
+    }
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      return new OpenAIProvider({
+        defaultModel: process.env.OPENAI_MODEL ?? "gpt-4o",
+      });
+    }
+
+    // Try Ollama (local)
+    const ollamaUrl = process.env.OLLAMA_URL ?? "http://localhost:11434";
+    const ollama = new OllamaProvider({
+      baseUrl: ollamaUrl,
+      defaultModel: process.env.OLLAMA_MODEL ?? "llama3.1",
+    });
+
+    // Return Ollama (will be stub if not available — worker handles fallback)
+    return ollama;
+  }
+
   async start(options: TestHarnessServerOptions = {}): Promise<void> {
     const port = options.port ?? parseInt(process.env.PORT ?? "3000", 10);
     const dbPath = options.dbPath ?? process.env.DB_PATH;
 
-    // 1. Database
+    // 1. Database (auto-detect: SQLite if available + DB_PATH set, else in-memory)
+    this.db = createDatabase(dbPath);
     if (dbPath) {
-      this.db = createSQLiteDatabase(dbPath);
       console.log(`[Server] SQLite database at ${dbPath}`);
     } else {
-      this.db = createInMemoryDatabase();
-      console.log("[Server] In-memory SQLite database");
+      console.log("[Server] In-memory database (data lost on restart)");
     }
 
     // 2. Queue
@@ -229,19 +259,9 @@ export class TestHarnessServer {
     // 3. Detection registry
     this.detectionRegistry = new DetectionRegistry();
 
-    // 4. LLM provider (with failover support)
-    let llm: LLMProvider;
-    if (options.llmProviders && options.llmProviders.length > 1) {
-      llm = new FailoverLLMProvider(options.llmProviders);
-      console.log(
-        `[Server] LLM failover chain: ${options.llmProviders.map((p) => p.name).join(" → ")}`
-      );
-    } else {
-      llm =
-        options.llmProvider ??
-        options.llmProviders?.[0] ??
-        new StubLLMProvider();
-    }
+    // 4. LLM provider — auto-detect from environment
+    const llm = this.createLLMProvider();
+    console.log(`[Server] LLM: ${llm.name}`);
 
     // 5. Rate limiter
     if (options.rateLimit) {
@@ -296,7 +316,7 @@ export class TestHarnessServer {
     // Close database
     if (this.db) {
       console.log("[Server] Closing database...");
-      this.db.close();
+      this.db.close?.();
     }
 
     // Clean up shutdown handlers

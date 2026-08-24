@@ -9,27 +9,25 @@ import { TestHarnessServer } from "./app.js";
 export { TestHarnessServer } from "./app.js";
 export type { TestHarnessServerOptions } from "./app.js";
 
-// Auto-start when run directly
-const isMainModule =
-  typeof process !== "undefined" &&
-  process.argv[1] &&
-  (process.argv[1].endsWith("/th-server/dist/index.js") ||
-    process.argv[1].endsWith("/th-server/src/index.ts"));
+console.log("[Server] Starting Test-Harness...");
+const server = new TestHarnessServer();
 
-if (isMainModule) {
-  const server = new TestHarnessServer();
+process.on("SIGINT", async () => {
+  console.log("\n[Server] SIGINT received, shutting down...");
+  await server.stop();
+  process.exit(0);
+});
 
-  const shutdown = async (signal: string) => {
-    console.log(`\n[Server] Received ${signal}, shutting down...`);
-    await server.stop();
-    process.exit(0);
-  };
+process.on("SIGTERM", async () => {
+  console.log("\n[Server] SIGTERM received, shutting down...");
+  await server.stop();
+  process.exit(0);
+});
 
-  process.on("SIGINT", () => void shutdown("SIGINT"));
-  process.on("SIGTERM", () => void shutdown("SIGTERM"));
-
-  server.start().catch((err) => {
-    console.error("[Server] Failed to start:", err);
-    process.exit(1);
-  });
-}
+server.start({
+  port: parseInt(process.env.PORT ?? "3000", 10),
+  dbPath: process.env.DB_PATH,
+}).catch((err) => {
+  console.error("[Server] Failed to start:", err);
+  process.exit(1);
+});

@@ -38,6 +38,15 @@ importers:
       '@test-harness/th-llm':
         specifier: workspace:*
         version: link:../../../packages/llm/th-llm
+      '@test-harness/th-llm-ollama':
+        specifier: workspace:*
+        version: link:../../../packages/llm/th-llm-ollama
+      '@test-harness/th-llm-openai':
+        specifier: workspace:*
+        version: link:../../../packages/llm/th-llm-openai
+      '@test-harness/th-llm-qwen':
+        specifier: workspace:*
+        version: link:../../../packages/llm/th-llm-qwen
       '@test-harness/th-persistence':
         specifier: workspace:*
         version: link:../../../packages/persistence/th-persistence

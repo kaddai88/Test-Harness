@@ -2,7 +2,11 @@
  * @test-harness/th-persistence
  *
  * Data persistence layer — repositories for scans, detection results,
- * events, and reports. Supports PostgreSQL (production) and SQLite (development).
+ * events, and reports.
+ *
+ * Two storage backends:
+ * - In-memory (default): pure JS, no native deps, data lost on restart
+ * - SQLite: persistent file storage, requires native bindings
  */
 
 // Schema
@@ -27,24 +31,41 @@ export type {
   CreateReportInput,
 } from "./repositories/interfaces.js";
 
-// SQLite implementations
+// In-memory implementations (no native deps)
 export {
-  SQLiteDatabase,
-  SQLiteScanRepository,
-  SQLiteDetectionResultRepository,
-  SQLiteScanEventRepository,
-  SQLiteReportRepository,
-} from "./providers/sqlite.js";
+  InMemoryScanRepository,
+  InMemoryDetectionResultRepository,
+  InMemoryScanEventRepository,
+  InMemoryReportRepository,
+} from "./providers/in-memory.js";
+
+// SQLite implementations (requires native better-sqlite3)
+// Only available when native bindings are installed
+let _SQLiteScanRepository: any;
+let _SQLiteDetectionResultRepository: any;
+let _SQLiteScanEventRepository: any;
+let _SQLiteReportRepository: any;
+let _SQLiteDatabase: any;
+
+try {
+  const sqlite = await import("./providers/sqlite.js");
+  _SQLiteScanRepository = sqlite.SQLiteScanRepository;
+  _SQLiteDetectionResultRepository = sqlite.SQLiteDetectionResultRepository;
+  _SQLiteScanEventRepository = sqlite.SQLiteScanEventRepository;
+  _SQLiteReportRepository = sqlite.SQLiteReportRepository;
+  _SQLiteDatabase = sqlite.SQLiteDatabase;
+} catch {
+  // better-sqlite3 not available — SQLite repos will be undefined
+}
 
 // ── Database Factory ──
 
 import {
-  SQLiteDatabase,
-  SQLiteScanRepository,
-  SQLiteDetectionResultRepository,
-  SQLiteScanEventRepository,
-  SQLiteReportRepository,
-} from "./providers/sqlite.js";
+  InMemoryScanRepository,
+  InMemoryDetectionResultRepository,
+  InMemoryScanEventRepository,
+  InMemoryReportRepository,
+} from "./providers/in-memory.js";
 import type {
   ScanRepository,
   DetectionResultRepository,
@@ -61,35 +82,43 @@ export interface DatabaseRepositories {
 }
 
 /**
- * Create an in-memory SQLite database with all repositories.
- * Perfect for development and testing.
+ * Create an in-memory database (no native deps).
+ * Data is lost when the process exits.
+ * This is the default — works everywhere.
  */
-export function createInMemoryDatabase(): DatabaseRepositories & {
-  close: () => void;
-} {
-  const db = new SQLiteDatabase(":memory:");
+export function createInMemoryDatabase(): DatabaseRepositories {
   return {
-    scans: new SQLiteScanRepository(db.getDb()),
-    detectionResults: new SQLiteDetectionResultRepository(db.getDb()),
-    scanEvents: new SQLiteScanEventRepository(db.getDb()),
-    reports: new SQLiteReportRepository(db.getDb()),
-    close: () => db.close(),
+    scans: new InMemoryScanRepository(),
+    detectionResults: new InMemoryDetectionResultRepository(),
+    scanEvents: new InMemoryScanEventRepository(),
+    reports: new InMemoryReportRepository(),
   };
 }
 
 /**
- * Create a file-backed SQLite database with all repositories.
- * Good for single-node deployments.
+ * Create a file-backed SQLite database.
+ * Falls back to in-memory if native bindings are unavailable.
  */
-export function createSQLiteDatabase(
-  dbPath: string = "./testharness.db"
-): DatabaseRepositories & { close: () => void } {
-  const db = new SQLiteDatabase(dbPath);
+export function createDatabase(
+  dbPath?: string
+): DatabaseRepositories & { close?: () => void } {
+  if (!dbPath || !_SQLiteDatabase) {
+    if (dbPath) {
+      console.warn(
+        "[Persistence] SQLite unavailable (no native bindings). Using in-memory storage."
+      );
+    }
+    return createInMemoryDatabase();
+  }
+  const db = new _SQLiteDatabase(dbPath);
   return {
-    scans: new SQLiteScanRepository(db.getDb()),
-    detectionResults: new SQLiteDetectionResultRepository(db.getDb()),
-    scanEvents: new SQLiteScanEventRepository(db.getDb()),
-    reports: new SQLiteReportRepository(db.getDb()),
+    scans: new _SQLiteScanRepository(db.getDb()),
+    detectionResults: new _SQLiteDetectionResultRepository(db.getDb()),
+    scanEvents: new _SQLiteScanEventRepository(db.getDb()),
+    reports: new _SQLiteReportRepository(db.getDb()),
     close: () => db.close(),
   };
 }
+
+// Backward compat
+export const createSQLiteDatabase = createDatabase;
