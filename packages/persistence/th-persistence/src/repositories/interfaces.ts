@@ -38,6 +38,7 @@ export interface ScanRepository {
   updateStatus(id: string, status: string): Promise<void>;
   updateStartedAt(id: string): Promise<void>;
   updateCompletedAt(id: string): Promise<void>;
+  updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void>;
   delete(id: string): Promise<void>;
   count(filter?: ScanFilter): Promise<number>;
 }

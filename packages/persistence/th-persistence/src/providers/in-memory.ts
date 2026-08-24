@@ -98,6 +98,13 @@ export class InMemoryScanRepository implements ScanRepository {
     if (row) row.completedAt = now();
   }
 
+  async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
+    const row = this.store.get(id);
+    if (row) {
+      row.metadata = { ...row.metadata, ...metadata };
+    }
+  }
+
   async delete(id: string): Promise<void> {
     this.store.delete(id);
   }

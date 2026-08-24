@@ -30,6 +30,7 @@ import { FormInteractionDetector, NavigationDetector, UIFunctionalityDetector } 
 import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
 import { ReportGenerator } from "@test-harness/th-report";
 import type { ScanConfig, ScanTarget, Finding, DetectionPlugin } from "@test-harness/th-protocol";
+import fs from "node:fs";
 
 export interface ScanJobProcessorOptions {
   repos: DatabaseRepositories;
@@ -92,11 +93,29 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
 
       // Browser driver (optional)
       try {
-        const browserProvider = new PuppeteerBrowserProvider();
+        // Auto-detect Chrome executable path on Windows
+        const chromePaths = [
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+          process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+        ];
+
+        let executablePath: string | undefined;
+        for (const path of chromePaths) {
+          if (path && fs.existsSync(path)) {
+            executablePath = path;
+            break;
+          }
+        }
+
+        const browserProvider = new PuppeteerBrowserProvider({
+          executablePath,
+        });
         container.register(BrowserDriverDefinition, valueProvider(browserProvider));
         await browserProvider.launch({ headless: true });
         this.broadcast("scan:progress", scanId, { status: "crawling", progress: 10, message: "Browser ready" });
-      } catch {
+      } catch (err) {
+        console.log('[Worker] Browser not available:', err instanceof Error ? err.message : String(err));
         // Browser not available — continue without it
       }
 
@@ -187,6 +206,14 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
 
       // Final status
       const finalStatus = result.status === "completed" ? "completed" : "failed";
+
+      // Save agent results to scan metadata
+      await this.repos.scans.updateMetadata(scanId, {
+        turns: result.turns,
+        summary: result.summary,
+        status: result.status,
+      });
+
       await this.repos.scans.updateStatus(scanId, finalStatus);
       await this.repos.scans.updateCompletedAt(scanId);
 

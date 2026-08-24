@@ -142,6 +142,21 @@ export class SQLiteScanRepository implements ScanRepository {
       .run(new Date().toISOString(), id);
   }
 
+  async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
+    // Get current metadata, merge with new, then update
+    const current = this.db
+      .prepare("SELECT metadata FROM scans WHERE id = ?")
+      .get(id) as { metadata: string } | undefined;
+
+    if (current) {
+      const existing = JSON.parse(current.metadata ?? "{}");
+      const merged = JSON.stringify({ ...existing, ...metadata });
+      this.db
+        .prepare("UPDATE scans SET metadata = ? WHERE id = ?")
+        .run(merged, id);
+    }
+  }
+
   async delete(id: string): Promise<void> {
     this.db.prepare("DELETE FROM scans WHERE id = ?").run(id);
   }

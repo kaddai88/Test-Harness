@@ -100,7 +100,7 @@ export const ScanDetail: React.FC = () => {
             <h1 className="text-2xl font-bold text-slate-100">Scan Detail</h1>
             <StatusBadge status={currentScan.status} />
           </div>
-          <p className="mt-1 text-sm text-slate-400">{currentScan.url}</p>
+          <p className="mt-1 text-sm text-slate-400">{currentScan.targetUrl}</p>
         </div>
         {isActive && (
           <Button variant="danger" onClick={() => id && cancelScan(id)}>
@@ -147,6 +147,12 @@ export const ScanDetail: React.FC = () => {
               <p className="text-xs text-slate-400">Findings</p>
               <p className="text-sm font-medium text-slate-200">{findings.length}</p>
             </div>
+            <div>
+              <p className="text-xs text-slate-400">Turns</p>
+              <p className="text-sm font-medium text-slate-200">
+                {(currentScan.metadata?.turns as number) ?? '—'}
+              </p>
+            </div>
           </div>
         </Card>
 
@@ -158,6 +164,16 @@ export const ScanDetail: React.FC = () => {
           />
         </Card>
       </div>
+
+      {/* AI Summary */}
+      {typeof currentScan.metadata?.summary === 'string' && currentScan.metadata.summary && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold text-slate-100">AI Analysis Summary</h2>
+          <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans leading-relaxed">
+            {currentScan.metadata.summary}
+          </pre>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Detection Progress */}
