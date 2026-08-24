@@ -4,12 +4,25 @@
  *
  * Starts the Test-Harness server with environment-based configuration.
  */
+import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Load .env from project root (works for both tsx and node dist)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..", "..", "..", "..");
+const dotenv = await import("dotenv");
+dotenv.config({ path: path.join(rootDir, ".env") });
+dotenv.config({ path: path.join(rootDir, ".env.local") });
+
 import { TestHarnessServer } from "./app.js";
 
 export { TestHarnessServer } from "./app.js";
 export type { TestHarnessServerOptions } from "./app.js";
 
 console.log("[Server] Starting Test-Harness...");
+console.log(`[Server] DASHSCOPE_API_KEY: ${process.env.DASHSCOPE_API_KEY ? "set" : "not set"}`);
 const server = new TestHarnessServer();
 
 process.on("SIGINT", async () => {
