@@ -10,6 +10,14 @@ import { createExtractDomTool } from "./builtins/extract-dom.js";
 import { createHttpRequestTool } from "./builtins/http-request.js";
 import { createRunDetectionTool } from "./builtins/run-detection.js";
 import { createListLinksTool } from "./builtins/list-links.js";
+import { createClickElementTool } from "./builtins/click-element.js";
+import { createFillFormTool } from "./builtins/fill-form.js";
+import { createNavigateToTool } from "./builtins/navigate-to.js";
+import { createTakeScreenshotTool } from "./builtins/take-screenshot.js";
+import { createMeasurePerformanceTool } from "./builtins/measure-performance.js";
+import { createAssertVisibleTool } from "./builtins/assert-visible.js";
+import { createAssertTextTool } from "./builtins/assert-text.js";
+import { BrowserDriverDefinition } from "@test-harness/th-browser";
 import type { DetectionPlugin } from "@test-harness/th-protocol";
 
 export { ToolRegistry } from "./registry.js";
@@ -18,6 +26,13 @@ export { createExtractDomTool } from "./builtins/extract-dom.js";
 export { createHttpRequestTool } from "./builtins/http-request.js";
 export { createRunDetectionTool } from "./builtins/run-detection.js";
 export { createListLinksTool } from "./builtins/list-links.js";
+export { createClickElementTool } from "./builtins/click-element.js";
+export { createFillFormTool } from "./builtins/fill-form.js";
+export { createNavigateToTool } from "./builtins/navigate-to.js";
+export { createTakeScreenshotTool } from "./builtins/take-screenshot.js";
+export { createMeasurePerformanceTool } from "./builtins/measure-performance.js";
+export { createAssertVisibleTool } from "./builtins/assert-visible.js";
+export { createAssertTextTool } from "./builtins/assert-text.js";
 
 /** Plugin that registers the tool framework and built-in tools */
 export class ToolsPlugin extends THPlugin {
@@ -45,6 +60,20 @@ export class ToolsPlugin extends THPlugin {
     this.registry.register(createExtractDomTool(container));
     this.registry.register(createHttpRequestTool());
     this.registry.register(createListLinksTool(container));
+
+    // Register browser tools (only if BrowserDriver is available in container)
+    try {
+      container.get(BrowserDriverDefinition);
+      this.registry.register(createClickElementTool(container));
+      this.registry.register(createFillFormTool(container));
+      this.registry.register(createNavigateToTool(container));
+      this.registry.register(createTakeScreenshotTool(container));
+      this.registry.register(createMeasurePerformanceTool(container));
+      this.registry.register(createAssertVisibleTool(container));
+      this.registry.register(createAssertTextTool(container));
+    } catch {
+      // BrowserDriver not available — skip browser tools
+    }
 
     if (this.getDetection) {
       this.registry.register(

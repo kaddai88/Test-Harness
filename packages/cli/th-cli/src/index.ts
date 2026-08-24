@@ -44,14 +44,19 @@ program
     "Maximum agent loop turns",
     "15"
   )
-  .action(async (url: string, opts: Record<string, string>) => {
+  .option(
+    "--no-browser",
+    "Disable browser tools (no Puppeteer launch)"
+  )
+  .action(async (url: string, opts: Record<string, unknown>) => {
     try {
       await runScan(url, {
         scope: opts["scope"] as "page" | "site" | "domain",
-        provider: opts["provider"],
-        model: opts["model"],
-        ollamaUrl: opts["ollamaUrl"],
-        maxTurns: parseInt(opts["maxTurns"] ?? "15", 10),
+        provider: opts["provider"] as string | undefined,
+        model: opts["model"] as string | undefined,
+        ollamaUrl: opts["ollamaUrl"] as string | undefined,
+        maxTurns: parseInt((opts["maxTurns"] as string) ?? "15", 10),
+        noBrowser: opts["browser"] === false,
       });
     } catch (err) {
       console.error(

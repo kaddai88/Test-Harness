@@ -17,6 +17,8 @@ import { SecurityHeadersDetector, SSLTLSDetector } from "@test-harness/th-detect
 import { PerformanceHeadersDetector, ResourceAnalyzer } from "@test-harness/th-detect-performance";
 import { MetaTagsDetector, RobotsSitemapDetector } from "@test-harness/th-detect-seo";
 import { ImageAccessibilityDetector, FormAccessibilityDetector, HeadingAccessibilityDetector } from "@test-harness/th-detect-a11y";
+import { FormInteractionDetector, NavigationDetector, UIFunctionalityDetector } from "@test-harness/th-detect-functionality";
+import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
 import { AgentLoop } from "@test-harness/th-agent";
 import type {
   LLMProvider,
@@ -32,6 +34,13 @@ import { createCrawlPageTool } from "@test-harness/th-tools";
 import { createExtractDomTool } from "@test-harness/th-tools";
 import { createHttpRequestTool } from "@test-harness/th-tools";
 import { createListLinksTool } from "@test-harness/th-tools";
+import { createClickElementTool } from "@test-harness/th-tools";
+import { createFillFormTool } from "@test-harness/th-tools";
+import { createNavigateToTool } from "@test-harness/th-tools";
+import { createTakeScreenshotTool } from "@test-harness/th-tools";
+import { createMeasurePerformanceTool } from "@test-harness/th-tools";
+import { createAssertVisibleTool } from "@test-harness/th-tools";
+import { createAssertTextTool } from "@test-harness/th-tools";
 
 export interface ScanCommandOptions {
   /** LLM provider: ollama, openai, deepseek */
@@ -44,6 +53,8 @@ export interface ScanCommandOptions {
   maxTurns?: number;
   /** Scan scope */
   scope?: "page" | "site" | "domain";
+  /** Disable browser tools (no Puppeteer) */
+  noBrowser?: boolean;
 }
 
 export async function runScan(
@@ -78,6 +89,10 @@ export async function runScan(
   detectionRegistry.register(new ImageAccessibilityDetector());
   detectionRegistry.register(new FormAccessibilityDetector());
   detectionRegistry.register(new HeadingAccessibilityDetector());
+  // Functionality
+  detectionRegistry.register(new FormInteractionDetector());
+  detectionRegistry.register(new NavigationDetector());
+  detectionRegistry.register(new UIFunctionalityDetector());
 
   // Register LLM provider
   const llmProvider: LLMProvider = new OllamaProvider({
@@ -104,6 +119,29 @@ export async function runScan(
   toolRegistry.register(createExtractDomTool(container));
   toolRegistry.register(createHttpRequestTool());
   toolRegistry.register(createListLinksTool(container));
+
+  // Register browser tools if not disabled
+  if (!options.noBrowser) {
+    try {
+      const browserProvider = new PuppeteerBrowserProvider();
+      container.register(BrowserDriverDefinition, valueProvider(browserProvider));
+      await browserProvider.launch({ headless: true });
+
+      toolRegistry.register(createClickElementTool(container));
+      toolRegistry.register(createFillFormTool(container));
+      toolRegistry.register(createNavigateToTool(container));
+      toolRegistry.register(createTakeScreenshotTool(container));
+      toolRegistry.register(createMeasurePerformanceTool(container));
+      toolRegistry.register(createAssertVisibleTool(container));
+      toolRegistry.register(createAssertTextTool(container));
+      terminal.success("Browser tools enabled (Puppeteer)");
+    } catch (err) {
+      terminal.warn(
+        `Browser tools unavailable: ${err instanceof Error ? err.message : String(err)}`
+      );
+      terminal.info("Continuing without browser tools...");
+    }
+  }
 
   // Register run_detection tool with detection registry
   const { createRunDetectionTool } = await import(
@@ -188,6 +226,16 @@ export async function runScan(
   if (result.summary) {
     console.log();
     console.log(result.summary);
+  }
+
+  // Cleanup: close browser if it was launched
+  if (!options.noBrowser) {
+    try {
+      const browser = container.get(BrowserDriverDefinition);
+      await browser.close();
+    } catch {
+      // Browser wasn't registered or already closed
+    }
   }
 
   // Cleanup
