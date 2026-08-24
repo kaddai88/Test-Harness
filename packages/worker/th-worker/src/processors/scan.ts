@@ -125,7 +125,7 @@ export class ScanJobProcessor implements JobProcessor<JobData> {
         detections: this.detectionRegistry.listIds(),
         strategy: ((scan.scanConfig?.strategy as ScanConfig["strategy"]) ?? "adaptive") as
           | "sequential" | "parallel" | "adaptive",
-        llm: { provider: this.llm.id, model: this.llm.name },
+        llm: { provider: this.llm.id, model: process.env.QWEN_MODEL ?? "qwen3.7-plus" },
         crawl: { maxDepth: 3, maxPages: 50, respectRobots: true, rateLimit: 2 },
         maxTurns: 20,
         timeout: 300_000,
