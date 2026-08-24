@@ -172,6 +172,10 @@ export class QwenProvider implements LLMProvider {
 
     const body = this.buildRequestBody(params, true);
 
+    // Debug log
+    console.log("[Qwen] Stream request body:", JSON.stringify(body, null, 2));
+    console.log("[Qwen] URL:", `${this.baseUrl}/chat/completions`);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     if (params.signal) {

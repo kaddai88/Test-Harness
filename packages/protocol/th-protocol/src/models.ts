@@ -51,6 +51,8 @@ export interface ScanConfig {
   maxTurns: number;
   /** Scan timeout in milliseconds */
   timeout: number;
+  /** User instructions / test requirements */
+  instructions?: string;
 }
 
 /** A scan target to inspect */

@@ -65,12 +65,25 @@ When you're done, provide a structured summary:
 /** Scan planning prompt — used when the agent needs to plan its approach */
 export function buildScanPlanningPrompt(
   targetUrl: string,
-  availableDetections: string[]
+  availableDetections: string[],
+  instructions?: string
 ): string {
-  return `Target URL: ${targetUrl}
+  let prompt = `Target URL: ${targetUrl}
 
 Available detection plugins: ${availableDetections.join(", ")}
 
 Please plan your scan approach. Start by crawling the page, then use browser tools to test interactivity (click elements, fill forms, take screenshots). Then run all applicable detections.
 Think about what additional checks might be relevant based on what you find.`;
+
+  if (instructions && instructions.trim()) {
+    prompt += `
+
+## User Instructions
+
+The user has provided the following specific instructions and context. Follow these carefully:
+
+${instructions.trim()}`;
+  }
+
+  return prompt;
 }

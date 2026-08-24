@@ -135,7 +135,8 @@ export class AgentLoop {
       turn: 0,
       content: buildScanPlanningPrompt(
         options.target.url,
-        availableDetections
+        availableDetections,
+        options.config.instructions as string | undefined
       ),
     });
 
@@ -290,7 +291,7 @@ export class AgentLoop {
       scanId: context.scanId,
       turnNumber: context.turnCount,
       stepNumber: step,
-      model: context.config.llm.model,
+      model: context.config.llm.model || process.env.QWEN_MODEL || "qwen3.7-plus",
       temperature: context.config.llm.temperature ?? 0.1,
       maxTokens: undefined,
     });

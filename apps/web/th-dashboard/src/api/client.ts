@@ -44,6 +44,7 @@ export const api = {
         scanConfig: {
           strategy: data.strategy,
           detections: data.categories ?? [],
+          instructions: data.instructions,
         },
       }),
     }).then(handleResponse<ScanCreateResponse>),

@@ -33,6 +33,7 @@
     "@test-harness/th-browser": "workspace:*",
     "@test-harness/th-agent": "workspace:*",
     "@test-harness/th-report": "workspace:*",
-    "commander": "^13.0.0"
+    "commander": "^13.0.0",
+    "dotenv": "^16.4.0"
   }
 }

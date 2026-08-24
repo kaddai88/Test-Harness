@@ -239,6 +239,9 @@ importers:
       commander:
         specifier: ^13.0.0
         version: 13.1.0
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
 
   packages/core/th-core:
     dependencies:

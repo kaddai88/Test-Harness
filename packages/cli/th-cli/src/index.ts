@@ -9,6 +9,17 @@
  *   th --help              Show help
  */
 
+import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Load .env from project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..", "..", "..", "..");
+const dotenv = await import("dotenv");
+dotenv.config({ path: path.join(rootDir, ".env") });
+
 import { Command } from "commander";
 import { runScan } from "./commands/scan.js";
 
@@ -33,7 +44,7 @@ program
     "LLM provider: qwen, openai, deepseek, ollama",
     "qwen"
   )
-  .option("-m, --model <model>", "LLM model name", "qwen-plus")
+  .option("-m, --model <model>", "LLM model name", process.env.QWEN_MODEL || "qwen3.7-plus")
   .option(
     "--ollama-url <url>",
     "Ollama base URL",

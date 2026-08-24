@@ -18,7 +18,7 @@ interface ScanStore {
 
   fetchScans: () => Promise<void>;
   fetchScan: (id: string) => Promise<void>;
-  createScan: (url: string, scope: string, strategy: string, categories: string[]) => Promise<string>;
+  createScan: (url: string, scope: string, strategy: string, categories: string[], instructions?: string) => Promise<string>;
   cancelScan: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setStatusFilter: (status: string) => void;
@@ -79,7 +79,7 @@ export const useScanStore = create<ScanStore>((set, get) => ({
     }
   },
 
-  createScan: async (url, scope, strategy, categories) => {
+  createScan: async (url, scope, strategy, categories, instructions?: string) => {
     set({ loading: true, error: null });
     try {
       const result = await api.createScan({
@@ -87,6 +87,7 @@ export const useScanStore = create<ScanStore>((set, get) => ({
         scope: scope as 'page' | 'site' | 'domain',
         strategy: strategy as 'sequential' | 'parallel' | 'adaptive',
         categories: categories as ('security' | 'performance' | 'functionality' | 'seo' | 'accessibility')[],
+        instructions,
       });
       set({ loading: false });
       return result.id;

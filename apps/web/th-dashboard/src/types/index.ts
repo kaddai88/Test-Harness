@@ -72,6 +72,7 @@ export interface ScanCreateRequest {
   scope: ScanScope;
   strategy: ScanStrategy;
   categories?: DetectionCategory[];
+  instructions?: string;
   maxTurns?: number;
   timeout?: number;
 }
