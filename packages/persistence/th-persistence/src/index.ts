@@ -54,8 +54,29 @@ try {
   _SQLiteScanEventRepository = sqlite.SQLiteScanEventRepository;
   _SQLiteReportRepository = sqlite.SQLiteReportRepository;
   _SQLiteDatabase = sqlite.SQLiteDatabase;
-} catch {
+} catch (e) {
   // better-sqlite3 not available — SQLite repos will be undefined
+  // This is expected when native bindings are not compiled
+  console.log("[Persistence] SQLite not available, will use JSON file database");
+}
+
+// JSON File implementations (pure JS, persistent)
+let _JsonFileScanRepository: any;
+let _JsonFileDetectionResultRepository: any;
+let _JsonFileScanEventRepository: any;
+let _JsonFileReportRepository: any;
+let _JsonFileDatabase: any;
+
+try {
+  const jsonFile = await import("./providers/json-file.js");
+  _JsonFileScanRepository = jsonFile.JsonFileScanRepository;
+  _JsonFileDetectionResultRepository = jsonFile.JsonFileDetectionResultRepository;
+  _JsonFileScanEventRepository = jsonFile.JsonFileScanEventRepository;
+  _JsonFileReportRepository = jsonFile.JsonFileReportRepository;
+  _JsonFileDatabase = jsonFile.JsonFileDatabase;
+  console.log("[Persistence] JSON file database loaded successfully");
+} catch (e) {
+  console.error("[Persistence] JSON file database failed to load:", e);
 }
 
 // ── Database Factory ──
@@ -96,28 +117,47 @@ export function createInMemoryDatabase(): DatabaseRepositories {
 }
 
 /**
- * Create a file-backed SQLite database.
- * Falls back to in-memory if native bindings are unavailable.
+ * Create a persistent database.
+ * Priority: SQLite > JSON File > In-Memory
  */
 export function createDatabase(
   dbPath?: string
 ): DatabaseRepositories & { close?: () => void } {
-  if (!dbPath || !_SQLiteDatabase) {
-    if (dbPath) {
-      console.warn(
-        "[Persistence] SQLite unavailable (no native bindings). Using in-memory storage."
-      );
-    }
+  if (!dbPath) {
     return createInMemoryDatabase();
   }
-  const db = new _SQLiteDatabase(dbPath);
-  return {
-    scans: new _SQLiteScanRepository(db.getDb()),
-    detectionResults: new _SQLiteDetectionResultRepository(db.getDb()),
-    scanEvents: new _SQLiteScanEventRepository(db.getDb()),
-    reports: new _SQLiteReportRepository(db.getDb()),
-    close: () => db.close(),
-  };
+
+  // Try SQLite first (may throw if native bindings not available)
+  if (_SQLiteDatabase) {
+    try {
+      const db = new _SQLiteDatabase(dbPath);
+      return {
+        scans: new _SQLiteScanRepository(db.getDb()),
+        detectionResults: new _SQLiteDetectionResultRepository(db.getDb()),
+        scanEvents: new _SQLiteScanEventRepository(db.getDb()),
+        reports: new _SQLiteReportRepository(db.getDb()),
+        close: () => db.close(),
+      };
+    } catch (e) {
+      console.log("[Persistence] SQLite not available, falling back to JSON file database");
+    }
+  }
+
+  // Fallback to JSON file database
+  if (_JsonFileDatabase) {
+    const db = new _JsonFileDatabase(dbPath);
+    return {
+      scans: new _JsonFileScanRepository(db),
+      detectionResults: new _JsonFileDetectionResultRepository(db),
+      scanEvents: new _JsonFileScanEventRepository(db),
+      reports: new _JsonFileReportRepository(db),
+      close: () => db.close(),
+    };
+  }
+
+  // Last resort: in-memory
+  console.warn("[Persistence] No persistent storage available. Using in-memory.");
+  return createInMemoryDatabase();
 }
 
 // Backward compat

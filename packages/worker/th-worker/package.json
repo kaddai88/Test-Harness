@@ -24,13 +24,7 @@
     "@test-harness/th-persistence": "workspace:*",
     "@test-harness/th-crawl": "workspace:*",
     "@test-harness/th-tools": "workspace:*",
-    "@test-harness/th-detection": "workspace:*",
     "@test-harness/th-report": "workspace:*",
-    "@test-harness/th-browser": "workspace:*",
-    "@test-harness/th-detect-security": "workspace:*",
-    "@test-harness/th-detect-performance": "workspace:*",
-    "@test-harness/th-detect-seo": "workspace:*",
-    "@test-harness/th-detect-a11y": "workspace:*",
-    "@test-harness/th-detect-functionality": "workspace:*"
+    "@test-harness/th-browser": "workspace:*"
   }
 }

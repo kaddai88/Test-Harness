@@ -2,10 +2,7 @@ import type {
   Scan,
   ScanCreateRequest,
   ScanCreateResponse,
-  Finding,
   HealthStatus,
-  DetectionProgress,
-  DashboardStats,
   PaginatedResponse,
 } from '../types';
 
@@ -61,13 +58,4 @@ export const api = {
 
   getHealth: (): Promise<HealthStatus> =>
     fetch(`${API_BASE}/health`).then(handleResponse<HealthStatus>),
-
-  getDetections: (scanId: string): Promise<DetectionProgress[]> =>
-    fetch(`${API_BASE}/scans/${scanId}/detections`).then(handleResponse<DetectionProgress[]>),
-
-  getFindings: (scanId: string): Promise<Finding[]> =>
-    fetch(`${API_BASE}/scans/${scanId}/findings`).then(handleResponse<Finding[]>),
-
-  getStats: (): Promise<DashboardStats> =>
-    fetch(`${API_BASE}/stats`).then(handleResponse<DashboardStats>),
 };

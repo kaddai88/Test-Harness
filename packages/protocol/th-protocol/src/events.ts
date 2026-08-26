@@ -260,3 +260,111 @@ export const AgentStreamChunkEvent = defineEvent<AgentStreamChunkEventData>(
   "agent:stream_chunk",
   { durable: false }
 );
+
+// ── AI Agent Session Events (real-time streaming) ──
+
+/** Session plan created by AI */
+export interface SessionPlanCreatedEventData {
+  sessionId: string;
+  plan: {
+    summary: string;
+    steps: Array<{
+      id: string;
+      description: string;
+      action: Record<string, unknown>;
+      priority: number;
+    }>;
+  };
+}
+
+export const SessionPlanCreatedEvent = defineEvent<SessionPlanCreatedEventData>(
+  "session:plan_created",
+  { durable: false }
+);
+
+/** Test step started */
+export interface TestStepStartedEventData {
+  sessionId: string;
+  stepId: string;
+  action: Record<string, unknown>;
+  description: string;
+}
+
+export const TestStepStartedEvent = defineEvent<TestStepStartedEventData>(
+  "session:step_started",
+  { durable: false }
+);
+
+/** Browser action executed */
+export interface ActionExecutedEventData {
+  sessionId: string;
+  stepId: string;
+  action: Record<string, unknown>;
+  result: {
+    success: boolean;
+    url?: string;
+    title?: string;
+    screenshot?: string;
+  };
+}
+
+export const ActionExecutedEvent = defineEvent<ActionExecutedEventData>(
+  "session:action_executed",
+  { durable: false }
+);
+
+/** AI observation after action */
+export interface ObservationEventData {
+  sessionId: string;
+  stepId: string;
+  observation: string;
+}
+
+export const ObservationEvent = defineEvent<ObservationEventData>(
+  "session:observation",
+  { durable: false }
+);
+
+/** AI decision for next step */
+export interface DecisionEventData {
+  sessionId: string;
+  stepId: string;
+  decision: string;
+  nextAction?: Record<string, unknown>;
+}
+
+export const DecisionEvent = defineEvent<DecisionEventData>(
+  "session:decision",
+  { durable: false }
+);
+
+/** Test step completed */
+export interface TestStepCompletedEventData {
+  sessionId: string;
+  stepId: string;
+  status: "completed" | "failed" | "skipped";
+  finding?: {
+    severity: string;
+    title: string;
+    description: string;
+  };
+}
+
+export const TestStepCompletedEvent = defineEvent<TestStepCompletedEventData>(
+  "session:step_completed",
+  { durable: false }
+);
+
+/** Session completed */
+export interface SessionCompletedEventData {
+  sessionId: string;
+  status: "completed" | "failed" | "cancelled";
+  summary: string;
+  findingCount: number;
+  stepCount: number;
+}
+
+export const SessionCompletedEvent = defineEvent<SessionCompletedEventData>(
+  "session:completed",
+  { durable: false }
+);

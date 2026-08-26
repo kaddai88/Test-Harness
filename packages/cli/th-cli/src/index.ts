@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * TestHarness CLI — AI-powered website quality analyzer.
+ * TestHarness CLI — AI-driven website testing platform.
+ *
+ * DSH-style architecture:
+ * User describes what to test → LLM plans → executes browser actions → streams results
  *
  * Usage:
- *   th scan <url>          Run a website scan
- *   th scan <url> --scope site    Scan entire site
- *   th --help              Show help
+ *   th test <url> --instructions "Test the login functionality"
+ *   th test <url> --instructions "Check all forms work correctly"
+ *   th --help
  */
 
 import "dotenv/config";
@@ -21,27 +24,27 @@ const dotenv = await import("dotenv");
 dotenv.config({ path: path.join(rootDir, ".env") });
 
 import { Command } from "commander";
-import { runScan } from "./commands/scan.js";
+import { runTest } from "./commands/test.js";
 
 const program = new Command();
 
 program
   .name("th")
-  .description("TestHarness — AI-powered website quality analyzer")
-  .version("0.1.0");
+  .description("TestHarness — AI-driven website testing platform")
+  .version("2.0.0");
 
 program
-  .command("scan")
-  .description("Scan a website for quality issues")
-  .argument("<url>", "Target URL to scan")
+  .command("test")
+  .description("Run AI-driven website test")
+  .argument("<url>", "Target URL to test")
   .option(
-    "-s, --scope <scope>",
-    "Scan scope: page, site, domain",
-    "page"
+    "-i, --instructions <text>",
+    "Natural language test instructions",
+    "Perform a basic functionality test"
   )
   .option(
     "-p, --provider <provider>",
-    "LLM provider: qwen, openai, deepseek, ollama",
+    "LLM provider: qwen, openai, ollama",
     "qwen"
   )
   .option("-m, --model <model>", "LLM model name", process.env.QWEN_MODEL || "qwen3.7-plus")
@@ -53,20 +56,20 @@ program
   .option(
     "--max-turns <n>",
     "Maximum agent loop turns",
-    "15"
+    "20"
   )
   .option(
     "--no-browser",
-    "Disable browser tools (no Puppeteer launch)"
+    "Disable browser automation (no Puppeteer)"
   )
   .action(async (url: string, opts: Record<string, unknown>) => {
     try {
-      await runScan(url, {
-        scope: opts["scope"] as "page" | "site" | "domain",
+      await runTest(url, {
+        instructions: opts["instructions"] as string,
         provider: opts["provider"] as string | undefined,
         model: opts["model"] as string | undefined,
         ollamaUrl: opts["ollamaUrl"] as string | undefined,
-        maxTurns: parseInt((opts["maxTurns"] as string) ?? "15", 10),
+        maxTurns: parseInt((opts["maxTurns"] as string) ?? "20", 10),
         noBrowser: opts["browser"] === false,
       });
     } catch (err) {

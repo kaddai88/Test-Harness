@@ -4,7 +4,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import { ReportGenerator } from "@test-harness/th-report";
-import type { DetectionResult, Finding } from "@test-harness/th-protocol";
+import type { Finding } from "@test-harness/th-protocol";
 import { sendJson, sendText, parseQuery, matchRoute } from "../http.js";
 
 export interface ReportRouteDeps {
@@ -60,31 +60,17 @@ export async function handleGetReport(
     return;
   }
 
-  // Generate on-the-fly
-  const detectionResults = await deps.repos.detectionResults.findByScanId(id);
+  // Generate on-the-fly from stored findings
+  const findings =
+    (scan.metadata?.findings as Finding[] | undefined) ?? [];
 
   const generator = new ReportGenerator();
   const output = await generator.generate(
     {
-      scanId: scan.id,
+      sessionId: scan.id,
       targetUrl: scan.targetUrl,
-      results: detectionResults.map(
-        (dr): DetectionResult => ({
-          detectionId: dr.detectionId,
-          category: dr.category as
-            | "security"
-            | "performance"
-            | "functionality"
-            | "seo"
-            | "accessibility",
-          status: dr.status as "completed" | "failed" | "skipped",
-          findings: dr.findings as unknown as Finding[],
-          score: dr.score,
-          metadata: {},
-          startedAt: new Date(dr.startedAt ?? Date.now()),
-          completedAt: new Date(dr.completedAt ?? Date.now()),
-        })
-      ),
+      findings,
+      summary: scan.metadata?.summary as string | undefined,
       startedAt: new Date(scan.startedAt ?? scan.createdAt),
       completedAt: new Date(scan.completedAt ?? Date.now()),
     },

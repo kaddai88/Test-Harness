@@ -39,24 +39,6 @@ importers:
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../../packages/core/th-core
-      '@test-harness/th-detect-a11y':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/accessibility/th-detect-a11y
-      '@test-harness/th-detect-functionality':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/functionality/th-detect-functionality
-      '@test-harness/th-detect-performance':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/performance/th-detect-performance
-      '@test-harness/th-detect-security':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/security/th-detect-security
-      '@test-harness/th-detect-seo':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/seo/th-detect-seo
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../packages/detection/th-detection
       '@test-harness/th-llm':
         specifier: workspace:*
         version: link:../../../packages/llm/th-llm
@@ -133,9 +115,6 @@ importers:
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../detection/th-detection
       '@test-harness/th-llm':
         specifier: workspace:*
         version: link:../../llm/th-llm
@@ -194,24 +173,6 @@ importers:
       '@test-harness/th-crawl':
         specifier: workspace:*
         version: link:../../crawl/th-crawl
-      '@test-harness/th-detect-a11y':
-        specifier: workspace:*
-        version: link:../../plugins/accessibility/th-detect-a11y
-      '@test-harness/th-detect-functionality':
-        specifier: workspace:*
-        version: link:../../plugins/functionality/th-detect-functionality
-      '@test-harness/th-detect-performance':
-        specifier: workspace:*
-        version: link:../../plugins/performance/th-detect-performance
-      '@test-harness/th-detect-security':
-        specifier: workspace:*
-        version: link:../../plugins/security/th-detect-security
-      '@test-harness/th-detect-seo':
-        specifier: workspace:*
-        version: link:../../plugins/seo/th-detect-seo
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../detection/th-detection
       '@test-harness/th-llm':
         specifier: workspace:*
         version: link:../../llm/th-llm
@@ -263,15 +224,6 @@ importers:
       undici:
         specifier: ^7.0.0
         version: 7.29.0
-
-  packages/detection/th-detection:
-    dependencies:
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../core/th-core
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../protocol/th-protocol
 
   packages/llm/th-llm:
     dependencies:
@@ -346,69 +298,6 @@ importers:
         specifier: ^7.6.0
         version: 7.6.13
 
-  packages/plugins/accessibility/th-detect-a11y:
-    dependencies:
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../detection/th-detection
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../../protocol/th-protocol
-
-  packages/plugins/functionality/th-detect-functionality:
-    dependencies:
-      '@test-harness/th-browser':
-        specifier: workspace:*
-        version: link:../../../browser/th-browser
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../detection/th-detection
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../../protocol/th-protocol
-
-  packages/plugins/performance/th-detect-performance:
-    dependencies:
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../detection/th-detection
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../../protocol/th-protocol
-
-  packages/plugins/security/th-detect-security:
-    dependencies:
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../detection/th-detection
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../../protocol/th-protocol
-
-  packages/plugins/seo/th-detect-seo:
-    dependencies:
-      '@test-harness/th-core':
-        specifier: workspace:*
-        version: link:../../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../../detection/th-detection
-      '@test-harness/th-protocol':
-        specifier: workspace:*
-        version: link:../../../protocol/th-protocol
-
   packages/protocol/th-protocol:
     dependencies:
       zod:
@@ -429,9 +318,6 @@ importers:
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../core/th-core
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../detection/th-detection
       '@test-harness/th-protocol':
         specifier: workspace:*
         version: link:../../protocol/th-protocol
@@ -447,9 +333,6 @@ importers:
       '@test-harness/th-crawl':
         specifier: workspace:*
         version: link:../../crawl/th-crawl
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../detection/th-detection
       '@test-harness/th-protocol':
         specifier: workspace:*
         version: link:../../protocol/th-protocol
@@ -471,24 +354,6 @@ importers:
       '@test-harness/th-crawl':
         specifier: workspace:*
         version: link:../../crawl/th-crawl
-      '@test-harness/th-detect-a11y':
-        specifier: workspace:*
-        version: link:../../plugins/accessibility/th-detect-a11y
-      '@test-harness/th-detect-functionality':
-        specifier: workspace:*
-        version: link:../../plugins/functionality/th-detect-functionality
-      '@test-harness/th-detect-performance':
-        specifier: workspace:*
-        version: link:../../plugins/performance/th-detect-performance
-      '@test-harness/th-detect-security':
-        specifier: workspace:*
-        version: link:../../plugins/security/th-detect-security
-      '@test-harness/th-detect-seo':
-        specifier: workspace:*
-        version: link:../../plugins/seo/th-detect-seo
-      '@test-harness/th-detection':
-        specifier: workspace:*
-        version: link:../../detection/th-detection
       '@test-harness/th-persistence':
         specifier: workspace:*
         version: link:../../persistence/th-persistence

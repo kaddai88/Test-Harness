@@ -7,10 +7,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { Duplex } from "node:stream";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import type { TaskQueue } from "@test-harness/th-queue";
-import type { DetectionRegistry } from "@test-harness/th-detection";
 import { applyCors, getPathname, sendJson } from "./http.js";
 import { dispatchScanRoute } from "./routes/scans.js";
-import { dispatchDetectionRoute } from "./routes/detections.js";
 import { dispatchReportRoute } from "./routes/reports.js";
 import { handleHealth, handleStatus } from "./routes/health.js";
 import { WebSocketHandler } from "./websocket.js";
@@ -19,21 +17,7 @@ export interface APIServerOptions {
   port?: number;
   repos: DatabaseRepositories;
   queue: TaskQueue;
-  detectionRegistry?: DetectionRegistry;
 }
-
-/** A minimal DetectionRegistry-like stub when none is provided. */
-const emptyDetectionRegistry: DetectionRegistry = {
-  getAll: () => [],
-  get: () => undefined,
-  getByCategory: () => [],
-  listIds: () => [],
-  has: () => false,
-  size: 0,
-  register: () => {
-    throw new Error("No detection registry configured");
-  },
-} as unknown as DetectionRegistry;
 
 export class APIServer {
   private server: ReturnType<typeof createServer>;
@@ -41,13 +25,11 @@ export class APIServer {
   private readonly port: number;
   private readonly repos: DatabaseRepositories;
   private readonly queue: TaskQueue;
-  private readonly detectionRegistry: DetectionRegistry;
 
   constructor(opts: APIServerOptions) {
     this.port = opts.port ?? 3000;
     this.repos = opts.repos;
     this.queue = opts.queue;
-    this.detectionRegistry = opts.detectionRegistry ?? emptyDetectionRegistry;
     this.ws = new WebSocketHandler();
 
     this.server = createServer((req, res) => {
@@ -140,12 +122,6 @@ export class APIServer {
       queue: this.queue,
     }, pathname);
     if (handled1) return;
-
-    // Detection routes
-    const handled2 = await dispatchDetectionRoute(req, res, {
-      registry: this.detectionRegistry,
-    }, pathname);
-    if (handled2) return;
 
     // Report routes
     const handled3 = await dispatchReportRoute(req, res, {

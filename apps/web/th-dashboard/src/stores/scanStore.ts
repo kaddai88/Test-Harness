@@ -1,14 +1,15 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
 import { scanWebSocket } from '../api/websocket';
-import type { Scan, Finding, DetectionProgress, AgentActivity } from '../types';
+import type { Scan, Finding, AgentActivity } from '../types';
 
 interface ScanStore {
   scans: Scan[];
   currentScan: Scan | null;
   findings: Finding[];
-  detections: DetectionProgress[];
   agentActivity: AgentActivity[];
+  /** Accumulated stream text for the current turn */
+  streamText: string;
   loading: boolean;
   error: string | null;
   totalScans: number;
@@ -18,7 +19,12 @@ interface ScanStore {
 
   fetchScans: () => Promise<void>;
   fetchScan: (id: string) => Promise<void>;
-  createScan: (url: string, scope: string, strategy: string, categories: string[], instructions?: string) => Promise<string>;
+  createScan: (
+    url: string,
+    scope: string,
+    strategy: string,
+    instructions?: string
+  ) => Promise<string>;
   cancelScan: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setStatusFilter: (status: string) => void;
@@ -30,8 +36,8 @@ export const useScanStore = create<ScanStore>((set, get) => ({
   scans: [],
   currentScan: null,
   findings: [],
-  detections: [],
   agentActivity: [],
+  streamText: '',
   loading: false,
   error: null,
   totalScans: 0,
@@ -63,6 +69,7 @@ export const useScanStore = create<ScanStore>((set, get) => ({
       const scan = await api.getScan(id);
       set({
         currentScan: scan,
+        findings: scan.findings ?? [],
         loading: false,
       });
     } catch (error) {
@@ -73,14 +80,13 @@ export const useScanStore = create<ScanStore>((set, get) => ({
     }
   },
 
-  createScan: async (url, scope, strategy, categories, instructions?: string) => {
+  createScan: async (url, scope, strategy, instructions?: string) => {
     set({ loading: true, error: null });
     try {
       const result = await api.createScan({
         targetUrl: url,
         scope: scope as 'page' | 'site' | 'domain',
         strategy: strategy as 'sequential' | 'parallel' | 'adaptive',
-        categories: categories as ('security' | 'performance' | 'functionality' | 'seo' | 'accessibility')[],
         instructions,
       });
       set({ loading: false });
@@ -127,34 +133,82 @@ export const useScanStore = create<ScanStore>((set, get) => ({
     scanWebSocket.connect();
 
     const unsubs = [
-      scanWebSocket.onScanUpdate((scan) => {
+      // Status change → merge into currentScan
+      scanWebSocket.onScanUpdate(({ sessionId, status }) => {
         const { currentScan, scans } = get();
-        if (currentScan && currentScan.id === scan.id) {
-          set({ currentScan: scan });
+        if (currentScan && currentScan.id === sessionId) {
+          set({ currentScan: { ...currentScan, status: status as Scan['status'] } });
         }
         set({
-          scans: scans.map((s) => (s.id === scan.id ? scan : s)),
+          scans: scans.map((s) =>
+            s.id === sessionId ? { ...s, status: status as Scan['status'] } : s
+          ),
         });
       }),
 
-      scanWebSocket.onFinding((finding) => {
-        set((state) => ({
-          findings: [finding, ...state.findings],
-        }));
+      // Batch findings from completed session
+      scanWebSocket.onFinding((findings) => {
+        set({ findings });
       }),
 
-      scanWebSocket.onDetectionUpdate((detection) => {
-        set((state) => ({
-          detections: state.detections.map((d) =>
-            d.id === detection.id ? detection : d
-          ),
-        }));
-      }),
-
+      // Agent activity stream
       scanWebSocket.onAgentActivity((activity) => {
+        const { streamText } = get();
+
+        // Accumulate stream text
+        if (activity.kind === 'stream' && activity.partial) {
+          set({
+            streamText: streamText + activity.partial,
+            agentActivity: [...get().agentActivity, activity],
+          });
+          return;
+        }
+
+        // Clear stream text on new turn or tool call
+        if (activity.kind === 'turn_started' || activity.kind === 'tool_call') {
+          set({
+            streamText: '',
+            agentActivity: [...get().agentActivity, activity],
+          });
+          return;
+        }
+
+        // Default: just append
         set((state) => ({
           agentActivity: [...state.agentActivity, activity],
         }));
+      }),
+
+      // Session phase transition (planning → executing)
+      scanWebSocket.onSessionStatus(({ sessionId, status, message }) => {
+        const { currentScan } = get();
+        if (currentScan && currentScan.id === sessionId) {
+          set({
+            currentScan: {
+              ...currentScan,
+              status: status as Scan['status'],
+              phase: message ?? status,
+            },
+          });
+        }
+      }),
+
+      // Session completed → update summary
+      scanWebSocket.onSessionCompleted(({ sessionId, status, summary, findingCount }) => {
+        const { currentScan } = get();
+        if (currentScan && currentScan.id === sessionId) {
+          set({
+            currentScan: {
+              ...currentScan,
+              status: status as Scan['status'],
+              metadata: {
+                ...currentScan.metadata,
+                summary: summary ?? '',
+                findingCount: findingCount ?? 0,
+              },
+            },
+          });
+        }
       }),
     ];
 

@@ -1,38 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useScanStore } from '../stores/scanStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { ProgressBar } from '../components/ui/ProgressBar';
-import { ScoreGauge } from '../components/ui/ScoreGauge';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { SeverityBadge } from '../components/ui/SeverityBadge';
 import { Spinner } from '../components/ui/Spinner';
 import { EmptyState } from '../components/ui/EmptyState';
-
-const statusColors: Record<string, 'blue' | 'emerald' | 'amber' | 'red'> = {
-  pending: 'blue',
-  running: 'blue',
-  completed: 'emerald',
-  failed: 'red',
-  cancelled: 'amber',
-};
-
-const detectionStatusIcon: Record<string, string> = {
-  pending: '○',
-  running: '◉',
-  completed: '✓',
-  failed: '✗',
-  skipped: '—',
-};
-
-const detectionStatusColor: Record<string, string> = {
-  pending: 'text-slate-400',
-  running: 'text-blue-400',
-  completed: 'text-emerald-400',
-  failed: 'text-red-400',
-  skipped: 'text-slate-500',
-};
+import type { AgentActivity, Finding } from '../types';
 
 export const ScanDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,13 +15,20 @@ export const ScanDetail: React.FC = () => {
   const {
     currentScan,
     findings,
-    detections,
     agentActivity,
+    streamText,
     loading,
     fetchScan,
     cancelScan,
     connectWebSocket,
   } = useScanStore();
+
+  const streamEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to latest activity
+  useEffect(() => {
+    streamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [agentActivity.length, streamText]);
 
   useEffect(() => {
     if (id) {
@@ -61,6 +43,9 @@ export const ScanDetail: React.FC = () => {
     const disconnect = connectWebSocket();
     return disconnect;
   }, [currentScan?.status, connectWebSocket]);
+
+  // Group activities into logical turns for display
+  const groupedSteps = useMemo(() => groupActivitiesByTurn(agentActivity), [agentActivity]);
 
   if (loading && !currentScan) {
     return (
@@ -84,205 +69,304 @@ export const ScanDetail: React.FC = () => {
     );
   }
 
-  const sortedFindings = [...findings].sort((a, b) => {
-    const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
-    return (order[a.severity] ?? 5) - (order[b.severity] ?? 5);
-  });
-
-  const isActive = currentScan.status === 'running' || currentScan.status === 'pending';
+  const isActive = currentScan.status === 'running' || currentScan.status === 'pending' || currentScan.status === 'planning' || currentScan.status === 'executing';
+  const phase = currentScan.phase || currentScan.status;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-100">Scan Detail</h1>
+            <h1 className="text-2xl font-bold text-slate-100">Test Session</h1>
             <StatusBadge status={currentScan.status} />
           </div>
           <p className="mt-1 text-sm text-slate-400">{currentScan.targetUrl}</p>
+          {currentScan.startedAt && (
+            <p className="mt-0.5 text-xs text-slate-500">
+              Started {new Date(currentScan.startedAt).toLocaleTimeString()}
+              {currentScan.completedAt && (
+                <> · Duration {Math.round((new Date(currentScan.completedAt).getTime() - new Date(currentScan.startedAt).getTime()) / 1000)}s</>
+              )}
+            </p>
+          )}
         </div>
-        {isActive && (
-          <Button variant="danger" onClick={() => id && cancelScan(id)}>
-            Cancel Scan
-          </Button>
-        )}
-        {!isActive && currentScan.status === 'completed' && id && (
-          <Button variant="secondary" onClick={() => navigate(`/scans/${id}/report`)}>
-            View Report
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isActive && (
+            <Button variant="danger" onClick={() => id && cancelScan(id)}>
+              Cancel
+            </Button>
+          )}
+          {!isActive && currentScan.status === 'completed' && id && (
+            <Button variant="secondary" onClick={() => navigate(`/scans/${id}/report`)}>
+              View Report
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Progress + Score */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Progress
-          </h2>
-          <ProgressBar
-            progress={currentScan.progress ?? 0}
-            label={currentScan.phase || currentScan.status}
-            color={statusColors[currentScan.status] ?? 'blue'}
-          />
-          <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-slate-400">Started</p>
-              <p className="text-sm font-medium text-slate-200">
-                {currentScan.startedAt ? new Date(currentScan.startedAt).toLocaleTimeString() : '—'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Duration</p>
-              <p className="text-sm font-medium text-slate-200">
-                {currentScan.startedAt && currentScan.completedAt
-                  ? `${Math.round((new Date(currentScan.completedAt).getTime() - new Date(currentScan.startedAt).getTime()) / 1000)}s`
-                  : currentScan.startedAt
-                  ? `${Math.round((Date.now() - new Date(currentScan.startedAt).getTime()) / 1000)}s`
-                  : '—'
-                }
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Findings</p>
-              <p className="text-sm font-medium text-slate-200">{findings.length}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Turns</p>
-              <p className="text-sm font-medium text-slate-200">
-                {(currentScan.metadata?.turns as number) ?? '—'}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="flex items-center justify-center">
-          <ScoreGauge
-            score={currentScan.score ?? 0}
-            label="Overall Score"
-            size={140}
-          />
-        </Card>
-      </div>
-
-      {/* AI Summary */}
-      {typeof currentScan.metadata?.summary === 'string' && currentScan.metadata.summary && (
-        <Card>
-          <h2 className="mb-3 text-lg font-semibold text-slate-100">AI Analysis Summary</h2>
-          <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans leading-relaxed">
-            {currentScan.metadata.summary}
-          </pre>
-        </Card>
+      {/* ── Phase indicator (during active runs) ── */}
+      {isActive && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2.5">
+          <Spinner size="sm" />
+          <span className="text-sm font-medium text-blue-300">
+            {phase === 'planning' ? '🧠 AI is generating test plan...' :
+             phase === 'executing' ? '🔧 Running browser tests...' :
+             `⏳ ${phase}`}
+          </span>
+        </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Detection Progress */}
-        <Card>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Detections</h2>
-          {detections.length === 0 ? (
-            <EmptyState title="No detections" description="Detections will appear here." />
-          ) : (
-            <div className="space-y-3">
-              {detections.map((det) => (
-                <div
-                  key={det.id}
-                  className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3"
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-200">{det.name}</span>
-                    <span className={`text-sm ${detectionStatusColor[det.status] ?? ''}`}>
-                      <span className="mr-1">{detectionStatusIcon[det.status] ?? '?'}</span>
-                      <span className="capitalize">{det.status}</span>
-                    </span>
-                  </div>
-                  <ProgressBar
-                    progress={det.progress}
-                    showPercentage
-                    color={
-                      det.status === 'completed'
-                        ? 'emerald'
-                        : det.status === 'failed'
-                          ? 'red'
-                          : 'blue'
-                    }
-                  />
-                  <p className="mt-1 text-xs text-slate-400">
-                    {det.findingsCount} finding{det.findingsCount !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Live Findings Feed */}
-        <Card>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Findings</h2>
-          {sortedFindings.length === 0 ? (
-            <EmptyState
-              title="No findings yet"
-              description="Findings will appear as detections complete."
-            />
-          ) : (
-            <div className="max-h-96 space-y-2 overflow-y-auto scrollbar-thin">
-              {sortedFindings.map((finding) => (
-                <div
-                  key={finding.id}
-                  className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3"
-                >
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <SeverityBadge severity={finding.severity} />
-                    <span className="text-xs capitalize text-slate-400">
-                      {finding.category}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-slate-200">{finding.title}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">
-                    {finding.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Agent Activity Log */}
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Agent Activity</h2>
-        {agentActivity.length === 0 ? (
+      {/* ── Main Chat Stream ── */}
+      <Card className="min-h-[400px] max-h-[70vh] overflow-y-auto scrollbar-thin">
+        {agentActivity.length === 0 && !streamText ? (
           <EmptyState
-            title="No activity yet"
-            description="Agent turns and tool calls will appear here."
+            title="Waiting for agent..."
+            description="The AI agent will show its steps here as it tests your site."
           />
         ) : (
-          <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-thin">
-            {agentActivity.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 rounded border border-slate-700/30 bg-slate-800/30 px-3 py-2"
-              >
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded bg-slate-700 text-xs text-slate-300">
-                  {activity.turn}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-200">{activity.action}</span>
-                    {activity.tool && (
-                      <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
-                        {activity.tool}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    {new Date(activity.timestamp).toLocaleTimeString()}
+          <div className="space-y-3">
+            {groupedSteps.map((group, gi) => (
+              <TurnGroup key={gi} turn={group.turn} activities={group.activities} />
+            ))}
+
+            {/* Live stream text (AI thinking/speaking) */}
+            {streamText && (
+              <div className="flex gap-3">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-xs text-white">
+                  🤖
+                </div>
+                <div className="flex-1 rounded-xl rounded-tl-none bg-slate-800/80 px-4 py-3">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300 font-mono">
+                    {streamText}
+                    <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded bg-blue-400" />
                   </p>
                 </div>
               </div>
-            ))}
+            )}
+
+            <div ref={streamEndRef} />
           </div>
         )}
       </Card>
+
+      {/* ── Findings ── */}
+      {findings.length > 0 && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold text-slate-100">
+            Findings
+            <span className="ml-2 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+              {findings.length}
+            </span>
+          </h2>
+          <div className="space-y-2">
+            {[...findings]
+              .sort((a, b) => {
+                const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+                return (order[a.severity] ?? 5) - (order[b.severity] ?? 5);
+              })
+              .map((finding) => (
+                <FindingCard key={finding.id} finding={finding} />
+              ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ── AI Summary ── */}
+      {typeof currentScan.metadata?.summary === 'string' && currentScan.metadata.summary && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold text-slate-100">AI Summary</h2>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
+            {currentScan.metadata.summary}
+          </div>
+        </Card>
+      )}
     </div>
   );
 };
+
+// ── Turn Group (groups activities by turn number) ──
+interface TurnGroupProps {
+  turn: number;
+  activities: AgentActivity[];
+}
+
+const TurnGroup: React.FC<TurnGroupProps> = ({ turn, activities }) => {
+  return (
+    <div className="space-y-2">
+      {/* Turn header */}
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">
+          {turn}
+        </span>
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          Turn {turn}
+        </span>
+        <div className="flex-1 border-t border-slate-700/50" />
+      </div>
+
+      {/* Activities in this turn */}
+      {activities.map((activity) => (
+        <ActivityRow key={activity.id} activity={activity} />
+      ))}
+    </div>
+  );
+};
+
+// ── Activity Row (renders different kinds of steps) ──
+interface ActivityRowProps {
+  activity: AgentActivity;
+}
+
+const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
+  switch (activity.kind) {
+    case 'turn_started':
+      return (
+        <div className="flex items-center gap-2 pl-9 text-xs text-slate-500">
+          <span className="animate-pulse">●</span>
+          <span>Thinking...</span>
+        </div>
+      );
+
+    case 'tool_call': {
+      const tool = activity.tool ?? 'unknown';
+      const input = activity.input ?? {};
+      const description = describeToolCall(tool, input);
+
+      return (
+        <div className="flex items-start gap-3 pl-9">
+          <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-blue-500/20 text-xs text-blue-400">
+            →
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-slate-200">
+              {description}
+              <span className="ml-2 rounded bg-slate-700/60 px-1.5 py-0.5 text-xs text-slate-400 font-mono">
+                {tool}
+              </span>
+            </p>
+            {tool === 'report_finding' && !!input.title && (
+              <div className="mt-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                <p className="text-xs font-medium text-amber-300">
+                  ⚠ Finding: {String(input.title)}
+                </p>
+                {!!input.description && (
+                  <p className="mt-0.5 text-xs text-amber-200/70">
+                    {String(input.description)}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case 'tool_result': {
+      const success = activity.success;
+      return (
+        <div className="flex items-center gap-3 pl-9">
+          <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs ${
+            success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+          }`}>
+            {success ? '✓' : '✗'}
+          </div>
+          <span className="text-xs text-slate-500">
+            {activity.tool} {success ? 'completed' : 'failed'}
+          </span>
+        </div>
+      );
+    }
+
+    case 'stream':
+      // Stream chunks are rendered separately via streamText
+      return null;
+
+    default:
+      return null;
+  }
+};
+
+// ── Finding Card (standalone finding from completed session) ──
+interface FindingCardProps {
+  finding: Finding;
+}
+
+const FindingCard: React.FC<FindingCardProps> = ({ finding }) => (
+  <div className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
+    <div className="mb-1 flex items-center justify-between gap-2">
+      <SeverityBadge severity={finding.severity} />
+      {finding.category && (
+        <span className="text-xs capitalize text-slate-400">{finding.category}</span>
+      )}
+    </div>
+    <p className="text-sm font-medium text-slate-200">{finding.title}</p>
+    <p className="mt-1 text-xs text-slate-400">{finding.description}</p>
+    {finding.recommendation && (
+      <p className="mt-2 text-xs text-blue-300/80">💡 {finding.recommendation}</p>
+    )}
+    {finding.evidence?.url && (
+      <p className="mt-1 text-xs text-slate-500 truncate">📍 {finding.evidence.url}</p>
+    )}
+  </div>
+);
+
+// ── Helpers ──
+
+interface TurnGroup {
+  turn: number;
+  activities: AgentActivity[];
+}
+
+function groupActivitiesByTurn(activities: AgentActivity[]): TurnGroup[] {
+  const groups: TurnGroup[] = [];
+  let currentTurn = -1;
+  let currentGroup: AgentActivity[] = [];
+
+  for (const activity of activities) {
+    if (activity.turn !== currentTurn) {
+      if (currentGroup.length > 0) {
+        groups.push({ turn: currentTurn, activities: currentGroup });
+      }
+      currentTurn = activity.turn;
+      currentGroup = [activity];
+    } else {
+      currentGroup.push(activity);
+    }
+  }
+
+  if (currentGroup.length > 0) {
+    groups.push({ turn: currentTurn, activities: currentGroup });
+  }
+
+  return groups;
+}
+
+function describeToolCall(tool: string, input: Record<string, unknown>): string {
+  switch (tool) {
+    case 'navigate_to':
+      return `Navigate to ${input.url ?? '...'}`;
+    case 'click_element':
+      return `Click on ${input.selector ?? input.description ?? 'element'}`;
+    case 'fill_input':
+      return `Fill input: ${input.selector ?? ''} = ${input.value ?? '...'}`;
+    case 'assert_visible':
+      return `Check visible: ${input.selector ?? '...'}`;
+    case 'assert_text':
+      return `Check text contains "${input.text ?? '...'}"`;
+    case 'take_screenshot':
+      return 'Take screenshot';
+    case 'extract_dom':
+      return `Extract DOM: ${input.selector ?? 'page'}`;
+    case 'crawl_page':
+      return `Crawl page: ${input.url ?? 'current'}`;
+    case 'measure_performance':
+      return 'Measure performance';
+    case 'list_links':
+      return 'List links on page';
+    case 'report_finding':
+      return `Report finding: ${input.title ?? 'issue'}`;
+    default:
+      return `Call ${tool}`;
+  }
+}

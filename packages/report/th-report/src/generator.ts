@@ -1,15 +1,16 @@
 /**
- * ReportGenerator — orchestrates rendering of a scan report.
+ * ReportGenerator — orchestrates rendering of a test session report.
  */
-import type { DetectionResult } from "@test-harness/th-protocol";
+import type { Finding } from "@test-harness/th-protocol";
 import { renderMarkdown } from "./renderers/markdown.js";
 import { renderJson } from "./renderers/json.js";
 import { renderHtml } from "./renderers/html.js";
 
 export interface ReportInput {
-  scanId: string;
+  sessionId: string;
   targetUrl: string;
-  results: DetectionResult[];
+  findings: Finding[];
+  summary?: string;
   startedAt: Date;
   completedAt: Date;
 }
@@ -32,12 +33,9 @@ export class ReportGenerator {
           format: "json",
           content,
           data: {
-            scanId: input.scanId,
+            sessionId: input.sessionId,
             targetUrl: input.targetUrl,
-            totalFindings: input.results.reduce(
-              (s, r) => s + r.findings.length,
-              0
-            ),
+            totalFindings: input.findings.length,
           },
         };
       }
@@ -47,12 +45,9 @@ export class ReportGenerator {
           format: "markdown",
           content,
           data: {
-            scanId: input.scanId,
+            sessionId: input.sessionId,
             targetUrl: input.targetUrl,
-            totalFindings: input.results.reduce(
-              (s, r) => s + r.findings.length,
-              0
-            ),
+            totalFindings: input.findings.length,
           },
         };
       }
@@ -62,12 +57,9 @@ export class ReportGenerator {
           format: "html",
           content,
           data: {
-            scanId: input.scanId,
+            sessionId: input.sessionId,
             targetUrl: input.targetUrl,
-            totalFindings: input.results.reduce(
-              (s, r) => s + r.findings.length,
-              0
-            ),
+            totalFindings: input.findings.length,
           },
         };
       }

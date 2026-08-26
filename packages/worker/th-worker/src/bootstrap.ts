@@ -1,14 +1,12 @@
 /**
  * WorkerBootstrap — wires the queue, processors, and persistence together.
  *
- * Call `start()` to begin consuming jobs; call `stop()` to drain and shut down.
+ * DSH-style: AI-driven test sessions, not fixed detection plugins.
  */
 import type { TaskQueue } from "@test-harness/th-queue";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import type { LLMProvider } from "@test-harness/th-protocol";
-import { DetectionRegistry } from "@test-harness/th-detection";
-import { ScanJobProcessor } from "./processors/scan.js";
-import { DetectionJobProcessor } from "./processors/detection.js";
+import { TestSessionJobProcessor } from "./processors/test-session.js";
 
 export interface WebSocketHandlerLike {
   broadcast(event: { type: string; [key: string]: unknown }): void;
@@ -18,7 +16,6 @@ export interface WorkerBootstrapOptions {
   queue: TaskQueue;
   repos: DatabaseRepositories;
   llm: LLMProvider;
-  detectionRegistry?: DetectionRegistry;
   wsHandler?: WebSocketHandlerLike;
 }
 
@@ -26,7 +23,6 @@ export class WorkerBootstrap {
   private readonly queue: TaskQueue;
   private readonly repos: DatabaseRepositories;
   private readonly llm: LLMProvider;
-  private readonly detectionRegistry: DetectionRegistry;
   private readonly wsHandler?: WebSocketHandlerLike;
   private started = false;
 
@@ -34,7 +30,6 @@ export class WorkerBootstrap {
     this.queue = opts.queue;
     this.repos = opts.repos;
     this.llm = opts.llm;
-    this.detectionRegistry = opts.detectionRegistry ?? new DetectionRegistry();
     this.wsHandler = opts.wsHandler;
   }
 
@@ -43,20 +38,13 @@ export class WorkerBootstrap {
     if (this.started) return;
     this.started = true;
 
-    const scanProcessor = new ScanJobProcessor({
+    const testProcessor = new TestSessionJobProcessor({
       repos: this.repos,
       llm: this.llm,
-      detectionRegistry: this.detectionRegistry,
       wsHandler: this.wsHandler,
     });
 
-    const detectionProcessor = new DetectionJobProcessor({
-      repos: this.repos,
-      registry: this.detectionRegistry,
-    });
-
-    this.queue.process("scan:execute", scanProcessor);
-    this.queue.process("scan:detect", detectionProcessor);
+    this.queue.process("test:execute", testProcessor);
   }
 
   /** Stop consuming jobs and shut down. */
@@ -64,10 +52,5 @@ export class WorkerBootstrap {
     if (!this.started) return;
     this.started = false;
     await this.queue.close();
-  }
-
-  /** Expose the detection registry so callers can register plugins. */
-  getDetectionRegistry(): DetectionRegistry {
-    return this.detectionRegistry;
   }
 }

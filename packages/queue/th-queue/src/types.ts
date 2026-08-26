@@ -5,19 +5,15 @@
  */
 
 export type JobType =
-  | "scan:execute"
-  | "scan:crawl"
-  | "scan:detect"
-  | "scan:report"
-  | "scan:llm-analyze";
+  | "test:execute"
+  | "test:report";
 
 export type JobStatus = "waiting" | "active" | "completed" | "failed" | "delayed";
 
 export interface JobData {
-  scanId: string;
+  sessionId: string;
   targetUrl?: string;
-  detectionIds?: string[];
-  config?: Record<string, unknown>;
+  instructions?: string;
 }
 
 export interface Job<T = JobData> {

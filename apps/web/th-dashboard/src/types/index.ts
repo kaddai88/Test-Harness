@@ -1,4 +1,4 @@
-export type ScanStatus = 'pending' | 'running' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
+export type ScanStatus = 'pending' | 'planning' | 'executing' | 'running' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
 export type ScanScope = 'page' | 'site' | 'domain';
 export type DetectionCategory = 'security' | 'performance' | 'functionality' | 'seo' | 'accessibility';
 export type ScanStrategy = 'sequential' | 'parallel' | 'adaptive';
@@ -25,14 +25,20 @@ export interface Scan {
 
 export interface Finding {
   id: string;
-  scanId: string;
-  category: DetectionCategory;
+  sessionId?: string;
+  scanId?: string;
+  category?: DetectionCategory;
   severity: Severity;
   title: string;
   description: string;
-  recommendation: string;
+  recommendation?: string;
   url?: string;
-  evidence?: string;
+  evidence?: {
+    selector?: string;
+    screenshot?: string;
+    url?: string;
+    html?: string;
+  };
   createdAt: string;
 }
 
@@ -50,13 +56,16 @@ export interface DetectionProgress {
 
 export interface AgentActivity {
   id: string;
-  scanId: string;
+  scanId?: string;
   turn: number;
-  action: string;
+  kind: 'turn_started' | 'stream' | 'tool_call' | 'tool_result';
   tool?: string;
-  input?: string;
-  output?: string;
-  timestamp: string;
+  input?: Record<string, unknown>;
+  success?: boolean;
+  /** Partial streamed text (kind: "stream") */
+  partial?: string;
+  done?: boolean;
+  timestamp: number;
 }
 
 export interface HealthStatus {

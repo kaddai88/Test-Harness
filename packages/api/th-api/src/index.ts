@@ -24,9 +24,6 @@ export {
 export { dispatchScanRoute } from "./routes/scans.js";
 export type { ScanRouteDeps } from "./routes/scans.js";
 
-export { dispatchDetectionRoute } from "./routes/detections.js";
-export type { DetectionRouteDeps } from "./routes/detections.js";
-
 export { dispatchReportRoute } from "./routes/reports.js";
 export type { ReportRouteDeps } from "./routes/reports.js";
 

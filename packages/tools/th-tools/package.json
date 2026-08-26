@@ -20,7 +20,6 @@
     "@test-harness/th-core": "workspace:*",
     "@test-harness/th-protocol": "workspace:*",
     "@test-harness/th-crawl": "workspace:*",
-    "@test-harness/th-detection": "workspace:*",
     "@test-harness/th-browser": "workspace:*",
     "zod": "^3.24.0"
   }

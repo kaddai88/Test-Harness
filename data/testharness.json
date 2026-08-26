@@ -1,0 +1,121 @@
+{
+  "scans": {
+    "49653c04-2b0a-4d07-8a2f-61a4ff9eba62": {
+      "id": "49653c04-2b0a-4d07-8a2f-61a4ff9eba62",
+      "targetUrl": "https://example.com",
+      "targetConfig": {},
+      "scanConfig": {
+        "strategy": "adaptive",
+        "instructions": "Check the homepage loads and contains a title"
+      },
+      "status": "failed",
+      "createdAt": "2026-08-26T00:44:31.113Z",
+      "startedAt": "2026-08-26T00:44:31.117Z",
+      "completedAt": "2026-08-26T00:44:33.854Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1
+      }
+    },
+    "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7": {
+      "id": "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7",
+      "targetUrl": "https://example.com",
+      "targetConfig": {},
+      "scanConfig": {
+        "strategy": "adaptive",
+        "instructions": "Check the homepage loads and contains a title"
+      },
+      "status": "completed",
+      "createdAt": "2026-08-26T00:47:28.855Z",
+      "startedAt": "2026-08-26T00:47:28.871Z",
+      "completedAt": "2026-08-26T00:47:59.638Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "## Test Summary\n\nI've successfully tested the homepage at https://example.com to verify it loads correctly and contains a title.\n\n### What I Tested:\n1. **Page Load**: Navigated to the homepage and verified it loads with HTTP 200 status\n2. **Page Title**: Confirmed the HTML `<title>` tag contains \"Example Domain\"\n3. **Visible Content**: Verified the H1 heading is visible and displays \"Example Domain\"\n4. **Page Structure**: Extracted DOM to understand the page layout\n5. **Performance**: Measured load times and Core Web Vitals\n\n### Results:\n✅ **All checks passed**\n\n- **Status**: 200 OK\n- **Title**: \"Example Domain\" ✓\n- **H1 Heading**: Visible and contains \"Example Domain\" ✓\n- **Load Time**: 658ms (browser navigation)\n- **Performance Metrics**:\n  - TTFB: 3ms (excellent)\n  - DOM Content Loaded: 13ms (excellent)\n  - First Contentful Paint: 40ms (excellent)\n  - DOM Nodes: 12 (minimal, clean page)\n\n### Page Structure:\n- Simple, clean HTML page\n- One H1 heading: \"Example Domain\"\n- One link to iana.org/domains/example\n- Viewport meta tag present (mobile-friendly)\n- No forms, images, or scripts\n\n**Overall Health**: ✅ Excellent - The homepage loads successfully, contains the expected title, and performs well with fast load times.",
+        "findings": [],
+        "turns": 3
+      }
+    },
+    "95890a80-ef7b-4432-bb07-65ceae943c50": {
+      "id": "95890a80-ef7b-4432-bb07-65ceae943c50",
+      "targetUrl": "https://example.com",
+      "targetConfig": {},
+      "scanConfig": {
+        "strategy": "adaptive",
+        "instructions": "Check the page loads"
+      },
+      "status": "completed",
+      "createdAt": "2026-08-26T00:49:46.490Z",
+      "startedAt": "2026-08-26T00:49:46.494Z",
+      "completedAt": "2026-08-26T00:50:45.916Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "## Test Session Summary\n\n### What I Tested\nI performed a comprehensive page load test on https://example.com:\n\n**Core Functionality:**\n- ✅ Page navigation and HTTP response (200 OK)\n- ✅ HTML content retrieval and rendering\n- ✅ DOM structure validation (headings, paragraphs, links)\n- ✅ Visual rendering (screenshot captured)\n- ✅ Element visibility and text content verification\n- ✅ Link functionality (clicked \"Learn more\" link successfully)\n\n**Performance Metrics:**\n- Time to First Byte (TTFB): 2.6ms\n- DOM Content Loaded: 13.3ms\n- Full Load: 13.9ms\n- First Contentful Paint: 36ms\n- Page size: Minimal (static HTML)\n\n### Findings\n\n**1 Issue Reported:**\n\n**Medium Severity - Missing HTTP Security Headers**\nThe page loads correctly but lacks standard security headers:\n- No Strict-Transport-Security (HSTS)\n- No Content-Security-Policy (CSP)\n- No X-Content-Type-Options\n- No X-Frame-Options\n- No Referrer-Policy\n\n### Overall Health\n✅ **Page loads successfully** - All core functionality works as expected. The page renders correctly, content is accessible, and links function properly. Performance is excellent with sub-20ms load times.\n\nThe only issue found is the absence of security headers, which is a best-practice concern rather than a functional problem. For a simple documentation example page like this, the impact is low, but adding these headers would improve security posture.",
+        "findings": [
+          {
+            "id": "f_1787705434971_8fg01e",
+            "sessionId": "95890a80-ef7b-4432-bb07-65ceae943c50",
+            "severity": "medium",
+            "title": "Missing HTTP Security Headers",
+            "description": "The response from https://example.com is missing several standard HTTP security headers:\n\n1. **Strict-Transport-Security (HSTS)** — Not set. Without HSTS, browsers may allow HTTP connections, exposing users to downgrade attacks.\n2. **Content-Security-Policy (CSP)** — Not set. No CSP means the browser has no restrictions on content sources, increasing XSS risk.\n3. **X-Content-Type-Options** — Not set. Without `nosniff`, browsers may MIME-sniff responses, potentially executing malicious content.\n4. **X-Frame-Options** — Not set. The page could be embedded in iframes on malicious sites (clickjacking risk).\n5. **Referrer-Policy** — Not set. Referrer information may leak to external sites.\n\nObserved headers: server: cloudflare, content-type: text/html, cf-cache-status: HIT, allow: GET, HEAD. No security-related headers present.",
+            "recommendation": "Add the following security headers to the server/CDN configuration:\n- Strict-Transport-Security: max-age=31536000; includeSubDomains\n- Content-Security-Policy: default-src 'self'\n- X-Content-Type-Options: nosniff\n- X-Frame-Options: DENY\n- Referrer-Policy: strict-origin-when-cross-origin",
+            "evidence": {
+              "url": "https://example.com"
+            },
+            "createdAt": "2026-08-26T00:50:34.971Z"
+          }
+        ],
+        "turns": 6
+      }
+    },
+    "524ab9a6-a247-4f01-9696-effaf438bb2c": {
+      "id": "524ab9a6-a247-4f01-9696-effaf438bb2c",
+      "targetUrl": "https://example.com",
+      "targetConfig": {},
+      "scanConfig": {
+        "strategy": "adaptive",
+        "instructions": "Check page loads"
+      },
+      "status": "completed",
+      "createdAt": "2026-08-26T00:51:41.328Z",
+      "startedAt": "2026-08-26T00:51:41.331Z",
+      "completedAt": "2026-08-26T00:52:21.496Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "The link navigated successfully to the IANA example domains page. All tests passed. Here's my summary:\n\n---\n\n## Test Session Summary — https://example.com\n\n### What I Tested\n| Test | Method | Result |\n|------|--------|--------|\n| **Page Load** | `navigate_to` + `crawl_page` | ✅ HTTP 200, loaded in ~477ms |\n| **Performance** | `measure_performance` | ✅ TTFB: 2.2ms, DOMContentLoaded: 19.3ms, FCP: 64ms |\n| **Content Rendering** | `assert_visible` + `assert_text` on `<h1>` | ✅ \"Example Domain\" heading visible and correct |\n| **DOM Structure** | `extract_dom` | ✅ 1 heading, 1 link, viewport meta tag present, no broken resources |\n| **Visual Check** | `take_screenshot` | ✅ Page renders correctly — clean layout, readable text |\n| **Outbound Link** | `click_element` → IANA page | ✅ \"Learn more\" link navigated successfully to `iana.org/domains/example` |\n\n### Findings Reported\n**None.** No issues were discovered during this test session.\n\n### Overall Health: ✅ Healthy\n\nThe page loads quickly (sub-500ms), returns a proper HTTP 200 response, renders all expected content (heading, descriptive paragraphs, outbound link), and the single interactive element (the \"Learn more\" link) functions correctly. Performance metrics are excellent — TTFB of ~2ms and FCP of 64ms indicate the Cloudflare-cached page is served very efficiently. The page is minimal (12 DOM nodes, no external resources, no JavaScript) which contributes to its fast load times.",
+        "findings": [],
+        "turns": 5
+      }
+    }
+  },
+  "detectionResults": {},
+  "scanEvents": {},
+  "reports": {
+    "f7540b92-ad0e-406d-9e56-efc893a3bd43": {
+      "id": "f7540b92-ad0e-406d-9e56-efc893a3bd43",
+      "scanId": "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7",
+      "format": "json",
+      "content": "{\n  \"sessionId\": \"308cf4bc-49ca-4cd4-bca7-fc12698f5ef7\",\n  \"targetUrl\": \"https://example.com\",\n  \"startedAt\": \"2026-08-26T00:47:28.871Z\",\n  \"completedAt\": \"2026-08-26T00:47:59.638Z\",\n  \"durationMs\": 30767,\n  \"summary\": {\n    \"totalFindings\": 0,\n    \"bySeverity\": {\n      \"critical\": 0,\n      \"high\": 0,\n      \"medium\": 0,\n      \"low\": 0,\n      \"info\": 0\n    },\n    \"overallScore\": 100,\n    \"completedSteps\": 0,\n    \"failedSteps\": 0\n  },\n  \"bySeverity\": [],\n  \"findings\": [],\n  \"aiSummary\": \"## Test Summary\\n\\nI've successfully tested the homepage at https://example.com to verify it loads correctly and contains a title.\\n\\n### What I Tested:\\n1. **Page Load**: Navigated to the homepage and verified it loads with HTTP 200 status\\n2. **Page Title**: Confirmed the HTML `<title>` tag contains \\\"Example Domain\\\"\\n3. **Visible Content**: Verified the H1 heading is visible and displays \\\"Example Domain\\\"\\n4. **Page Structure**: Extracted DOM to understand the page layout\\n5. **Performance**: Measured load times and Core Web Vitals\\n\\n### Results:\\n✅ **All checks passed**\\n\\n- **Status**: 200 OK\\n- **Title**: \\\"Example Domain\\\" ✓\\n- **H1 Heading**: Visible and contains \\\"Example Domain\\\" ✓\\n- **Load Time**: 658ms (browser navigation)\\n- **Performance Metrics**:\\n  - TTFB: 3ms (excellent)\\n  - DOM Content Loaded: 13ms (excellent)\\n  - First Contentful Paint: 40ms (excellent)\\n  - DOM Nodes: 12 (minimal, clean page)\\n\\n### Page Structure:\\n- Simple, clean HTML page\\n- One H1 heading: \\\"Example Domain\\\"\\n- One link to iana.org/domains/example\\n- Viewport meta tag present (mobile-friendly)\\n- No forms, images, or scripts\\n\\n**Overall Health**: ✅ Excellent - The homepage loads successfully, contains the expected title, and performs well with fast load times.\"\n}",
+      "data": {
+        "sessionId": "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7",
+        "targetUrl": "https://example.com",
+        "totalFindings": 0
+      },
+      "createdAt": "2026-08-26T00:48:23.905Z"
+    },
+    "47b3cac2-0952-4aae-b211-5327e2545353": {
+      "id": "47b3cac2-0952-4aae-b211-5327e2545353",
+      "scanId": "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7",
+      "format": "html",
+      "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<title>Test Report — 308cf4bc-49ca-4cd4-bca7-fc12698f5ef7</title>\n<style>\n  body { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #111; line-height: 1.5; }\n  h1 { border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }\n  h2 { margin-top: 2rem; color: #1f2937; }\n  .meta { color: #6b7280; font-size: 0.95rem; }\n  .meta span { margin-right: 1.5rem; }\n  .score-box { display: inline-block; padding: 0.5rem 1rem; border-radius: 8px; color: white; font-size: 1.5rem; font-weight: bold; background: #16a34a; }\n  table { border-collapse: collapse; margin: 1rem 0; }\n  th, td { border: 1px solid #e5e7eb; padding: 0.4rem 0.8rem; text-align: left; }\n  th { background: #f9fafb; }\n  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; color: white; font-size: 0.75rem; text-transform: uppercase; font-weight: 600; }\n  .group { background: #f9fafb; border-left: 4px solid #3b82f6; padding: 1rem; margin: 1rem 0; border-radius: 4px; }\n  .group h3 { margin-top: 0; }\n  .muted { color: #6b7280; font-weight: normal; font-size: 0.9rem; }\n  ul { padding-left: 1.5rem; }\n  .finding { background: white; border-radius: 4px; padding: 0.75rem; margin: 0.5rem 0; border-left: 3px solid #d1d5db; }\n  .finding.critical { border-left-color: #b91c1c; }\n  .finding.high { border-left-color: #ea580c; }\n  .finding.medium { border-left-color: #ca8a04; }\n  .finding.low { border-left-color: #2563eb; }\n  .finding p { margin: 0.25rem 0; }\n  .rec { color: #1e40af; }\n</style>\n</head>\n<body>\n  <h1>Test Report</h1>\n  <div class=\"meta\">\n    <span><strong>Session ID:</strong> 308cf4bc-49ca-4cd4-bca7-fc12698f5ef7</span><br>\n    <span><strong>Target:</strong> https://example.com</span><br>\n    <span><strong>Started:</strong> 2026-08-26T00:47:28.871Z</span><br>\n    <span><strong>Completed:</strong> 2026-08-26T00:47:59.638Z</span><br>\n    <span><strong>Duration:</strong> 30.8s</span>\n  </div>\n\n  <h2>AI Summary</h2><p>## Test Summary\n\nI've successfully tested the homepage at https://example.com to verify it loads correctly and contains a title.\n\n### What I Tested:\n1. **Page Load**: Navigated to the homepage and verified it loads with HTTP 200 status\n2. **Page Title**: Confirmed the HTML `&lt;title&gt;` tag contains &quot;Example Domain&quot;\n3. **Visible Content**: Verified the H1 heading is visible and displays &quot;Example Domain&quot;\n4. **Page Structure**: Extracted DOM to understand the page layout\n5. **Performance**: Measured load times and Core Web Vitals\n\n### Results:\n✅ **All checks passed**\n\n- **Status**: 200 OK\n- **Title**: &quot;Example Domain&quot; ✓\n- **H1 Heading**: Visible and contains &quot;Example Domain&quot; ✓\n- **Load Time**: 658ms (browser navigation)\n- **Performance Metrics**:\n  - TTFB: 3ms (excellent)\n  - DOM Content Loaded: 13ms (excellent)\n  - First Contentful Paint: 40ms (excellent)\n  - DOM Nodes: 12 (minimal, clean page)\n\n### Page Structure:\n- Simple, clean HTML page\n- One H1 heading: &quot;Example Domain&quot;\n- One link to iana.org/domains/example\n- Viewport meta tag present (mobile-friendly)\n- No forms, images, or scripts\n\n**Overall Health**: ✅ Excellent - The homepage loads successfully, contains the expected title, and performs well with fast load times.</p>\n\n  <h2>Score Overview</h2>\n  <div class=\"score-box\">100 / 100</div>\n  <table>\n    <thead><tr><th>Severity</th><th>Count</th></tr></thead>\n    <tbody>\n      <tr>\n        <td><span class=\"badge\" style=\"background:#b91c1c\">critical</span></td>\n        <td>0</td>\n      </tr>\n\n      <tr>\n        <td><span class=\"badge\" style=\"background:#ea580c\">high</span></td>\n        <td>0</td>\n      </tr>\n\n      <tr>\n        <td><span class=\"badge\" style=\"background:#ca8a04\">medium</span></td>\n        <td>0</td>\n      </tr>\n\n      <tr>\n        <td><span class=\"badge\" style=\"background:#2563eb\">low</span></td>\n        <td>0</td>\n      </tr>\n\n      <tr>\n        <td><span class=\"badge\" style=\"background:#6b7280\">info</span></td>\n        <td>0</td>\n      </tr></tbody>\n  </table>\n\n  <h2>Findings by Severity</h2>\n  <p>No findings to report.</p>\n</body>\n</html>",
+      "data": {
+        "sessionId": "308cf4bc-49ca-4cd4-bca7-fc12698f5ef7",
+        "targetUrl": "https://example.com",
+        "totalFindings": 0
+      },
+      "createdAt": "2026-08-26T00:48:41.640Z"
+    }
+  }
+}

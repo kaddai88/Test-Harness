@@ -1,18 +1,11 @@
 /**
  * HTML renderer — generates a self-contained HTML report with inline CSS.
  */
-import type { DetectionResult, Severity } from "@test-harness/th-protocol";
-import { summarize, groupByCategory } from "../aggregator.js";
+import type { Finding, FindingSeverity } from "@test-harness/th-protocol";
+import { summarize, groupBySeverity } from "../aggregator.js";
+import type { ReportInput } from "../generator.js";
 
-export interface HtmlRenderInput {
-  scanId: string;
-  targetUrl: string;
-  results: DetectionResult[];
-  startedAt: Date;
-  completedAt: Date;
-}
-
-const SEVERITY_COLORS: Record<Severity, string> = {
+const SEVERITY_COLORS: Record<FindingSeverity, string> = {
   critical: "#b91c1c",
   high: "#ea580c",
   medium: "#ca8a04",
@@ -20,17 +13,17 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   info: "#6b7280",
 };
 
-export function renderHtml(input: HtmlRenderInput): string {
-  const { scanId, targetUrl, results, startedAt, completedAt } = input;
-  const summary = summarize(input.results);
-  const groups = groupByCategory(results);
+export function renderHtml(input: ReportInput): string {
+  const { sessionId, targetUrl, findings, summary, startedAt, completedAt } = input;
+  const scanSummary = summarize(findings);
+  const groups = groupBySeverity(findings);
   const durationMs = completedAt.getTime() - startedAt.getTime();
   const durationSec = (durationMs / 1000).toFixed(1);
 
   const scoreColor =
-    summary.overallScore >= 80
+    scanSummary.overallScore >= 80
       ? "#16a34a"
-      : summary.overallScore >= 50
+      : scanSummary.overallScore >= 50
         ? "#ca8a04"
         : "#b91c1c";
 
@@ -41,12 +34,12 @@ export function renderHtml(input: HtmlRenderInput): string {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-  const severityRows = (["critical", "high", "medium", "low", "info"] as Severity[])
+  const severityRows = (["critical", "high", "medium", "low", "info"] as FindingSeverity[])
     .map(
       (sev) => `
       <tr>
         <td><span class="badge" style="background:${SEVERITY_COLORS[sev]}">${sev}</span></td>
-        <td>${summary.bySeverity[sev]}</td>
+        <td>${scanSummary.bySeverity[sev]}</td>
       </tr>`
     )
     .join("\n");
@@ -58,7 +51,7 @@ export function renderHtml(input: HtmlRenderInput): string {
           .map(
             (g) => `
         <section class="group">
-          <h3>${escape(capitalize(g.category))} <span class="muted">· score ${g.score}/100 · ${g.findings.length} finding${g.findings.length === 1 ? "" : "s"}</span></h3>
+          <h3>${escape(capitalize(g.key))} <span class="muted">· ${g.findings.length} finding${g.findings.length === 1 ? "" : "s"}</span></h3>
           <ul>
             ${g.findings
               .map(
@@ -80,7 +73,7 @@ export function renderHtml(input: HtmlRenderInput): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Scan Report — ${escape(scanId)}</title>
+<title>Test Report — ${escape(sessionId)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #111; line-height: 1.5; }
   h1 { border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
@@ -106,23 +99,25 @@ export function renderHtml(input: HtmlRenderInput): string {
 </style>
 </head>
 <body>
-  <h1>Scan Report</h1>
+  <h1>Test Report</h1>
   <div class="meta">
-    <span><strong>Scan ID:</strong> ${escape(scanId)}</span><br>
+    <span><strong>Session ID:</strong> ${escape(sessionId)}</span><br>
     <span><strong>Target:</strong> ${escape(targetUrl)}</span><br>
     <span><strong>Started:</strong> ${startedAt.toISOString()}</span><br>
     <span><strong>Completed:</strong> ${completedAt.toISOString()}</span><br>
     <span><strong>Duration:</strong> ${durationSec}s</span>
   </div>
 
+  ${summary ? `<h2>AI Summary</h2><p>${escape(summary)}</p>` : ""}
+
   <h2>Score Overview</h2>
-  <div class="score-box">${summary.overallScore} / 100</div>
+  <div class="score-box">${scanSummary.overallScore} / 100</div>
   <table>
     <thead><tr><th>Severity</th><th>Count</th></tr></thead>
     <tbody>${severityRows}</tbody>
   </table>
 
-  <h2>Findings by Category</h2>
+  <h2>Findings by Severity</h2>
   ${groupsHtml}
 </body>
 </html>`;

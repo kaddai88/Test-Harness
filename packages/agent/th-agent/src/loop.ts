@@ -126,23 +126,22 @@ export class AgentLoop {
     logger.info(`Starting scan for ${options.target.url}`);
 
     // Log the initial user message (scan task)
-    const availableDetections = options.toolRegistry
+    const availableTools = options.toolRegistry
       .getAll()
-      .filter((t) => t.category === "detection")
       .map((t) => t.id);
 
     sessionLog.append("user/message", {
       turn: 0,
       content: buildScanPlanningPrompt(
         options.target.url,
-        availableDetections,
+        availableTools,
         options.config.instructions as string | undefined
       ),
     });
 
     // Log a system note about scan configuration
     sessionLog.append("system/note", {
-      note: `Scan config: strategy=${options.config.strategy}, maxTurns=${context.maxTurns}, detections=[${availableDetections.join(", ")}]`,
+      note: `Scan config: strategy=${options.config.strategy}, maxTurns=${context.maxTurns}, tools=[${availableTools.join(", ")}]`,
     });
 
     // Main loop

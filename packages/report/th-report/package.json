@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@test-harness/th-core": "workspace:*",
-    "@test-harness/th-protocol": "workspace:*",
-    "@test-harness/th-detection": "workspace:*"
+    "@test-harness/th-protocol": "workspace:*"
   }
 }

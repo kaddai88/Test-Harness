@@ -4,6 +4,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import type { TaskQueue } from "@test-harness/th-queue";
+import type { Finding } from "@test-harness/th-protocol";
 import {
   sendJson,
   readJsonBody,
@@ -48,14 +49,17 @@ export async function handleCreateScan(
     scanConfig: body.scanConfig ?? {},
   });
 
-  // Enqueue a scan:execute job
+  // Enqueue a test:execute job
+  const scanConfig = (body.scanConfig ?? {}) as Record<string, unknown>;
   await deps.queue.add(
-    "scan:execute",
+    "test:execute",
     {
-      scanId: scan.id,
+      sessionId: scan.id,
       targetUrl: body.targetUrl,
-      detectionIds: body.detectionIds,
-      config: body.scanConfig,
+      instructions:
+        typeof scanConfig.instructions === "string"
+          ? scanConfig.instructions
+          : undefined,
     },
     { priority: 0 }
   );
@@ -110,12 +114,11 @@ export async function handleGetScan(
     return;
   }
 
-  const [detectionResults, events] = await Promise.all([
-    deps.repos.detectionResults.findByScanId(scan.id),
-    deps.repos.scanEvents.findByScanId(scan.id),
-  ]);
+  // Flatten findings from metadata so the frontend can consume them directly
+  const findings =
+    (scan.metadata?.findings as Finding[] | undefined) ?? [];
 
-  sendJson(res, 200, { scan, detectionResults, events });
+  sendJson(res, 200, { ...scan, findings, summary: scan.metadata?.summary });
 }
 
 /** DELETE /api/v1/scans/:id — delete a scan. */

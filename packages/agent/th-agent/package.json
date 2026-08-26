@@ -20,7 +20,6 @@
     "@test-harness/th-core": "workspace:*",
     "@test-harness/th-protocol": "workspace:*",
     "@test-harness/th-llm": "workspace:*",
-    "@test-harness/th-tools": "workspace:*",
-    "@test-harness/th-detection": "workspace:*"
+    "@test-harness/th-tools": "workspace:*"
   }
 }
