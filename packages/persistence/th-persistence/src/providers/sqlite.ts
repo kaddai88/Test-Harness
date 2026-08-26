@@ -20,15 +20,7 @@ export class SQLiteDatabase {
   close(): void {}
 }
 
-export class SQLiteScanRepository {
-  constructor() { throw new Error("SQLite not available"); }
-}
-
-export class SQLiteDetectionResultRepository {
-  constructor() { throw new Error("SQLite not available"); }
-}
-
-export class SQLiteScanEventRepository {
+export class SQLiteSessionRepository {
   constructor() { throw new Error("SQLite not available"); }
 }
 

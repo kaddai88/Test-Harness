@@ -5,22 +5,13 @@
  * Perfect for development, testing, and demo mode.
  */
 import type {
-  ScanRepository,
-  CreateScanInput,
-  ScanFilter,
-  DetectionResultRepository,
-  CreateDetectionResultInput,
-  ScanEventRepository,
-  CreateScanEventInput,
+  SessionRepository,
+  CreateSessionInput,
+  SessionFilter,
   ReportRepository,
   CreateReportInput,
 } from "../repositories/interfaces.js";
-import type {
-  ScanRow,
-  DetectionResultRow,
-  ScanEventRow,
-  ReportRow,
-} from "../schema.js";
+import type { SessionRow, ReportRow } from "../schema.js";
 
 function uuid(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
@@ -37,13 +28,13 @@ function now(): string {
   return new Date().toISOString();
 }
 
-// ── In-memory Scan Repository ──
+// ── In-memory Session Repository ──
 
-export class InMemoryScanRepository implements ScanRepository {
-  private store = new Map<string, ScanRow>();
+export class InMemorySessionRepository implements SessionRepository {
+  private store = new Map<string, SessionRow>();
 
-  async create(input: CreateScanInput): Promise<ScanRow> {
-    const row: ScanRow = {
+  async create(input: CreateSessionInput): Promise<SessionRow> {
+    const row: SessionRow = {
       id: input.id ?? uuid(),
       targetUrl: input.targetUrl,
       targetConfig: input.targetConfig,
@@ -59,18 +50,12 @@ export class InMemoryScanRepository implements ScanRepository {
     return { ...row };
   }
 
-  async findById(id: string): Promise<ScanRow | null> {
+  async findById(id: string): Promise<SessionRow | null> {
     const row = this.store.get(id);
     return row ? { ...row } : null;
   }
 
-  async findByTarget(url: string): Promise<ScanRow[]> {
-    return Array.from(this.store.values())
-      .filter((r) => r.targetUrl === url)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
-  async findAll(filter?: ScanFilter): Promise<ScanRow[]> {
+  async findAll(filter?: SessionFilter): Promise<SessionRow[]> {
     let rows = Array.from(this.store.values());
     if (filter?.status) {
       rows = rows.filter((r) => r.status === filter.status);
@@ -109,87 +94,11 @@ export class InMemoryScanRepository implements ScanRepository {
     this.store.delete(id);
   }
 
-  async count(filter?: ScanFilter): Promise<number> {
+  async count(filter?: SessionFilter): Promise<number> {
     if (!filter?.status) return this.store.size;
     let count = 0;
     this.store.forEach((r) => { if (r.status === filter.status) count++; });
     return count;
-  }
-}
-
-// ── In-memory Detection Result Repository ──
-
-export class InMemoryDetectionResultRepository implements DetectionResultRepository {
-  private store = new Map<string, DetectionResultRow>();
-
-  async create(input: CreateDetectionResultInput): Promise<DetectionResultRow> {
-    const row: DetectionResultRow = {
-      id: input.id ?? uuid(),
-      scanId: input.scanId,
-      detectionId: input.detectionId,
-      category: input.category,
-      status: input.status,
-      findings: input.findings ?? [],
-      score: input.score ?? 0,
-      startedAt: now(),
-      completedAt: "",
-      error: input.error ?? null,
-    };
-    this.store.set(row.id, row);
-    return { ...row };
-  }
-
-  async findByScanId(scanId: string): Promise<DetectionResultRow[]> {
-    return Array.from(this.store.values())
-      .filter((r) => r.scanId === scanId)
-      .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
-      .map((r) => ({ ...r }));
-  }
-
-  async findById(id: string): Promise<DetectionResultRow | null> {
-    const row = this.store.get(id);
-    return row ? { ...row } : null;
-  }
-
-  async updateStatus(id: string, status: string): Promise<void> {
-    const row = this.store.get(id);
-    if (row) row.status = status;
-  }
-
-  async updateCompletedAt(id: string): Promise<void> {
-    const row = this.store.get(id);
-    if (row) row.completedAt = now();
-  }
-}
-
-// ─ In-memory Scan Event Repository ──
-
-export class InMemoryScanEventRepository implements ScanEventRepository {
-  private store = new Map<string, ScanEventRow>();
-
-  async create(input: CreateScanEventInput): Promise<ScanEventRow> {
-    const row: ScanEventRow = {
-      id: input.id ?? uuid(),
-      scanId: input.scanId,
-      eventType: input.eventType,
-      eventData: input.eventData,
-      createdAt: now(),
-      sequence: input.sequence,
-    };
-    this.store.set(row.id, row);
-    return { ...row };
-  }
-
-  async findByScanId(scanId: string): Promise<ScanEventRow[]> {
-    return Array.from(this.store.values())
-      .filter((r) => r.scanId === scanId)
-      .sort((a, b) => a.sequence - b.sequence)
-      .map((r) => ({ ...r }));
-  }
-
-  async getNextSequence(scanId: string): Promise<number> {
-    const events = await this.findByScanId(scanId);
-    return events.length > 0 ? events[events.length - 1]!.sequence + 1 : 1;
   }
 }
 
@@ -201,7 +110,7 @@ export class InMemoryReportRepository implements ReportRepository {
   async create(input: CreateReportInput): Promise<ReportRow> {
     const row: ReportRow = {
       id: input.id ?? uuid(),
-      scanId: input.scanId,
+      sessionId: input.sessionId,
       format: input.format,
       content: input.content ?? null,
       data: input.data ?? {},
@@ -211,16 +120,16 @@ export class InMemoryReportRepository implements ReportRepository {
     return { ...row };
   }
 
-  async findByScanId(scanId: string): Promise<ReportRow[]> {
+  async findBySessionId(sessionId: string): Promise<ReportRow[]> {
     return Array.from(this.store.values())
-      .filter((r) => r.scanId === scanId)
+      .filter((r) => r.sessionId === sessionId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((r) => ({ ...r }));
   }
 
-  async findByScanIdAndFormat(scanId: string, format: string): Promise<ReportRow | null> {
+  async findBySessionIdAndFormat(sessionId: string, format: string): Promise<ReportRow | null> {
     for (const row of this.store.values()) {
-      if (row.scanId === scanId && row.format === format) return { ...row };
+      if (row.sessionId === sessionId && row.format === format) return { ...row };
     }
     return null;
   }

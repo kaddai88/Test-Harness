@@ -1,16 +1,16 @@
 /**
  * Database schema — table definitions and SQL schemas.
  *
- * These tables form the persistent storage layer for scan data.
+ * These tables form the persistent storage layer for session data.
  * The schema is provider-neutral — works with both PostgreSQL and SQLite.
  */
 
 /**
- * Scan record — represents a single website scan.
+ * Session record — represents a single AI-driven test session.
  *
- * Status flow: pending → crawling → analyzing → completed | failed | cancelled
+ * Status flow: pending → planning → executing → completed | failed | cancelled
  */
-export interface ScanRow {
+export interface SessionRow {
   id: string;
   targetUrl: string;
   targetConfig: Record<string, unknown>;
@@ -24,39 +24,11 @@ export interface ScanRow {
 }
 
 /**
- * Detection result — one detection plugin's findings for a scan.
- */
-export interface DetectionResultRow {
-  id: string;
-  scanId: string;
-  detectionId: string;
-  category: string;
-  status: string;
-  findings: Array<Record<string, unknown>>;
-  score: number;
-  startedAt: string;
-  completedAt: string;
-  error: string | null;
-}
-
-/**
- * Scan event — durable event for audit trail and replay.
- */
-export interface ScanEventRow {
-  id: string;
-  scanId: string;
-  eventType: string;
-  eventData: Record<string, unknown>;
-  createdAt: string;
-  sequence: number;
-}
-
-/**
- * Report — generated report for a scan.
+ * Report — generated report for a session.
  */
 export interface ReportRow {
   id: string;
-  scanId: string;
+  sessionId: string;
   format: string;
   content: string | null;
   data: Record<string, unknown>;
@@ -68,7 +40,7 @@ export interface ReportRow {
 export const POSTGRES_SCHEMA = `
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-CREATE TABLE IF NOT EXISTS scans (
+CREATE TABLE IF NOT EXISTS sessions (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   target_url    TEXT NOT NULL,
   target_config JSONB NOT NULL DEFAULT '{}',
@@ -81,52 +53,25 @@ CREATE TABLE IF NOT EXISTS scans (
   metadata      JSONB NOT NULL DEFAULT '{}'
 );
 
-CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(status);
-CREATE INDEX IF NOT EXISTS idx_scans_created_at ON scans(created_at DESC);
-
-CREATE TABLE IF NOT EXISTS detection_results (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  scan_id       UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
-  detection_id  TEXT NOT NULL,
-  category      VARCHAR(20) NOT NULL,
-  status        VARCHAR(20) NOT NULL,
-  findings      JSONB NOT NULL DEFAULT '[]',
-  score         NUMERIC(5,2),
-  started_at    TIMESTAMPTZ,
-  completed_at  TIMESTAMPTZ,
-  error         TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_detection_results_scan_id ON detection_results(scan_id);
-
-CREATE TABLE IF NOT EXISTS scan_events (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  scan_id       UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
-  event_type    TEXT NOT NULL,
-  event_data    JSONB NOT NULL DEFAULT '{}',
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  sequence      BIGINT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_scan_events_scan_id ON scan_events(scan_id);
-CREATE INDEX IF NOT EXISTS idx_scan_events_sequence ON scan_events(scan_id, sequence);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS reports (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  scan_id       UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+  session_id    UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   format        TEXT NOT NULL,
   content       TEXT,
   data          JSONB NOT NULL DEFAULT '{}',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_reports_scan_id ON reports(scan_id);
+CREATE INDEX IF NOT EXISTS idx_reports_session_id ON reports(session_id);
 `;
 
 // ── SQL Schema (SQLite for development) ──
 
 export const SQLITE_SCHEMA = `
-CREATE TABLE IF NOT EXISTS scans (
+CREATE TABLE IF NOT EXISTS sessions (
   id            TEXT PRIMARY KEY,
   target_url    TEXT NOT NULL,
   target_config TEXT NOT NULL DEFAULT '{}',
@@ -139,31 +84,9 @@ CREATE TABLE IF NOT EXISTS scans (
   metadata      TEXT NOT NULL DEFAULT '{}'
 );
 
-CREATE TABLE IF NOT EXISTS detection_results (
-  id            TEXT PRIMARY KEY,
-  scan_id       TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
-  detection_id  TEXT NOT NULL,
-  category      TEXT NOT NULL,
-  status        TEXT NOT NULL,
-  findings      TEXT NOT NULL DEFAULT '[]',
-  score         REAL,
-  started_at    TEXT,
-  completed_at  TEXT,
-  error         TEXT
-);
-
-CREATE TABLE IF NOT EXISTS scan_events (
-  id            TEXT PRIMARY KEY,
-  scan_id       TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
-  event_type    TEXT NOT NULL,
-  event_data    TEXT NOT NULL DEFAULT '{}',
-  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  sequence      INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS reports (
   id            TEXT PRIMARY KEY,
-  scan_id       TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+  session_id    TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   format        TEXT NOT NULL,
   content       TEXT,
   data          TEXT NOT NULL DEFAULT '{}',

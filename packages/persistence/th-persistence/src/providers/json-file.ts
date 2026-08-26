@@ -3,20 +3,11 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import type { SessionRow, ReportRow } from '../schema.js';
 import type {
-  ScanRow,
-  DetectionResultRow,
-  ScanEventRow,
-  ReportRow,
-} from '../schema.js';
-import type {
-  ScanRepository,
-  CreateScanInput,
-  ScanFilter,
-  DetectionResultRepository,
-  CreateDetectionResultInput,
-  ScanEventRepository,
-  CreateScanEventInput,
+  SessionRepository,
+  CreateSessionInput,
+  SessionFilter,
   ReportRepository,
   CreateReportInput,
 } from '../repositories/interfaces.js';
@@ -48,15 +39,13 @@ function ensureDir(filePath: string): void {
 export class JsonFileDatabase {
   private filePath: string;
   private data: {
-    scans: Record<string, ScanRow>;
-    detectionResults: Record<string, DetectionResultRow>;
-    scanEvents: Record<string, ScanEventRow>;
+    sessions: Record<string, SessionRow>;
     reports: Record<string, ReportRow>;
   };
 
   constructor(filePath: string) {
     this.filePath = filePath;
-    this.data = { scans: {}, detectionResults: {}, scanEvents: {}, reports: {} };
+    this.data = { sessions: {}, reports: {} };
 
     // Ensure parent directory exists
     ensureDir(filePath);
@@ -64,7 +53,19 @@ export class JsonFileDatabase {
     // Load existing data
     if (fs.existsSync(filePath)) {
       try {
-        this.data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        // Backward compat: rename old `scans` key → `sessions`
+        if (raw.scans && !raw.sessions) {
+          raw.sessions = raw.scans;
+          delete raw.scans;
+        }
+        // Drop legacy keys
+        delete raw.detectionResults;
+        delete raw.scanEvents;
+        this.data = {
+          sessions: raw.sessions ?? {},
+          reports: raw.reports ?? {},
+        };
       } catch (err) {
         console.warn('[JsonDB] Failed to load existing data, starting fresh:', err);
       }
@@ -91,14 +92,14 @@ export class JsonFileDatabase {
   }
 }
 
-// ── JSON File Scan Repository ──
+// ── JSON File Session Repository ──
 
-export class JsonFileScanRepository implements ScanRepository {
+export class JsonFileSessionRepository implements SessionRepository {
   constructor(private db: JsonFileDatabase) {}
 
-  async create(input: CreateScanInput): Promise<ScanRow> {
+  async create(input: CreateSessionInput): Promise<SessionRow> {
     const id = input.id ?? uuid();
-    const row: ScanRow = {
+    const row: SessionRow = {
       id,
       targetUrl: input.targetUrl,
       targetConfig: input.targetConfig ?? {},
@@ -110,24 +111,18 @@ export class JsonFileScanRepository implements ScanRepository {
       createdBy: input.createdBy ?? null,
       metadata: input.metadata ?? {},
     };
-    this.db.getData().scans[id] = row;
+    this.db.getData().sessions[id] = row;
     this.db.save();
     return { ...row };
   }
 
-  async findById(id: string): Promise<ScanRow | null> {
-    const row = this.db.getData().scans[id];
+  async findById(id: string): Promise<SessionRow | null> {
+    const row = this.db.getData().sessions[id];
     return row ? { ...row } : null;
   }
 
-  async findByTarget(url: string): Promise<ScanRow[]> {
-    return Object.values(this.db.getData().scans)
-      .filter((r) => r.targetUrl === url)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
-  async findAll(filter?: ScanFilter): Promise<ScanRow[]> {
-    let rows = Object.values(this.db.getData().scans);
+  async findAll(filter?: SessionFilter): Promise<SessionRow[]> {
+    let rows = Object.values(this.db.getData().sessions);
     if (filter?.status) {
       rows = rows.filter((r) => r.status === filter.status);
     }
@@ -140,7 +135,7 @@ export class JsonFileScanRepository implements ScanRepository {
   }
 
   async updateStatus(id: string, status: string): Promise<void> {
-    const row = this.db.getData().scans[id];
+    const row = this.db.getData().sessions[id];
     if (row) {
       row.status = status;
       this.db.save();
@@ -148,7 +143,7 @@ export class JsonFileScanRepository implements ScanRepository {
   }
 
   async updateStartedAt(id: string): Promise<void> {
-    const row = this.db.getData().scans[id];
+    const row = this.db.getData().sessions[id];
     if (row) {
       row.startedAt = now();
       this.db.save();
@@ -156,7 +151,7 @@ export class JsonFileScanRepository implements ScanRepository {
   }
 
   async updateCompletedAt(id: string): Promise<void> {
-    const row = this.db.getData().scans[id];
+    const row = this.db.getData().sessions[id];
     if (row) {
       row.completedAt = now();
       this.db.save();
@@ -164,7 +159,7 @@ export class JsonFileScanRepository implements ScanRepository {
   }
 
   async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
-    const row = this.db.getData().scans[id];
+    const row = this.db.getData().sessions[id];
     if (row) {
       row.metadata = { ...row.metadata, ...metadata };
       this.db.save();
@@ -172,100 +167,16 @@ export class JsonFileScanRepository implements ScanRepository {
   }
 
   async delete(id: string): Promise<void> {
-    delete this.db.getData().scans[id];
+    delete this.db.getData().sessions[id];
     this.db.save();
   }
 
-  async count(filter?: ScanFilter): Promise<number> {
-    const rows = Object.values(this.db.getData().scans);
+  async count(filter?: SessionFilter): Promise<number> {
+    const rows = Object.values(this.db.getData().sessions);
     if (filter?.status) {
       return rows.filter((r) => r.status === filter.status).length;
     }
     return rows.length;
-  }
-}
-
-// ── JSON File Detection Result Repository ──
-
-export class JsonFileDetectionResultRepository implements DetectionResultRepository {
-  constructor(private db: JsonFileDatabase) {}
-
-  async create(input: CreateDetectionResultInput): Promise<DetectionResultRow> {
-    const id = input.id ?? uuid();
-    const row: DetectionResultRow = {
-      id,
-      scanId: input.scanId,
-      detectionId: input.detectionId,
-      category: input.category,
-      status: input.status,
-      findings: input.findings ?? [],
-      score: input.score ?? 0,
-      startedAt: now(),
-      completedAt: '',
-      error: input.error ?? null,
-    };
-    this.db.getData().detectionResults[id] = row;
-    this.db.save();
-    return { ...row };
-  }
-
-  async findByScanId(scanId: string): Promise<DetectionResultRow[]> {
-    return Object.values(this.db.getData().detectionResults)
-      .filter((r) => r.scanId === scanId)
-      .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  }
-
-  async findById(id: string): Promise<DetectionResultRow | null> {
-    const row = this.db.getData().detectionResults[id];
-    return row ? { ...row } : null;
-  }
-
-  async updateStatus(id: string, status: string): Promise<void> {
-    const row = this.db.getData().detectionResults[id];
-    if (row) {
-      row.status = status;
-      this.db.save();
-    }
-  }
-
-  async updateCompletedAt(id: string): Promise<void> {
-    const row = this.db.getData().detectionResults[id];
-    if (row) {
-      row.completedAt = now();
-      this.db.save();
-    }
-  }
-}
-
-// ─ JSON File Scan Event Repository ──
-
-export class JsonFileScanEventRepository implements ScanEventRepository {
-  constructor(private db: JsonFileDatabase) {}
-
-  async create(input: CreateScanEventInput): Promise<ScanEventRow> {
-    const id = input.id ?? uuid();
-    const row: ScanEventRow = {
-      id,
-      scanId: input.scanId,
-      eventType: input.eventType,
-      eventData: input.eventData,
-      createdAt: now(),
-      sequence: input.sequence,
-    };
-    this.db.getData().scanEvents[id] = row;
-    this.db.save();
-    return { ...row };
-  }
-
-  async findByScanId(scanId: string): Promise<ScanEventRow[]> {
-    return Object.values(this.db.getData().scanEvents)
-      .filter((r) => r.scanId === scanId)
-      .sort((a, b) => a.sequence - b.sequence);
-  }
-
-  async getNextSequence(scanId: string): Promise<number> {
-    const events = await this.findByScanId(scanId);
-    return events.length > 0 ? events[events.length - 1]!.sequence + 1 : 1;
   }
 }
 
@@ -278,7 +189,7 @@ export class JsonFileReportRepository implements ReportRepository {
     const id = input.id ?? uuid();
     const row: ReportRow = {
       id,
-      scanId: input.scanId,
+      sessionId: input.sessionId,
       format: input.format,
       content: input.content ?? null,
       data: input.data ?? {},
@@ -289,15 +200,15 @@ export class JsonFileReportRepository implements ReportRepository {
     return { ...row };
   }
 
-  async findByScanId(scanId: string): Promise<ReportRow[]> {
+  async findBySessionId(sessionId: string): Promise<ReportRow[]> {
     return Object.values(this.db.getData().reports)
-      .filter((r) => r.scanId === scanId)
+      .filter((r) => r.sessionId === sessionId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  async findByScanIdAndFormat(scanId: string, format: string): Promise<ReportRow | null> {
+  async findBySessionIdAndFormat(sessionId: string, format: string): Promise<ReportRow | null> {
     const row = Object.values(this.db.getData().reports).find(
-      (r) => r.scanId === scanId && r.format === format
+      (r) => r.sessionId === sessionId && r.format === format
     );
     return row ? { ...row } : null;
   }
