@@ -1,7 +1,7 @@
 /**
  * Plugin system — the unit of composition.
  *
- * Every capability (LLM adapter, detection module, tool, storage backend)
+ * Every capability (LLM adapter, tool, storage backend)
  * is packaged as a plugin with a manifest, activation, and deactivation lifecycle.
  */
 import type { THContainer } from "./container.js";

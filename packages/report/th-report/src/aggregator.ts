@@ -7,7 +7,7 @@ import type {
 } from "@test-harness/th-protocol";
 
 /** Summary statistics for a scan */
-export interface ScanSummary {
+export interface SessionSummary {
   totalFindings: number;
   bySeverity: Record<FindingSeverity, number>;
   overallScore: number;
@@ -25,7 +25,7 @@ export interface FindingsGroup {
 /**
  * Build a full summary from findings.
  */
-export function summarize(findings: Finding[]): ScanSummary {
+export function summarize(findings: Finding[]): SessionSummary {
   const bySeverity: Record<FindingSeverity, number> = {
     critical: 0,
     high: 0,

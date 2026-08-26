@@ -11,7 +11,7 @@ export {
   summarize,
   groupBySeverity,
 } from "./aggregator.js";
-export type { ScanSummary, FindingsGroup } from "./aggregator.js";
+export type { SessionSummary, FindingsGroup } from "./aggregator.js";
 
 export { renderMarkdown } from "./renderers/markdown.js";
 

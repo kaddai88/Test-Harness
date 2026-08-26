@@ -100,8 +100,8 @@ describe("InMemoryQueue", () => {
     const waitingJobs = await queue.getJobs(undefined, "waiting");
     expect(waitingJobs).toHaveLength(3);
 
-    const activeScanExecute = await queue.getJobs("test:execute", "active");
-    expect(activeScanExecute).toHaveLength(0);
+    const activeSessionExecute = await queue.getJobs("test:execute", "active");
+    expect(activeSessionExecute).toHaveLength(0);
   });
 
   // ── priority ──

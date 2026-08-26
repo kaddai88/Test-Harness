@@ -1,12 +1,10 @@
 # Test-Harness
 
-> AI-powered website quality analysis platform. Crawl a site, run security /
-> performance / SEO / accessibility detections, and let an LLM-driven agent
-> intelligently orchestrate the scan and summarize findings.
+> AI-driven website testing platform (DSH-style architecture). Describe what you want tested in natural language — an LLM agent plans, executes browser actions, and streams results in real-time.
 
-![CI](https://github.com/<your-org>/test-harness/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-84%20passing-brightgreen)
-![Packages](https://img.shields.io/badge/packages-22-blue)
+![CI](https://github.com/kaddai88/Test_Harness_v2/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)
+![Packages](https://img.shields.io/badge/packages-17-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -22,17 +20,17 @@ built as a TypeScript monorepo. It is architecturally inspired by
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and its
 [Cordis](https://github.com/cordiverse/cordis) plugin framework:
 
-**Everything is a plugin** — LLM adapters, detection modules, tools, crawlers,
+**Everything is a plugin** — LLM adapters, tools, storage backends compose through a unified plugin container.
 and storage backends all register behind typed *service definitions* with
 *waterfall* extension points for interception.
 
 ### Key Features
 
-- **AI Agent Loop** — LLM decides which detections to run, when, and how to interpret results
+- **AI Agent Loop** — LLM decides what to test, in what order, and how to interpret results (DSH-style architecture with SessionLog, waterfall events, Turn→Step pipeline)
 - **Session Log** — Append-only event log; all model-visible content is reconstructable from the log
 - **Waterfall Events** — Around-middleware at every pipeline stage (pre-step, request, pre/post-execute)
 - **Streaming LLM** — Real-time terminal and WebSocket progress during scans
-- **9 Detection Plugins** — Security, Performance, SEO, Accessibility (22 detectors total)
+- **Browser Tools** — navigate, click, fill, screenshot, assert (Puppeteer-backed)
 - **3 LLM Adapters** — Ollama (local), OpenAI, DeepSeek with failover support
 - **Full Web Platform** — REST API + WebSocket + React Dashboard
 - **Production Ready** — Graceful shutdown, rate limiting, Docker deployment, CI/CD
@@ -62,20 +60,22 @@ and storage backends all register behind typed *service definitions* with
 │  Session Log: append-only, deriveMessages(), fully replayable           │
 └──────────┬──────────────────────────────────────────────────────────────┘
            │
-     ┌─────┼─────┬─────────────┬──────────────┐
-     ▼     ▼     ▼             ▼              ▼
-┌────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│  LLM   │ │ Tools  │ │Detection │ │  Crawl   │ │  Report  │
-│Provider│ │Registry│ │ Registry │ │ Service  │ │Generator │
-│        │ │        │ │          │ │          │ │          │
-│┌──────┐│ │┌──────┐│ │┌───────┐ │ │┌───────┐ │ │┌───────┐│
-││Ollama││ ││crawl ││ ││Sec(2) │ │ ││HTTP   │ │ ││ JSON  ││
-││OpenAI││ ││extract││ ││Perf(2)│ │ ││Fetch  │ │ ││  MD   ││
-││DeepSk││ ││http  ││ ││SEO (2)│ │ ││DOM    │ │ ││ HTML  ││
-││Stub  ││ ││links ││ ││A11y(3)│ │ ││Robots │ │ │└───────┘│
-│└──────┘│ ││detect││ │└───────┘ │ │└───────┘ │ │          │
-└────────┘ │└──────┘│ └──────────┘ └──────────┘ └──────────┘
-           └────────┘
+     ┌─────┬─────────────┬──────────┐
+     ▼     ▼             ▼          ▼
+┌────────┐ ┌──────────┐ ┌────────┐ ┌──────────┐
+│  LLM   │ │ Tools    │ │Browser │ │  Report  │
+│Provider│ │ Registry │ │ Driver │ │Generator │
+│        │ │          │ │        │ │          │
+│┌──────┐│ │┌──────┐ │ │┌──────┐│ │┌───────┐│
+││Ollama││ ││nav   │ │ ││Pupp- ││ ││ JSON  ││
+││OpenAI││ ││click │ │ ││eteer ││ ││  MD   ││
+││Qwen  ││ ││fill  │ │ ││(Chr) ││ ││ HTML  ││
+││Stub  ││ ││assert│ │ │└──────┘│ │└───────┘│
+│└──────┘│ ││screen│ │ │        │ │          │
+│        │ ││http  │ │ │        │ │          │
+│        │ ││report│ │ │        │ │          │
+│        │ │└──────┘ │ │        │ │          │
+└────────┘ └──────────┘ └────────┘ └──────────┘
      ┌─────────────────────────────────────────────────┐
      │              th-core  (Plugin Framework)         │
      │  ┌───────────┐ ┌────────┐ ┌───────┐ ┌────────┐ │
@@ -102,14 +102,14 @@ pnpm install
 # Start Ollama (or set OPENAI_API_KEY / DEEPSEEK_API_KEY)
 ollama pull llama3.1
 
-# Scan a single page
-pnpm --filter @test-harness/th-cli scan https://example.com
+# Start a test session
+pnpm --filter @test-harness/th-cli test https://example.com --instructions "Test the login page"
 
 # Scan a whole site
-pnpm --filter @test-harness/th-cli scan https://example.com --scope site
+pnpm --filter @test-harness/th-cli test https://example.com --instructions "Explore the whole site"
 
 # Use a different LLM provider
-pnpm --filter @test-harness/th-cli scan https://example.com --provider openai --model gpt-4o
+pnpm --filter @test-harness/th-cli test https://example.com --provider openai --model gpt-4o
 ```
 
 ### Server + Dashboard
@@ -124,10 +124,10 @@ node apps/server/th-server/dist/index.js
 pnpm --filter @test-harness/th-dashboard dev
 # → Dashboard: http://localhost:5173
 
-# Start a scan via API
-curl -X POST http://localhost:3000/api/v1/scans \
+# Start a session via API
+curl -X POST http://localhost:3000/api/v1/sessions \
   -H "Content-Type: application/json" \
-  -d '{"targetUrl":"https://example.com","scope":"site"}'
+  -d '{"targetUrl":"https://example.com","scanConfig":{"instructions":"Test the login page"}}'
 
 # Watch real-time progress via WebSocket
 # ws://localhost:3000/ws
@@ -175,27 +175,22 @@ See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
 | `@test-harness/th-llm-openai` | OpenAI | GPT-4o, streaming, function calling |
 | `@test-harness/th-llm-deepseek` | DeepSeek | V3/R1, OpenAI-compatible |
 
-### Detection Plugins (9 detectors)
+### Tools & Browser
 
-| Package | Category | Detectors |
-|---|---|---|
-| `@test-harness/th-detection` | Framework | Registry, Runner, Composer, Scoring |
-| `@test-harness/th-detect-security` | Security | SecurityHeaders (6 headers + CSP analysis), SSL/TLS |
-| `@test-harness/th-detect-performance` | Performance | PerformanceHeaders (cache, encoding), ResourceAnalyzer |
-| `@test-harness/th-detect-seo` | SEO | MetaTags (title, description, OG, Twitter), RobotsSitemap |
-| `@test-harness/th-detect-a11y` | Accessibility | ImageA11y, FormA11y, HeadingA11y |
+| Package | Description |
+|---|---|
+| `@test-harness/th-tools` | Tool framework + built-in browser/HTTP tools (3-stage prepare→dispatch→finalize pipeline) |
+| `@test-harness/th-browser` | Browser capability seam + Puppeteer implementation |
 
 ### Infrastructure
 
 | Package | Path | Description |
 |---|---|---|
-| `@test-harness/th-tools` | `packages/tools/th-tools` | Tool framework + 5 built-in tools (3-stage pipeline) |
-| `@test-harness/th-crawl` | `packages/crawl/th-crawl` | HTTP fetch + DOM extraction + robots.txt |
-| `@test-harness/th-persistence` | `packages/persistence/th-persistence` | SQLite repositories (scans, results, events, reports) |
-| `@test-harness/th-queue` | `packages/queue/th-queue` | In-process task queue (5 job types, priority, retry) |
-| `@test-harness/th-worker` | `packages/worker/th-worker` | Job processors (Scan, Detection) |
+| `@test-harness/th-persistence` | `packages/persistence/th-persistence` | Session storage (JSON file / in-memory) |
+| `@test-harness/th-queue` | `packages/queue/th-queue` | In-process task queue (test:execute, test:report jobs) |
+| `@test-harness/th-worker` | `packages/worker/th-worker` | Test session job processor |
 | `@test-harness/th-report` | `packages/report/th-report` | Report generator (JSON / Markdown / HTML) |
-| `@test-harness/th-api` | `packages/api/th-api` | REST API (9 endpoints) + WebSocket gateway |
+| `@test-harness/th-api` | `packages/api/th-api` | REST API (sessions, reports, health) + WebSocket gateway |
 
 ## Documentation
 
@@ -203,7 +198,7 @@ See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
 |---|---|
 | [Contributing](CONTRIBUTING.md) | Setup, conventions, how to add plugins |
 | [API Reference](docs/API.md) | REST + WebSocket endpoints with examples |
-| [Plugin Dev Guide](docs/PLUGIN-DEV.md) | Write detection / tool / LLM adapter plugins |
+| [Plugin Dev Guide](docs/PLUGIN-DEV.md) | Write tools / LLM adapters / storage backends |
 | [DSH Analysis](docs/DSH-ANALYSIS.md) | DeepSeek Harness architecture deep dive |
 | [Progress Report](docs/PROGRESS-REPORT.md) | Implementation plan and status |
 
@@ -211,9 +206,9 @@ See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
 
 ```bash
 pnpm install                 # install deps
-pnpm run build               # build all 22 packages
+pnpm run build               # build all packages
 pnpm run typecheck           # type-check all packages
-npx vitest run               # run 84 tests
+npx vitest run               # run all tests
 pnpm run clean               # remove all dist/ folders
 ```
 

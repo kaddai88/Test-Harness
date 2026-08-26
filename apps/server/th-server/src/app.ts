@@ -2,13 +2,12 @@
  * TestHarnessServer — composes all services into a running application.
  *
  * Lifecycle:
- *   1. Create database (SQLite)
+ *   1. Create database (JSON file or in-memory)
  *   2. Create queue (in-memory)
- *   3. Create detection registry
- *   4. Create API server
- *   5. Create worker bootstrap
- *   6. Start everything
- *   7. Register graceful shutdown handlers
+ *   3. Create API server
+ *   4. Create worker bootstrap
+ *   5. Start everything
+ *   6. Register graceful shutdown handlers
  */
 import {
   createDatabase,
@@ -58,7 +57,7 @@ class StubLLMProvider implements LLMProvider {
   async complete(_params: CompletionParams): Promise<ModelResponse> {
     return {
       id: `stub_${Date.now()}`,
-      content: "Scan completed (stub LLM — no real model configured).",
+      content: "Session completed (stub LLM — no real model configured).",
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       finishReason: "stop",
@@ -69,7 +68,7 @@ class StubLLMProvider implements LLMProvider {
   async *stream(_params: CompletionParams): AsyncIterable<StreamChunk> {
     yield {
       type: "content",
-      data: "Scan completed (stub LLM — no real model configured).",
+      data: "Session completed (stub LLM — no real model configured).",
     };
     yield {
       type: "done",
