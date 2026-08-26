@@ -8,7 +8,7 @@ import type { Duplex } from "node:stream";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import type { TaskQueue } from "@test-harness/th-queue";
 import { applyCors, getPathname, sendJson } from "./http.js";
-import { dispatchScanRoute } from "./routes/scans.js";
+import { dispatchSessionRoute } from "./routes/sessions.js";
 import { dispatchReportRoute } from "./routes/reports.js";
 import { handleHealth, handleStatus } from "./routes/health.js";
 import { WebSocketHandler } from "./websocket.js";
@@ -116,8 +116,8 @@ export class APIServer {
       return;
     }
 
-    // Scan routes
-    const handled1 = await dispatchScanRoute(req, res, {
+    // Session routes
+    const handled1 = await dispatchSessionRoute(req, res, {
       repos: this.repos,
       queue: this.queue,
     }, pathname);

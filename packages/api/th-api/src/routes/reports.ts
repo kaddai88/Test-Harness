@@ -1,5 +1,5 @@
 /**
- * Report routes — generate and retrieve scan reports.
+ * Report routes — generate and retrieve session reports.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
@@ -11,7 +11,7 @@ export interface ReportRouteDeps {
   repos: DatabaseRepositories;
 }
 
-/** GET /api/v1/scans/:id/report — get or generate a report. */
+/** GET /api/v1/sessions/:id/report — get or generate a report. */
 export async function handleGetReport(
   req: IncomingMessage,
   res: ServerResponse,
@@ -30,25 +30,25 @@ export async function handleGetReport(
 
   const id = params.id;
   if (!id) {
-    sendJson(res, 400, { error: "Missing scan id" });
+    sendJson(res, 400, { error: "Missing session id" });
     return;
   }
 
-  const scan = await deps.repos.scans.findById(id);
-  if (!scan) {
-    sendJson(res, 404, { error: "Scan not found" });
+  const session = await deps.repos.sessions.findById(id);
+  if (!session) {
+    sendJson(res, 404, { error: "Session not found" });
     return;
   }
 
   // Check if a cached report exists
-  const cached = await deps.repos.reports.findByScanIdAndFormat(
+  const cached = await deps.repos.reports.findBySessionIdAndFormat(
     id,
     format
   );
   if (cached?.content) {
     if (format === "json") {
       sendJson(res, 200, {
-        scanId: scan.id,
+        sessionId: session.id,
         format,
         content: cached.content,
         data: cached.data,
@@ -62,24 +62,24 @@ export async function handleGetReport(
 
   // Generate on-the-fly from stored findings
   const findings =
-    (scan.metadata?.findings as Finding[] | undefined) ?? [];
+    (session.metadata?.findings as Finding[] | undefined) ?? [];
 
   const generator = new ReportGenerator();
   const output = await generator.generate(
     {
-      sessionId: scan.id,
-      targetUrl: scan.targetUrl,
+      sessionId: session.id,
+      targetUrl: session.targetUrl,
       findings,
-      summary: scan.metadata?.summary as string | undefined,
-      startedAt: new Date(scan.startedAt ?? scan.createdAt),
-      completedAt: new Date(scan.completedAt ?? Date.now()),
+      summary: session.metadata?.summary as string | undefined,
+      startedAt: new Date(session.startedAt ?? session.createdAt),
+      completedAt: new Date(session.completedAt ?? Date.now()),
     },
     format
   );
 
   // Persist for future requests
   await deps.repos.reports.create({
-    scanId: scan.id,
+    sessionId: session.id,
     format: output.format,
     content: output.content,
     data: output.data,
@@ -87,7 +87,7 @@ export async function handleGetReport(
 
   if (format === "json") {
     sendJson(res, 200, {
-      scanId: scan.id,
+      sessionId: session.id,
       format: output.format,
       content: output.content,
       data: output.data,
@@ -108,7 +108,7 @@ export async function dispatchReportRoute(
   const method = req.method ?? "GET";
 
   const reportMatch = matchRoute(
-    "/api/v1/scans/:id/report",
+    "/api/v1/sessions/:id/report",
     pathname
   );
   if (method === "GET" && reportMatch) {

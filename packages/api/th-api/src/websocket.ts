@@ -92,28 +92,28 @@ export class WebSocketHandler {
     }
   }
 
-  /** Broadcast a scan progress event. */
-  broadcastScanProgress(
-    scanId: string,
+  /** Broadcast a session progress event. */
+  broadcastSessionProgress(
+    sessionId: string,
     data: { status: string; progress?: number; message?: string }
   ): void {
-    this.broadcast({ type: "scan:progress", scanId, ...data });
+    this.broadcast({ type: "session:progress", sessionId, ...data });
   }
 
   /** Broadcast an agent event. */
   broadcastAgentEvent(
-    scanId: string,
+    sessionId: string,
     data: { eventType: string; payload: unknown }
   ): void {
-    this.broadcast({ type: "agent:event", scanId, ...data });
+    this.broadcast({ type: "agent:event", sessionId, ...data });
   }
 
-  /** Broadcast scan completion. */
-  broadcastScanComplete(
-    scanId: string,
+  /** Broadcast session completion. */
+  broadcastSessionComplete(
+    sessionId: string,
     data: { status: string; summary?: string }
   ): void {
-    this.broadcast({ type: "scan:completed", scanId, ...data });
+    this.broadcast({ type: "session:completed", sessionId, ...data });
   }
 
   /** Get the number of connected clients. */

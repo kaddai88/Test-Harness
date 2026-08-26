@@ -28,23 +28,23 @@ export async function handleStatus(
   res: ServerResponse,
   deps: HealthDeps
 ): Promise<void> {
-  const totalScans = await deps.repos.scans.count();
-  const pendingScans = await deps.repos.scans.count({ status: "pending" });
-  const activeScans = await deps.repos.scans.count({ status: "analyzing" });
-  const completedScans = await deps.repos.scans.count({ status: "completed" });
-  const failedScans = await deps.repos.scans.count({ status: "failed" });
+  const totalSessions = await deps.repos.sessions.count();
+  const pendingSessions = await deps.repos.sessions.count({ status: "pending" });
+  const activeSessions = await deps.repos.sessions.count({ status: "executing" });
+  const completedSessions = await deps.repos.sessions.count({ status: "completed" });
+  const failedSessions = await deps.repos.sessions.count({ status: "failed" });
 
   const waitingJobs = await deps.queue.getJobs(undefined, "waiting");
   const activeJobs = await deps.queue.getJobs(undefined, "active");
 
   sendJson(res, 200, {
     status: "ok",
-    scans: {
-      total: totalScans,
-      pending: pendingScans,
-      active: activeScans,
-      completed: completedScans,
-      failed: failedScans,
+    sessions: {
+      total: totalSessions,
+      pending: pendingSessions,
+      active: activeSessions,
+      completed: completedSessions,
+      failed: failedSessions,
     },
     queue: {
       waiting: waitingJobs.length,

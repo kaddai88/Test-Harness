@@ -21,8 +21,8 @@ export {
 } from "./http.js";
 
 // Route dispatchers
-export { dispatchScanRoute } from "./routes/scans.js";
-export type { ScanRouteDeps } from "./routes/scans.js";
+export { dispatchSessionRoute } from "./routes/sessions.js";
+export type { SessionRouteDeps } from "./routes/sessions.js";
 
 export { dispatchReportRoute } from "./routes/reports.js";
 export type { ReportRouteDeps } from "./routes/reports.js";
