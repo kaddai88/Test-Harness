@@ -31,9 +31,6 @@ export type SessionEventType =
   | "request/config"
   // System
   | "system/note"
-  // Detection results
-  | "detection/start"
-  | "detection/result"
   // Custom events
   | "custom";
 
@@ -116,21 +113,6 @@ export interface RequestConfigEvent {
   toolCount: number;
 }
 
-export interface DetectionStartEvent {
-  scanId: string;
-  detectionId: string;
-  turn: number;
-}
-
-export interface DetectionResultEvent {
-  scanId: string;
-  detectionId: string;
-  status: string;
-  findingCount: number;
-  score: number;
-  duration: number;
-}
-
 export interface SystemNoteEvent {
   note: string;
 }
@@ -152,8 +134,6 @@ export type SessionEventData =
   | ToolCallEvent
   | ToolResultEvent
   | RequestConfigEvent
-  | DetectionStartEvent
-  | DetectionResultEvent
   | SystemNoteEvent
   | CustomEventData;
 
@@ -177,7 +157,7 @@ export interface SessionEvent {
  * Append-only session event log.
  *
  * The log is the authoritative record of everything that happened during
- * a scan session. Model-visible content (messages, tool calls, results)
+ * a test session. Model-visible content (messages, tool calls, results)
  * is always derived from the log, never stored separately.
  */
 export class SessionLog {

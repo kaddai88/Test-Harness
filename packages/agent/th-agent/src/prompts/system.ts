@@ -40,8 +40,8 @@ Your job is to understand what the user wants to test, then plan and execute a r
 ## Output
 At the end, summarize the test session: the pages/features you exercised, the findings you reported, and overall health of the target.`;
 
-/** Scan planning prompt — used when the agent needs to plan its approach */
-export function buildScanPlanningPrompt(
+/** Session planning prompt — used when the agent needs to plan its approach */
+export function buildSessionPlanningPrompt(
   targetUrl: string,
   availableTools: string[],
   instructions?: string

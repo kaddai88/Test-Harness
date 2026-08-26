@@ -1,5 +1,5 @@
 /**
- * Agent Loop — the core driver that orchestrates the scan.
+ * Agent Loop — the core driver that orchestrates the session.
  *
  * Implements the DSH-style Turn → Step → Model → Tool → Result pipeline.
  * Key improvements over the basic version:
@@ -14,7 +14,7 @@
  *    A step is one model request + the tool calls it triggers.
  *
  * The loop runs until:
- * - The LLM returns no tool calls (scan complete)
+ * - The LLM returns no tool calls (session complete)
  * - Max turns reached
  * - Abort signal triggered
  * - Error occurs
@@ -22,8 +22,8 @@
 import type {
   LLMProvider,
   Message,
-  ScanConfig,
-  ScanTarget,
+  SessionConfig,
+  SessionTarget,
   ToolSchema,
 } from "@test-harness/th-protocol";
 import {
@@ -44,7 +44,7 @@ import type {
 } from "./context.js";
 import type { ToolRegistry } from "@test-harness/th-tools";
 import type { EventBusImpl } from "@test-harness/th-core";
-import { SYSTEM_PROMPT, buildScanPlanningPrompt } from "./prompts/system.js";
+import { SYSTEM_PROMPT, buildSessionPlanningPrompt } from "./prompts/system.js";
 import { SessionLog } from "./session.js";
 import { StreamAssembler } from "./assembler.js";
 
@@ -71,9 +71,9 @@ const defaultLogger: AgentLogger = {
 };
 
 export interface AgentLoopOptions {
-  scanId: string;
-  target: ScanTarget;
-  config: ScanConfig;
+  sessionId: string;
+  target: SessionTarget;
+  config: SessionConfig;
   llm: LLMProvider;
   toolRegistry: ToolRegistry;
   eventBus: EventBusImpl;
@@ -108,7 +108,7 @@ export class AgentLoop {
     const sessionLog = new SessionLog();
 
     const context: AgentContext = {
-      scanId: options.scanId,
+      sessionId: options.sessionId,
       target: options.target,
       config: options.config,
       llm: options.llm,
@@ -123,25 +123,25 @@ export class AgentLoop {
       abortSignal: abortController.signal,
     };
 
-    logger.info(`Starting scan for ${options.target.url}`);
+    logger.info(`Starting session for ${options.target.url}`);
 
-    // Log the initial user message (scan task)
+    // Log the initial user message (session task)
     const availableTools = options.toolRegistry
       .getAll()
       .map((t) => t.id);
 
     sessionLog.append("user/message", {
       turn: 0,
-      content: buildScanPlanningPrompt(
+      content: buildSessionPlanningPrompt(
         options.target.url,
         availableTools,
         options.config.instructions as string | undefined
       ),
     });
 
-    // Log a system note about scan configuration
+    // Log a system note about session configuration
     sessionLog.append("system/note", {
-      note: `Scan config: strategy=${options.config.strategy}, maxTurns=${context.maxTurns}, tools=[${availableTools.join(", ")}]`,
+      note: `Session config: strategy=${options.config.strategy}, maxTurns=${context.maxTurns}, tools=[${availableTools.join(", ")}]`,
     });
 
     // Main loop
@@ -158,7 +158,7 @@ export class AgentLoop {
 
       // Emit turn started event
       await options.eventBus.emit(AgentTurnStartedEvent, {
-        scanId: options.scanId,
+        sessionId: options.sessionId,
         turnNumber: context.turnCount,
       });
 
@@ -172,9 +172,9 @@ export class AgentLoop {
             reason: { kind: "completed" },
           });
 
-          logger.info("Scan complete.");
+          logger.info("Session complete.");
           return {
-            scanId: options.scanId,
+            sessionId: options.sessionId,
             status: "completed",
             turns: context.turnCount,
             summary: result.response.content,
@@ -198,7 +198,7 @@ export class AgentLoop {
 
         logger.error(`Turn failed: ${error.message}`);
         return {
-          scanId: options.scanId,
+          sessionId: options.sessionId,
           status: "failed",
           turns: context.turnCount,
           error,
@@ -216,14 +216,14 @@ export class AgentLoop {
 
     if (abortController.signal.aborted) {
       return {
-        scanId: options.scanId,
+        sessionId: options.sessionId,
         status: "cancelled",
         turns: context.turnCount,
       };
     }
 
     return {
-      scanId: options.scanId,
+      sessionId: options.sessionId,
       status: "timeout",
       turns: context.turnCount,
       summary: "Maximum turns reached",
@@ -253,7 +253,7 @@ export class AgentLoop {
 
     // Fire pre-step waterfall — plugins can modify or reject
     const preStepResult = await eventBus.waterfall(AgentPreStepEvent, {
-      scanId: context.scanId,
+      sessionId: context.sessionId,
       turnNumber: context.turnCount,
       stepNumber: step,
       messages: messages.map((m) => ({
@@ -287,7 +287,7 @@ export class AgentLoop {
 
     // Request waterfall — plugins can modify model config
     const requestConfig = await eventBus.waterfall(AgentRequestEvent, {
-      scanId: context.scanId,
+      sessionId: context.sessionId,
       turnNumber: context.turnCount,
       stepNumber: step,
       model: context.config.llm.model || process.env.QWEN_MODEL || "qwen3.7-plus",
@@ -328,7 +328,7 @@ export class AgentLoop {
         if (now - lastStreamEmit > 200 || assembler.done) {
           lastStreamEmit = now;
           await eventBus.emit(AgentStreamChunkEvent, {
-            scanId: context.scanId,
+            sessionId: context.sessionId,
             turnNumber: context.turnCount,
             partialContent: assembler.partialContent,
             toolCallCount: assembler.toolCallCount,
@@ -368,7 +368,7 @@ export class AgentLoop {
     if (!response.toolCalls || response.toolCalls.length === 0) {
       // Fire turn-stopping event — plugins can request continuation
       await eventBus.serial(AgentTurnStoppingEvent, {
-        scanId: context.scanId,
+        sessionId: context.sessionId,
         turnNumber: context.turnCount,
         shouldContinue: false,
       });
@@ -396,7 +396,7 @@ export class AgentLoop {
 
       // Emit tool call event
       await eventBus.emit(AgentToolCallEvent, {
-        scanId: context.scanId,
+        sessionId: context.sessionId,
         turnNumber: context.turnCount,
         toolName: toolCall.name,
         input: toolCall.arguments,
@@ -404,7 +404,7 @@ export class AgentLoop {
 
       // Pre-execute waterfall — plugins can deny or modify
       const preExecute = await eventBus.waterfall(ToolsPreExecuteEvent, {
-        scanId: context.scanId,
+        sessionId: context.sessionId,
         toolName: toolCall.name,
         input: toolCall.arguments,
         decision: "approve" as const,
@@ -424,7 +424,7 @@ export class AgentLoop {
           toolCall.name,
           preExecute.input,
           {
-            scanId: context.scanId,
+            sessionId: context.sessionId,
             abortSignal: context.abortSignal,
           }
         );
@@ -454,7 +454,7 @@ export class AgentLoop {
 
         // Post-execute waterfall — plugins can modify result
         const postExecute = await eventBus.waterfall(ToolsPostExecuteEvent, {
-          scanId: context.scanId,
+          sessionId: context.sessionId,
           toolName: toolCall.name,
           success: result.success,
           data: result.data,
@@ -473,7 +473,7 @@ export class AgentLoop {
 
         // Emit tool result event
         await eventBus.emit(AgentToolResultEvent, {
-          scanId: context.scanId,
+          sessionId: context.sessionId,
           turnNumber: context.turnCount,
           toolName: toolCall.name,
           success: result.success,

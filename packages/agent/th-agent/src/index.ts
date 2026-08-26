@@ -1,7 +1,7 @@
 /**
  * @test-harness/th-agent
  *
- * Agent Loop — the AI-driven scan orchestrator.
+ * Agent Loop — the AI-driven session orchestrator.
  */
 export { AgentLoop } from "./loop.js";
 export type { AgentLoopOptions, AgentLogger } from "./loop.js";
@@ -27,4 +27,4 @@ export type {
   ToolResultEvent,
   RequestConfigEvent,
 } from "./session.js";
-export { SYSTEM_PROMPT, buildScanPlanningPrompt } from "./prompts/system.js";
+export { SYSTEM_PROMPT, buildSessionPlanningPrompt } from "./prompts/system.js";

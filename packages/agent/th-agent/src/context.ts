@@ -1,21 +1,21 @@
 /**
- * Agent Context — per-scan state carried through the agent loop.
+ * Agent Context — per-session state carried through the agent loop.
  */
 import type {
   LLMProvider,
   Message,
-  ScanConfig,
-  ScanTarget,
+  SessionConfig,
+  SessionTarget,
 } from "@test-harness/th-protocol";
 import type { THContainer, EventBusImpl } from "@test-harness/th-core";
 import type { ToolRegistry } from "@test-harness/th-tools";
 import type { SessionLog } from "./session.js";
 
-/** Per-scan agent context */
+/** Per-session agent context */
 export interface AgentContext {
-  readonly scanId: string;
-  readonly target: ScanTarget;
-  readonly config: ScanConfig;
+  readonly sessionId: string;
+  readonly target: SessionTarget;
+  readonly config: SessionConfig;
   readonly llm: LLMProvider;
   readonly toolRegistry: ToolRegistry;
   readonly eventBus: EventBusImpl;
@@ -46,7 +46,7 @@ export interface AgentContext {
 
 /** Result from a complete agent loop run */
 export interface AgentResult {
-  scanId: string;
+  sessionId: string;
   status: "completed" | "failed" | "cancelled" | "timeout";
   turns: number;
   summary?: string;
