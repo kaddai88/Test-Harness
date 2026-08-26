@@ -1,11 +1,11 @@
 # Test-Harness
 
-> AI 驱动的网站质量检测平台。爬取网站，运行安全 / 性能 / SEO / 无障碍检测，
-> 让 LLM 智能体自动编排扫描流程并汇总检测结果。
+> AI 驱动的网站测试平台（DSH 风格架构）。用自然语言描述你要测什么——LLM 智能体自主规划、
+> 执行浏览器操作、实时流式推送结果。
 
-![CI](https://github.com/<your-org>/test-harness/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-84%20passing-brightgreen)
-![Packages](https://img.shields.io/badge/packages-22-blue)
+![CI](https://github.com/kaddai88/Test_Harness_v2/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)
+![Packages](https://img.shields.io/badge/packages-17-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -16,21 +16,21 @@
 
 ## 概述
 
-Test-Harness 是一个生产级的、AI 驱动的网站质量检测平台，采用 TypeScript monorepo 构建。
+Test-Harness 是一个生产级的、AI 驱动的网站测试平台，采用 TypeScript monorepo 构建。
 架构设计灵感来源于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 及其
 [Cordis](https://github.com/cordiverse/cordis) 插件框架：
 
-**一切皆插件** — LLM 适配器、检测模块、工具、爬虫和存储后端都通过类型化的*服务定义*注册，
+**一切皆插件** — LLM 适配器、工具、存储后端都通过类型化的*服务定义*注册，
 并通过 *waterfall* 扩展点进行拦截。
 
 ### 核心特性
 
-- **AI Agent Loop** — LLM 智能决定运行哪些检测、何时运行、如何解读结果
+- **AI Agent Loop** — LLM 智能决定测什么、按什么顺序、如何解读结果（DSH 风格架构：SessionLog、Waterfall 事件、Turn→Step 管线）
 - **Session Log** — 仅追加的事件日志；所有模型可见内容均可从日志中重建
 - **Waterfall 事件** — 每个管线阶段都支持 around-middleware 拦截（pre-step、request、pre/post-execute）
-- **LLM 流式输出** — 扫描过程中的实时终端和 WebSocket 进度推送
-- **9 个检测插件** — 安全、性能、SEO、无障碍（共 22 个检测器）
-- **3 个 LLM 适配器** — Ollama（本地）、OpenAI、DeepSeek，支持故障转移
+- **LLM 流式输出** — 测试过程中的实时终端和 WebSocket 进度推送
+- **浏览器工具** — navigate、click、fill、screenshot、assert（基于 Puppeteer）
+- **3+ 个 LLM 适配器** — Ollama（本地）、OpenAI、Qwen（DashScope），支持故障转移
 - **完整 Web 平台** — REST API + WebSocket + React Dashboard
 - **生产就绪** — 优雅停机、速率限制、Docker 部署、CI/CD
 
@@ -39,7 +39,7 @@ Test-Harness 是一个生产级的、AI 驱动的网站质量检测平台，采�
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                             客户端层                                      │
-│   CLI (th scan)    React Dashboard    REST API    WebSocket (实时推送)    │
+│   CLI (th test)    React Dashboard    REST API    WebSocket (实时推送)    │
 └──────────┬──────────────┬──────────────────┬───────────────┬────────────┘
            │              │                  │               │
            ▼              ▼                  ▼               ▼
@@ -59,20 +59,22 @@ Test-Harness 是一个生产级的、AI 驱动的网站质量检测平台，采�
 │  Session Log: 仅追加、deriveMessages()、完全可重放                         │
 └──────────┬──────────────────────────────────────────────────────────────┘
            │
-     ┌─────┼─────┬─────────────┬──────────────┐
-     ▼     ▼     ▼             ▼              ▼
-┌────────┐ ────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│  LLM   │ │ Tools  │ │Detection │ │  Crawl   │ │  Report  │
-│Provider│ │Registry│ │ Registry │ │ Service  │ │Generator │
-│        │ │        │ │          │ │          │ │          │
-│┌──────┐│ │┌──────┐│ │┌───────┐ │ │┌───────┐ │ │───────┐│
-││Ollama││ ││crawl ││ ││Sec(2) │ │ ││HTTP   │ │ ││ JSON  ││
-││OpenAI││ ││extract││ ││Perf(2)│ │ ││Fetch  │ │ ││  MD   ││
-││DeepSk││ ││http  ││ ││SEO (2)│ │ ││DOM    │ │ ││ HTML  ││
-││Stub  ││ ││links ││ ││A11y(3)│ │ ││Robots │ │ │└───────┘│
-│└──────│ ││detect││ │└───────┘ │ │└─────── │ │          │
-└────────┘ │└──────┘│ └──────────┘ └──────────┘ └──────────┘
-           └────────┘
+     ┌─────┬─────────────┬──────────┐
+     ▼     ▼             ▼          ▼
+┌────────┐ ┌──────────┐ ┌────────┐ ┌──────────┐
+│  LLM   │ │ Tools    │ │Browser │ │  Report  │
+│Provider│ │ Registry │ │ Driver │ │Generator │
+│        │ │          │ │        │ │          │
+│┌──────┐│ │┌──────┐ │ │┌──────┐│ │┌───────┐│
+││Ollama││ ││nav   │ │ ││Pupp- ││ ││ JSON  ││
+││OpenAI││ ││click │ │ ││eteer ││ ││  MD   ││
+││Qwen  ││ ││fill  │ │ ││(Chr) ││ ││ HTML  ││
+││Stub  ││ ││assert│ │ │└──────┘│ │└───────┘│
+│└──────┘│ ││screen│ │ │        │ │          │
+│        │ ││http  │ │ │        │ │          │
+│        │ ││report│ │ │        │ │          │
+│        │ │└──────┘ │ │        │ │          │
+└────────┘ └──────────┘ └────────┘ └──────────┘
      ┌─────────────────────────────────────────────────┐
      │              th-core  (插件框架)                 │
      │  ┌───────────┐ ┌────────┐ ┌───────┐ ┌────────┐ │
@@ -84,7 +86,7 @@ Test-Harness 是一个生产级的、AI 驱动的网站质量检测平台，采�
      ┌─────────────────────────────────────────────────┐
      │              存储与传输                            │
      │  th-persistence   th-queue    th-worker         │
-     │  (SQLite/PG)      (BullMQ)   (任务处理器)        │
+     │  (JSON/内存)       (进程内)   (任务处理器)        │
      └─────────────────────────────────────────────────
 ```
 
@@ -99,14 +101,14 @@ pnpm install
 # 启动 Ollama（或设置 OPENAI_API_KEY / DEEPSEEK_API_KEY）
 ollama pull llama3.1
 
-# 扫描单个页面
-pnpm --filter @test-harness/th-cli scan https://example.com
+# 启动测试会话
+pnpm --filter @test-harness/th-cli test https://example.com --instructions "测试登录功能"
 
-# 扫描整个站点
-pnpm --filter @test-harness/th-cli scan https://example.com --scope site
+# 探索整个站点
+pnpm --filter @test-harness/th-cli test https://example.com --instructions "探索整个站点"
 
 # 使用不同的 LLM 提供者
-pnpm --filter @test-harness/th-cli scan https://example.com --provider openai --model gpt-4o
+pnpm --filter @test-harness/th-cli test https://example.com --provider openai --model gpt-4o
 ```
 
 ### 服务器 + Dashboard
@@ -121,10 +123,10 @@ node apps/server/th-server/dist/index.js
 pnpm --filter @test-harness/th-dashboard dev
 # → Dashboard: http://localhost:5173
 
-# 通过 API 发起扫描
-curl -X POST http://localhost:3000/api/v1/scans \
+# 通过 API 发起测试会话
+curl -X POST http://localhost:3000/api/v1/sessions \
   -H "Content-Type: application/json" \
-  -d '{"targetUrl":"https://example.com","scope":"site"}'
+  -d '{"targetUrl":"https://example.com","scanConfig":{"instructions":"测试登录功能"}}'
 
 # 通过 WebSocket 观看实时进度
 # ws://localhost:3000/ws
@@ -140,7 +142,7 @@ docker compose logs -f server
 ### 运行测试
 
 ```bash
-npx vitest run                  # 7 个测试套件，84 个测试用例
+npx vitest run                  # 运行所有测试
 ```
 
 完整 REST + WebSocket 端点参考请查看 [docs/API.md](docs/API.md)。
@@ -153,7 +155,7 @@ npx vitest run                  # 7 个测试套件，84 个测试用例
 |---|---|---|
 | `@test-harness/th-server` | `apps/server/th-server` | 生产服务器（REST + WebSocket + Worker） |
 | `@test-harness/th-dashboard` | `apps/web/th-dashboard` | React 18 单页应用（Vite + Tailwind + Zustand） |
-| `@test-harness/th-cli` | `packages/cli/th-cli` | 命令行工具：`th scan <url>` |
+| `@test-harness/th-cli` | `packages/cli/th-cli` | 命令行工具：`th test <url>` |
 
 ### 框架核心
 
@@ -172,27 +174,22 @@ npx vitest run                  # 7 个测试套件，84 个测试用例
 | `@test-harness/th-llm-openai` | OpenAI | GPT-4o、流式输出、函数调用 |
 | `@test-harness/th-llm-deepseek` | DeepSeek | V3/R1、OpenAI 兼容接口 |
 
-### 检测插件（9 个检测器）
+### 工具与浏览器
 
-| 包名 | 类别 | 检测器 |
-|---|---|---|
-| `@test-harness/th-detection` | 框架 | Registry、Runner、Composer、Scoring |
-| `@test-harness/th-detect-security` | 安全 | SecurityHeaders（6 个头部 + CSP 分析）、SSL/TLS |
-| `@test-harness/th-detect-performance` | 性能 | PerformanceHeaders（缓存头、编码）、ResourceAnalyzer |
-| `@test-harness/th-detect-seo` | SEO | MetaTags（标题/描述/OG/Twitter）、RobotsSitemap |
-| `@test-harness/th-detect-a11y` | 无障碍 | ImageA11y、FormA11y、HeadingA11y |
+| 包名 | 说明 |
+|---|---|
+| `@test-harness/th-tools` | 工具框架 + 内置浏览器/HTTP 工具（三阶段 prepare→dispatch→finalize 管线） |
+| `@test-harness/th-browser` | 浏览器能力接缝 + Puppeteer 实现 |
 
 ### 基础设施
 
 | 包名 | 路径 | 说明 |
 |---|---|---|
-| `@test-harness/th-tools` | `packages/tools/th-tools` | 工具框架 + 5 个内置工具（三阶段执行管线） |
-| `@test-harness/th-crawl` | `packages/crawl/th-crawl` | HTTP 爬取 + DOM 提取 + robots.txt 解析 |
-| `@test-harness/th-persistence` | `packages/persistence/th-persistence` | SQLite 仓库（扫描、结果、事件、报告） |
-| `@test-harness/th-queue` | `packages/queue/th-queue` | 进程内任务队列（5 种任务类型，优先级，重试） |
-| `@test-harness/th-worker` | `packages/worker/th-worker` | 任务处理器（Scan、Detection） |
+| `@test-harness/th-persistence` | `packages/persistence/th-persistence` | 会话存储（JSON 文件 / 内存） |
+| `@test-harness/th-queue` | `packages/queue/th-queue` | 进程内任务队列（test:execute、test:report 任务类型） |
+| `@test-harness/th-worker` | `packages/worker/th-worker` | 测试会话任务处理器 |
 | `@test-harness/th-report` | `packages/report/th-report` | 报告生成器（JSON / Markdown / HTML） |
-| `@test-harness/th-api` | `packages/api/th-api` | REST API（9 个端点）+ WebSocket 网关 |
+| `@test-harness/th-api` | `packages/api/th-api` | REST API（sessions、reports、health）+ WebSocket 网关 |
 
 ## 文档
 
@@ -200,7 +197,7 @@ npx vitest run                  # 7 个测试套件，84 个测试用例
 |---|---|
 | [贡献指南](CONTRIBUTING.md) | 环境搭建、编码规范、如何添加插件 |
 | [API 参考](docs/API.md) | REST + WebSocket 端点完整文档与示例 |
-| [插件开发指南](docs/PLUGIN-DEV.md) | 编写检测插件 / 工具 / LLM 适配器 |
+| [插件开发指南](docs/PLUGIN-DEV.md) | 编写工具 / LLM 适配器 / 存储后端 |
 | [DSH 架构分析](docs/DSH-ANALYSIS.md) | DeepSeek Harness 架构深度剖析 |
 | [实现计划](docs/PROGRESS-REPORT.md) | 实现计划与进度报告 |
 
@@ -208,9 +205,9 @@ npx vitest run                  # 7 个测试套件，84 个测试用例
 
 ```bash
 pnpm install                 # 安装依赖
-pnpm run build               # 构建全部 22 个包
+pnpm run build               # 构建所有包
 pnpm run typecheck           # 类型检查所有包
-npx vitest run               # 运行 84 个测试
+npx vitest run               # 运行所有测试
 pnpm run clean               # 清理所有 dist/ 目录
 ```
 
@@ -232,28 +229,27 @@ pnpm run clean               # 清理所有 dist/ 目录
 - ✅ 插件框架（DI 容器、4 模式事件总线、效果系统）
 - ✅ Agent Loop（Session Log、Waterfall 事件、LLM 流式输出）
 - ✅ 三阶段工具执行管线 + 超时控制
-- ✅ 3 个 LLM 适配器（Ollama、OpenAI、DeepSeek）+ 故障转移
-- ✅ 9 个检测插件，覆盖 4 大类别（22 个检测器）
-- ✅ REST API（9 个端点）+ WebSocket 实时网关
-- ✅ React Dashboard（6 个页面，实时扫描进度）
-- ✅ SQLite 持久化（Repository 模式）
+- ✅ 3+ 个 LLM 适配器（Ollama、OpenAI、Qwen）+ 故障转移
+- ✅ 浏览器工具（基于 Puppeteer）
+- ✅ REST API（sessions/reports/health 端点）+ WebSocket 实时网关
+- ✅ React Dashboard（6 个页面，实时测试进度）
+- ✅ JSON 文件持久化（Repository 模式）
 - ✅ 任务队列（优先级 + 重试）
 - ✅ 报告生成（JSON / Markdown / HTML）
 - ✅ 优雅停机、速率限制、Docker 部署
 - ✅ GitHub Actions CI/CD（Node 20 + 22 矩阵）
-- ✅ 84 个通过单元测试
+- ✅ 34 个通过测试
 - ✅ 完整文档（API、插件开发指南、贡献指南）
 
 ### 未来规划
 
--  PostgreSQL 持久化提供者（生产数据库）
+- 📋 PostgreSQL 持久化提供者（生产数据库）
 - 📋 BullMQ + Redis（分布式任务队列）
 - 📋 JWT 认证 + 多租户支持
 - 📋 Kubernetes 部署 + Helm Charts
-- 📋 定时扫描 + 扫描结果对比
+- 📋 定时测试 + 结果对比
 - 📋 白标报告
-- 📋 浏览器爬取（Puppeteer/Playwright）
--  反爬虫 / 代理支持
+- 📋 反爬虫 / 代理支持
 
 ## 许可证
 
