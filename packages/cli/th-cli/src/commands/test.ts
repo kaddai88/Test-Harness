@@ -13,7 +13,7 @@ import { QwenProvider } from "@test-harness/th-llm-qwen";
 import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
-import type { LLMProvider, Finding, ScanTarget, ScanConfig } from "@test-harness/th-protocol";
+import type { LLMProvider, Finding, SessionTarget, SessionConfig } from "@test-harness/th-protocol";
 import { terminal } from "../output/terminal.js";
 
 export interface TestCommandOptions {
@@ -86,8 +86,8 @@ export async function runTest(
 
   const agentLoop = new AgentLoop();
 
-  const target: ScanTarget = { url, scope: "page" };
-  const config: ScanConfig = {
+  const target: SessionTarget = { url, scope: "page" };
+  const config: SessionConfig = {
     strategy: "adaptive",
     maxTurns: options.maxTurns ?? 20,
     instructions: options.instructions,
@@ -104,7 +104,7 @@ export async function runTest(
   };
 
   const result = await agentLoop.run({
-    scanId: sessionId,
+    sessionId: sessionId,
     target,
     config,
     llm: llmProvider,

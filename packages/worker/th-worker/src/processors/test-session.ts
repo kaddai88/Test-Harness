@@ -19,8 +19,8 @@ import {
   AgentStreamChunkEvent,
   AgentToolCallEvent,
   AgentToolResultEvent,
-  type ScanTarget,
-  type ScanConfig,
+  type SessionTarget,
+  type SessionConfig,
   type Finding,
 } from "@test-harness/th-protocol";
 import { THContainer, valueProvider } from "@test-harness/th-core";
@@ -84,14 +84,14 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       throw new Error("test:execute requires sessionId and targetUrl in job data");
     }
 
-    const session = await this.repos.scans.findById(sessionId);
+    const session = await this.repos.sessions.findById(sessionId);
     if (!session) {
       throw new Error(`Session "${sessionId}" not found`);
     }
 
     // Update status to planning
-    await this.repos.scans.updateStatus(sessionId, "planning");
-    await this.repos.scans.updateStartedAt(sessionId);
+    await this.repos.sessions.updateStatus(sessionId, "planning");
+    await this.repos.sessions.updateStartedAt(sessionId);
     this.broadcast("session:status", sessionId, { status: "planning", message: "AI is generating test plan..." });
 
     const collectedFindings: Finding[] = [];
@@ -116,16 +116,16 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       }
       registry.register(createReportFindingTool(collectedFindings, sessionId));
 
-      // ── Build ScanTarget / ScanConfig from session ──
+      // ── Build SessionTarget / SessionConfig from session ──
       const targetConfig = (session.targetConfig ?? {}) as Record<string, unknown>;
       const rawConfig = (session.scanConfig ?? {}) as Record<string, unknown>;
 
-      const target: ScanTarget = {
+      const target: SessionTarget = {
         url: session.targetUrl,
-        scope: (targetConfig.scope as ScanTarget["scope"]) ?? "page",
+        scope: (targetConfig.scope as SessionTarget["scope"]) ?? "page",
       };
 
-      const config: ScanConfig = {
+      const config: SessionConfig = {
         strategy: typeof rawConfig.strategy === "string" ? rawConfig.strategy : "adaptive",
         maxTurns: typeof rawConfig.maxTurns === "number" ? rawConfig.maxTurns : 20,
         instructions: session.metadata?.instructions as string | undefined ?? instructions,
@@ -182,7 +182,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       // ── Run the Agent Loop ──
       const loop = new AgentLoop();
       const result = await loop.run({
-        scanId: sessionId,
+        sessionId: sessionId,
         target,
         config,
         llm: this.llm,
@@ -201,16 +201,16 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
             ? "cancelled"
             : "completed";
 
-      await this.repos.scans.updateStatus(sessionId, status);
-      await this.repos.scans.updateCompletedAt(sessionId);
-      await this.repos.scans.updateMetadata(sessionId, {
+      await this.repos.sessions.updateStatus(sessionId, status);
+      await this.repos.sessions.updateCompletedAt(sessionId);
+      await this.repos.sessions.updateMetadata(sessionId, {
         summary: result.summary ?? "",
         findings: collectedFindings,
         turns: result.turns,
       });
 
-      this.broadcast("scan:update", sessionId, { status });
-      this.broadcast("scan:finding", sessionId, { findings: collectedFindings });
+      this.broadcast("session:update", sessionId, { status });
+      this.broadcast("session:finding", sessionId, { findings: collectedFindings });
       this.broadcast("session:completed", sessionId, {
         status,
         summary: result.summary ?? "",
@@ -227,8 +227,8 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(`[TestSessionJobProcessor] Session ${sessionId} failed:`, errorMsg);
       disposables.forEach((d) => d.dispose());
-      await this.repos.scans.updateStatus(sessionId, "failed");
-      await this.repos.scans.updateCompletedAt(sessionId);
+      await this.repos.sessions.updateStatus(sessionId, "failed");
+      await this.repos.sessions.updateCompletedAt(sessionId);
       this.broadcast("session:failed", sessionId, {
         status: "failed",
         error: errorMsg,
