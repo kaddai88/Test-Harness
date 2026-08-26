@@ -350,20 +350,18 @@ function describeToolCall(tool: string, input: Record<string, unknown>): string 
       return `Click on ${input.selector ?? input.description ?? 'element'}`;
     case 'fill_input':
       return `Fill input: ${input.selector ?? ''} = ${input.value ?? '...'}`;
+    case 'fill_form':
+      return `Fill form: ${input.selector ?? ''} = ${input.value ?? '...'}`;
     case 'assert_visible':
       return `Check visible: ${input.selector ?? '...'}`;
     case 'assert_text':
       return `Check text contains "${input.text ?? '...'}"`;
     case 'take_screenshot':
       return 'Take screenshot';
-    case 'extract_dom':
-      return `Extract DOM: ${input.selector ?? 'page'}`;
-    case 'crawl_page':
-      return `Crawl page: ${input.url ?? 'current'}`;
     case 'measure_performance':
       return 'Measure performance';
-    case 'list_links':
-      return 'List links on page';
+    case 'http_request':
+      return `HTTP ${input.method ?? 'GET'} ${input.url ?? '...'}`;
     case 'report_finding':
       return `Report finding: ${input.title ?? 'issue'}`;
     default:

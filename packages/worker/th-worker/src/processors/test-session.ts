@@ -24,7 +24,6 @@ import {
   type Finding,
 } from "@test-harness/th-protocol";
 import { THContainer, valueProvider } from "@test-harness/th-core";
-import { CrawlServiceDefinition, CrawlServiceImpl } from "@test-harness/th-crawl";
 import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
@@ -102,10 +101,6 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       // ── Build container & dependencies ──
       const container = new THContainer();
 
-      // Crawl service (required by crawl_page/extract_dom/list_links tools)
-      const crawlService = new CrawlServiceImpl();
-      container.register(CrawlServiceDefinition, valueProvider(crawlService));
-
       // Browser driver (if available)
       const browserReady = await this.launchBrowser(container);
       if (browserReady) {
@@ -143,12 +138,6 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
             process.env.OLLAMA_MODEL ??
             "qwen-plus",
           temperature: 0.1,
-        },
-        crawl: {
-          maxDepth: 3,
-          maxPages: 20,
-          respectRobots: true,
-          rateLimit: 0,
         },
       };
 

@@ -28,7 +28,7 @@ export function createMeasurePerformanceTool(container: THContainer): Tool {
     name: "Measure Performance",
     description:
       "Collect performance metrics from the browser (TTFB, DOMContentLoaded, LCP, CLS, page size, etc.). Use this to evaluate page load speed and Core Web Vitals.",
-    category: "analysis",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 30_000,

@@ -5,10 +5,7 @@
  */
 import { THPlugin, type THContainer } from "@test-harness/th-core";
 import { ToolRegistry } from "./registry.js";
-import { createCrawlPageTool } from "./builtins/crawl-page.js";
-import { createExtractDomTool } from "./builtins/extract-dom.js";
 import { createHttpRequestTool } from "./builtins/http-request.js";
-import { createListLinksTool } from "./builtins/list-links.js";
 import { createClickElementTool } from "./builtins/click-element.js";
 import { createFillFormTool } from "./builtins/fill-form.js";
 import { createNavigateToTool } from "./builtins/navigate-to.js";
@@ -21,10 +18,7 @@ import { BrowserDriverDefinition } from "@test-harness/th-browser";
 import type { Tool } from "@test-harness/th-protocol";
 
 export { ToolRegistry } from "./registry.js";
-export { createCrawlPageTool } from "./builtins/crawl-page.js";
-export { createExtractDomTool } from "./builtins/extract-dom.js";
 export { createHttpRequestTool } from "./builtins/http-request.js";
-export { createListLinksTool } from "./builtins/list-links.js";
 export { createClickElementTool } from "./builtins/click-element.js";
 export { createFillFormTool } from "./builtins/fill-form.js";
 export { createNavigateToTool } from "./builtins/navigate-to.js";
@@ -37,10 +31,7 @@ export { createReportFindingTool } from "./builtins/report-finding.js";
 /** Build the full set of built-in tools for a container. */
 export function createAllTools(container: THContainer): Tool[] {
   const tools: Tool[] = [
-    createCrawlPageTool(container),
-    createExtractDomTool(container),
     createHttpRequestTool(),
-    createListLinksTool(container),
   ];
 
   // Register browser tools only if BrowserDriver is available in container

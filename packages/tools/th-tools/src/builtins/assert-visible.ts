@@ -23,7 +23,7 @@ export function createAssertVisibleTool(container: THContainer): Tool {
     name: "Assert Element Visible",
     description:
       "Assert that an element identified by a CSS selector is visible on the page. Returns visibility status and the element's text content.",
-    category: "analysis",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 15_000,

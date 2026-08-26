@@ -26,7 +26,7 @@ export function createFillFormTool(container: THContainer): Tool {
     name: "Fill Form",
     description:
       "Fill in form fields with provided data. Use this to test forms, search boxes, login flows, etc. Optionally submit the form after filling.",
-    category: "utility",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 20_000,

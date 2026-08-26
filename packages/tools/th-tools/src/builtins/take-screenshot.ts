@@ -28,7 +28,7 @@ export function createTakeScreenshotTool(container: THContainer): Tool {
     name: "Take Screenshot",
     description:
       "Capture a screenshot of the current page or a specific element. Returns the image as base64. Use this to visually verify page layout, element appearance, or error states.",
-    category: "analysis",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 15_000,

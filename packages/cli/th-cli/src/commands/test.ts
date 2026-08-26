@@ -11,7 +11,6 @@ import { THContainer, valueProvider } from "@test-harness/th-core";
 import { OllamaProvider } from "@test-harness/th-llm-ollama";
 import { QwenProvider } from "@test-harness/th-llm-qwen";
 import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
-import { CrawlServiceDefinition, CrawlServiceImpl } from "@test-harness/th-crawl";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import type { LLMProvider, Finding, ScanTarget, ScanConfig } from "@test-harness/th-protocol";
@@ -77,10 +76,6 @@ export async function runTest(
   console.log();
   terminal.header("Starting AI Agent");
 
-  // Crawl service (required by crawl_page/extract_dom/list_links tools)
-  const crawlService = new CrawlServiceImpl();
-  container.register(CrawlServiceDefinition, valueProvider(crawlService));
-
   // Register tools (browser tools included if BrowserDriver is available)
   const registry = new ToolRegistry();
   const findings: Finding[] = [];
@@ -106,7 +101,6 @@ export async function runTest(
         "qwen-plus",
       temperature: 0.1,
     },
-    crawl: { maxDepth: 3, maxPages: 20, respectRobots: true, rateLimit: 0 },
   };
 
   const result = await agentLoop.run({

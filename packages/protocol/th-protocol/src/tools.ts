@@ -11,7 +11,7 @@
 import type { z } from "zod";
 
 /** Tool category */
-export type ToolCategory = "crawl" | "detection" | "analysis" | "utility";
+export type ToolCategory = "browser" | "http" | "utility";
 
 /** Context passed to a tool during execution */
 export interface ToolContext {
@@ -56,11 +56,10 @@ export interface Tool {
    *
    * Examples of concurrency-safe tools:
    * - http_request (read-only HTTP calls)
-   * - extract_dom (read-only DOM extraction)
    *
    * Examples of exclusive tools:
-   * - run_detection (may modify shared state)
-   * - crawl_page (rate-limited, shares browser pool)
+   * - navigate_to (modifies browser state)
+   * - click_element (modifies page state)
    */
   isConcurrencySafe?(args: unknown): boolean;
 

@@ -28,7 +28,7 @@ export function createNavigateToTool(container: THContainer): Tool {
     name: "Navigate To URL",
     description:
       "Navigate the browser to a specific URL. Use this to visit pages, follow links, or test different routes on a website.",
-    category: "crawl",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 30_000,

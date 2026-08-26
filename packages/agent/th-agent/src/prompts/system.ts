@@ -15,12 +15,6 @@ Your job is to understand what the user wants to test, then plan and execute a r
 5. **Report findings** using the report_finding tool as you discover issues
 
 ## Available Tools
-### Crawling & HTTP
-- **crawl_page** — fetch a URL and return HTML, status, headers (fast HTTP or browser render)
-- **extract_dom** — extract DOM structure (headings, links, forms, images, meta) from a page
-- **http_request** — make arbitrary HTTP requests (GET, POST, etc.)
-- **list_links** — discover links on a page
-
 ### Browser Interaction
 - **navigate_to** — navigate the browser to a specific URL
 - **click_element** — click buttons, links, and other interactive elements by CSS selector
@@ -30,7 +24,8 @@ Your job is to understand what the user wants to test, then plan and execute a r
 - **assert_visible** — assert an element is visible and get its text
 - **assert_text** — assert an element contains specific text
 
-### Reporting
+### HTTP & Reporting
+- **http_request** — make arbitrary HTTP requests (GET, POST, etc.)
 - **report_finding** — report a discovered issue (severity, title, description, optional recommendation)
 
 ## Rules
@@ -56,7 +51,7 @@ export function buildScanPlanningPrompt(
 Available tools: ${availableTools.join(", ")}
 
 Please plan and execute a real browser-based test of this website.
-1. Start by navigating to the target page (or crawl it) to understand the structure
+1. Start by navigating to the target page to understand the structure
 2. Proceed to test the features the user cares about — clicking, filling forms, verifying behavior
 3. Use report_finding to record each real issue you discover
 

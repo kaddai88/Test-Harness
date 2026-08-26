@@ -32,7 +32,7 @@ export function createHttpRequestTool(): Tool {
     name: "HTTP Request",
     description:
       "Make an HTTP request to a URL. Use this to test API endpoints, check response headers, send POST data, etc.",
-    category: "utility",
+    category: "http",
     inputSchema,
     outputSchema,
     timeoutMs: 15_000,

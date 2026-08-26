@@ -23,7 +23,7 @@ export function createClickElementTool(container: THContainer): Tool {
     name: "Click Element",
     description:
       "Click an element on the page identified by a CSS selector. Use this to interact with buttons, links, and other clickable elements in a real browser.",
-    category: "utility",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 15_000,

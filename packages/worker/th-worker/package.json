@@ -22,7 +22,6 @@
     "@test-harness/th-queue": "workspace:*",
     "@test-harness/th-agent": "workspace:*",
     "@test-harness/th-persistence": "workspace:*",
-    "@test-harness/th-crawl": "workspace:*",
     "@test-harness/th-tools": "workspace:*",
     "@test-harness/th-report": "workspace:*",
     "@test-harness/th-browser": "workspace:*"

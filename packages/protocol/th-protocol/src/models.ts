@@ -194,13 +194,6 @@ export interface ScanConfig {
   timeout?: number;
   instructions?: string;
   llm: LLMConfig;
-  detections?: string[];
-  crawl?: {
-    maxDepth: number;
-    maxPages: number;
-    respectRobots: boolean;
-    rateLimit: number;
-  };
 }
 
 // ── Legacy compat (gradual migration) ──

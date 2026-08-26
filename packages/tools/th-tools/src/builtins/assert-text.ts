@@ -26,7 +26,7 @@ export function createAssertTextTool(container: THContainer): Tool {
     name: "Assert Element Text",
     description:
       "Assert that an element contains specific text. Returns whether the text matches and the actual text content.",
-    category: "analysis",
+    category: "browser",
     inputSchema,
     outputSchema,
     timeoutMs: 15_000,

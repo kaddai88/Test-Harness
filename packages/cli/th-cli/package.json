@@ -22,7 +22,6 @@
     "@test-harness/th-llm-openai": "workspace:*",
     "@test-harness/th-llm-deepseek": "workspace:*",
     "@test-harness/th-llm-qwen": "workspace:*",
-    "@test-harness/th-crawl": "workspace:*",
     "@test-harness/th-tools": "workspace:*",
     "@test-harness/th-browser": "workspace:*",
     "@test-harness/th-agent": "workspace:*",
