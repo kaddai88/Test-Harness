@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useScanStore } from '../stores/scanStore';
+import { useSessionStore } from '../stores/sessionStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Spinner } from '../components/ui/Spinner';
 import { EmptyState } from '../components/ui/EmptyState';
-import type { ScanStatus } from '../types';
+import type { SessionStatus } from '../types';
 
 const statusTabs: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -15,30 +15,30 @@ const statusTabs: { value: string; label: string }[] = [
   { value: 'failed', label: 'Failed' },
 ];
 
-export const ScanHistory: React.FC = () => {
+export const SessionHistory: React.FC = () => {
   const navigate = useNavigate();
-  const { scans, loading, totalScans, currentPage, pageSize, statusFilter, fetchScans, setPage, setStatusFilter } =
-    useScanStore();
+  const { sessions, loading, totalSessions, currentPage, pageSize, statusFilter, fetchSessions, setPage, setStatusFilter } =
+    useSessionStore();
 
   useEffect(() => {
-    void fetchScans();
-  }, [fetchScans]);
+    void fetchSessions();
+  }, [fetchSessions]);
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(totalScans / pageSize)),
-    [totalScans, pageSize]
+    () => Math.max(1, Math.ceil(totalSessions / pageSize)),
+    [totalSessions, pageSize]
   );
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Scan History</h1>
+          <h1 className="text-2xl font-bold text-slate-100">Session History</h1>
           <p className="mt-1 text-sm text-slate-400">
-            {totalScans} scan{totalScans !== 1 ? 's' : ''} total
+            {totalSessions} session{totalSessions !== 1 ? 's' : ''} total
           </p>
         </div>
-        <Button onClick={() => navigate('/scans/new')}>New Scan</Button>
+        <Button onClick={() => navigate('/sessions/new')}>New Session</Button>
       </div>
 
       {/* Status Filter Tabs */}
@@ -60,17 +60,17 @@ export const ScanHistory: React.FC = () => {
 
       {/* Table */}
       <Card padding={false}>
-        {loading && scans.length === 0 ? (
+        {loading && sessions.length === 0 ? (
           <div className="flex h-48 items-center justify-center">
             <Spinner size="lg" />
           </div>
-        ) : scans.length === 0 ? (
+        ) : sessions.length === 0 ? (
           <EmptyState
-            title="No scans found"
-            description="No scans match the current filter."
+            title="No sessions found"
+            description="No sessions match the current filter."
             action={
-              <Button variant="secondary" onClick={() => navigate('/scans/new')}>
-                Create a scan
+              <Button variant="secondary" onClick={() => navigate('/sessions/new')}>
+                Create a session
               </Button>
             }
           />
@@ -89,36 +89,36 @@ export const ScanHistory: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  {scans.map((scan) => (
+                  {sessions.map((session) => (
                     <tr
-                      key={scan.id}
+                      key={session.id}
                       className="cursor-pointer transition-colors hover:bg-slate-700/20"
-                      onClick={() => navigate(`/scans/${scan.id}`)}
+                      onClick={() => navigate(`/sessions/${session.id}`)}
                     >
                       <td className="px-5 py-3">
                         <span className="block max-w-xs truncate text-sm font-medium text-slate-200">
-                          {scan.targetUrl}
+                          {session.targetUrl}
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        <StatusBadge status={scan.status as ScanStatus} />
+                        <StatusBadge status={session.status as SessionStatus} />
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-300">
-                        {scan.score != null ? Math.round(scan.score) : '—'}
+                        {session.score != null ? Math.round(session.score) : '—'}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-300">
-                        {scan.findings?.length ?? 0}
+                        {session.findings?.length ?? 0}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-300">
-                        {scan.startedAt && scan.completedAt
-                          ? `${Math.round((new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime()) / 1000)}s`
-                          : scan.startedAt
+                        {session.startedAt && session.completedAt
+                          ? `${Math.round((new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()) / 1000)}s`
+                          : session.startedAt
                           ? '—'
                           : '—'
                         }
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-400">
-                        {new Date(scan.createdAt).toLocaleDateString()}
+                        {new Date(session.createdAt).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}

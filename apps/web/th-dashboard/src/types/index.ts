@@ -1,16 +1,13 @@
-export type ScanStatus = 'pending' | 'planning' | 'executing' | 'running' | 'crawling' | 'analyzing' | 'completed' | 'failed' | 'cancelled';
-export type ScanScope = 'page' | 'site' | 'domain';
-export type DetectionCategory = 'security' | 'performance' | 'functionality' | 'seo' | 'accessibility';
-export type ScanStrategy = 'sequential' | 'parallel' | 'adaptive';
+export type SessionStatus = 'pending' | 'planning' | 'executing' | 'running' | 'completed' | 'failed' | 'cancelled';
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
-export interface Scan {
+export interface Session {
   id: string;
   targetUrl: string;
   url?: string;
   targetConfig?: Record<string, unknown>;
   scanConfig?: Record<string, unknown>;
-  status: ScanStatus;
+  status: SessionStatus;
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
@@ -18,7 +15,6 @@ export interface Scan {
   metadata?: Record<string, unknown>;
   score?: number;
   findings?: Finding[];
-  detections?: DetectionProgress[];
   progress?: number;
   phase?: string;
 }
@@ -26,8 +22,6 @@ export interface Scan {
 export interface Finding {
   id: string;
   sessionId?: string;
-  scanId?: string;
-  category?: DetectionCategory;
   severity: Severity;
   title: string;
   description: string;
@@ -42,21 +36,9 @@ export interface Finding {
   createdAt: string;
 }
 
-export interface DetectionProgress {
-  id: string;
-  scanId: string;
-  category: DetectionCategory;
-  name: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-  progress: number;
-  findingsCount: number;
-  startedAt: string | null;
-  completedAt: string | null;
-}
-
 export interface AgentActivity {
   id: string;
-  scanId?: string;
+  sessionId?: string;
   turn: number;
   kind: 'turn_started' | 'stream' | 'tool_call' | 'tool_result';
   tool?: string;
@@ -72,35 +54,24 @@ export interface HealthStatus {
   status: 'ok' | 'degraded' | 'error';
   version: string;
   uptime: number;
-  activeScans: number;
+  activeSessions: number;
 }
 
-export interface ScanCreateRequest {
+export interface SessionCreateRequest {
   targetUrl: string;
   url?: string;
-  scope: ScanScope;
-  strategy: ScanStrategy;
-  categories?: DetectionCategory[];
   instructions?: string;
   maxTurns?: number;
   timeout?: number;
 }
 
-export interface ScanCreateResponse {
+export interface SessionCreateResponse {
   id: string;
-  status: ScanStatus;
-}
-
-export interface DashboardStats {
-  totalScans: number;
-  activeScans: number;
-  averageScore: number;
-  totalFindings: number;
+  status: SessionStatus;
 }
 
 export interface PaginatedResponse<T> {
-  scans: T[];
-  items?: T[];
+  sessions: T[];
   total: number;
   limit?: number;
   offset?: number;

@@ -2,9 +2,9 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
-import { NewScan } from './pages/NewScan';
-import { ScanDetail } from './pages/ScanDetail';
-import { ScanHistory } from './pages/ScanHistory';
+import { NewSession } from './pages/NewSession';
+import { SessionDetail } from './pages/SessionDetail';
+import { SessionHistory } from './pages/SessionHistory';
 import { ReportView } from './pages/ReportView';
 import { Settings } from './pages/Settings';
 
@@ -12,10 +12,10 @@ const App: React.FC = () => (
   <Routes>
     <Route element={<Layout />}>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/scans/new" element={<NewScan />} />
-      <Route path="/scans/:id" element={<ScanDetail />} />
-      <Route path="/history" element={<ScanHistory />} />
-      <Route path="/scans/:id/report" element={<ReportView />} />
+      <Route path="/sessions/new" element={<NewSession />} />
+      <Route path="/sessions/:id" element={<SessionDetail />} />
+      <Route path="/history" element={<SessionHistory />} />
+      <Route path="/sessions/:id/report" element={<ReportView />} />
       <Route path="/settings" element={<Settings />} />
     </Route>
   </Routes>

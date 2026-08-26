@@ -1,7 +1,7 @@
 import type {
-  Scan,
-  ScanCreateRequest,
-  ScanCreateResponse,
+  Session,
+  SessionCreateRequest,
+  SessionCreateResponse,
   HealthStatus,
   PaginatedResponse,
 } from '../types';
@@ -17,7 +17,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
-  getScans: (page = 1, pageSize = 20, status?: string): Promise<PaginatedResponse<Scan>> => {
+  getSessions: (page = 1, pageSize = 20, status?: string): Promise<PaginatedResponse<Session>> => {
     const params = new URLSearchParams({
       limit: String(pageSize),
       offset: String((page - 1) * pageSize),
@@ -25,34 +25,31 @@ export const api = {
     if (status && status !== 'all') {
       params.set('status', status);
     }
-    return fetch(`${API_BASE}/scans?${params}`).then(handleResponse<PaginatedResponse<Scan>>);
+    return fetch(`${API_BASE}/sessions?${params}`).then(handleResponse<PaginatedResponse<Session>>);
   },
 
-  getScan: (id: string): Promise<Scan> =>
-    fetch(`${API_BASE}/scans/${id}`).then(handleResponse<Scan>),
+  getSession: (id: string): Promise<Session> =>
+    fetch(`${API_BASE}/sessions/${id}`).then(handleResponse<Session>),
 
-  createScan: (data: ScanCreateRequest): Promise<ScanCreateResponse> =>
-    fetch(`${API_BASE}/scans`, {
+  createSession: (data: SessionCreateRequest): Promise<SessionCreateResponse> =>
+    fetch(`${API_BASE}/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         targetUrl: data.targetUrl ?? data.url,
-        targetConfig: { scope: data.scope },
         scanConfig: {
-          strategy: data.strategy,
-          detections: data.categories ?? [],
           instructions: data.instructions,
         },
       }),
-    }).then(handleResponse<ScanCreateResponse>),
+    }).then(handleResponse<SessionCreateResponse>),
 
-  cancelScan: (id: string): Promise<void> =>
-    fetch(`${API_BASE}/scans/${id}/cancel`, { method: 'POST' }).then((r) => {
-      if (!r.ok) throw new Error(`Failed to cancel scan: ${r.statusText}`);
+  cancelSession: (id: string): Promise<void> =>
+    fetch(`${API_BASE}/sessions/${id}/cancel`, { method: 'POST' }).then((r) => {
+      if (!r.ok) throw new Error(`Failed to cancel session: ${r.statusText}`);
     }),
 
   getReport: (id: string, format: string): Promise<Record<string, unknown>> =>
-    fetch(`${API_BASE}/scans/${id}/report?format=${format}`).then(
+    fetch(`${API_BASE}/sessions/${id}/report?format=${format}`).then(
       handleResponse<Record<string, unknown>>
     ),
 

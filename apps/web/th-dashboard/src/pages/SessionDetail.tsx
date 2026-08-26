@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useScanStore } from '../stores/scanStore';
+import { useSessionStore } from '../stores/sessionStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -9,19 +9,19 @@ import { Spinner } from '../components/ui/Spinner';
 import { EmptyState } from '../components/ui/EmptyState';
 import type { AgentActivity, Finding } from '../types';
 
-export const ScanDetail: React.FC = () => {
+export const SessionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
-    currentScan,
+    currentSession,
     findings,
     agentActivity,
     streamText,
     loading,
-    fetchScan,
-    cancelScan,
+    fetchSession,
+    cancelSession,
     connectWebSocket,
-  } = useScanStore();
+  } = useSessionStore();
 
   const streamEndRef = useRef<HTMLDivElement>(null);
 
@@ -32,22 +32,22 @@ export const ScanDetail: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      void fetchScan(id);
+      void fetchSession(id);
     }
-  }, [id, fetchScan]);
+  }, [id, fetchSession]);
 
   useEffect(() => {
-    if (!currentScan || currentScan.status === 'completed' || currentScan.status === 'failed' || currentScan.status === 'cancelled') {
+    if (!currentSession || currentSession.status === 'completed' || currentSession.status === 'failed' || currentSession.status === 'cancelled') {
       return;
     }
     const disconnect = connectWebSocket();
     return disconnect;
-  }, [currentScan?.status, connectWebSocket]);
+  }, [currentSession?.status, connectWebSocket]);
 
   // Group activities into logical turns for display
   const groupedSteps = useMemo(() => groupActivitiesByTurn(agentActivity), [agentActivity]);
 
-  if (loading && !currentScan) {
+  if (loading && !currentSession) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
@@ -55,11 +55,11 @@ export const ScanDetail: React.FC = () => {
     );
   }
 
-  if (!currentScan) {
+  if (!currentSession) {
     return (
       <EmptyState
-        title="Scan not found"
-        description="The scan you're looking for doesn't exist."
+        title="Session not found"
+        description="The session you're looking for doesn't exist."
         action={
           <Button variant="secondary" onClick={() => navigate('/')}>
             Back to Dashboard
@@ -69,8 +69,8 @@ export const ScanDetail: React.FC = () => {
     );
   }
 
-  const isActive = currentScan.status === 'running' || currentScan.status === 'pending' || currentScan.status === 'planning' || currentScan.status === 'executing';
-  const phase = currentScan.phase || currentScan.status;
+  const isActive = currentSession.status === 'running' || currentSession.status === 'pending' || currentSession.status === 'planning' || currentSession.status === 'executing';
+  const phase = currentSession.phase || currentSession.status;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -79,25 +79,25 @@ export const ScanDetail: React.FC = () => {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-slate-100">Test Session</h1>
-            <StatusBadge status={currentScan.status} />
+            <StatusBadge status={currentSession.status} />
           </div>
-          <p className="mt-1 text-sm text-slate-400">{currentScan.targetUrl}</p>
-          {currentScan.startedAt && (
+          <p className="mt-1 text-sm text-slate-400">{currentSession.targetUrl}</p>
+          {currentSession.startedAt && (
             <p className="mt-0.5 text-xs text-slate-500">
-              Started {new Date(currentScan.startedAt).toLocaleTimeString()}
-              {currentScan.completedAt && (
-                <> · Duration {Math.round((new Date(currentScan.completedAt).getTime() - new Date(currentScan.startedAt).getTime()) / 1000)}s</>
+              Started {new Date(currentSession.startedAt).toLocaleTimeString()}
+              {currentSession.completedAt && (
+                <> · Duration {Math.round((new Date(currentSession.completedAt).getTime() - new Date(currentSession.startedAt).getTime()) / 1000)}s</>
               )}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {isActive && (
-            <Button variant="danger" onClick={() => id && cancelScan(id)}>
+            <Button variant="danger" onClick={() => id && cancelSession(id)}>
               Cancel
             </Button>
           )}
-          {!isActive && currentScan.status === 'completed' && id && (
+          {!isActive && currentSession.status === 'completed' && id && (
             <Button variant="secondary" onClick={() => navigate(`/scans/${id}/report`)}>
               View Report
             </Button>
@@ -173,11 +173,11 @@ export const ScanDetail: React.FC = () => {
       )}
 
       {/* ── AI Summary ── */}
-      {typeof currentScan.metadata?.summary === 'string' && currentScan.metadata.summary && (
+      {typeof currentSession.metadata?.summary === 'string' && currentSession.metadata.summary && (
         <Card>
           <h2 className="mb-3 text-lg font-semibold text-slate-100">AI Summary</h2>
           <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">
-            {currentScan.metadata.summary}
+            {currentSession.metadata.summary}
           </div>
         </Card>
       )}
@@ -296,9 +296,6 @@ const FindingCard: React.FC<FindingCardProps> = ({ finding }) => (
   <div className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
     <div className="mb-1 flex items-center justify-between gap-2">
       <SeverityBadge severity={finding.severity} />
-      {finding.category && (
-        <span className="text-xs capitalize text-slate-400">{finding.category}</span>
-      )}
     </div>
     <p className="text-sm font-medium text-slate-200">{finding.title}</p>
     <p className="mt-1 text-xs text-slate-400">{finding.description}</p>

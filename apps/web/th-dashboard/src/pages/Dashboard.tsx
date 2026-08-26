@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useScanStore } from '../stores/scanStore';
+import { useSessionStore } from '../stores/sessionStore';
 import { Card } from '../components/ui/Card';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Spinner } from '../components/ui/Spinner';
@@ -29,47 +29,47 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color }) => (
 );
 
 export const Dashboard: React.FC = () => {
-  const { scans, loading, fetchScans } = useScanStore();
+  const { sessions, loading, fetchSessions } = useSessionStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    void fetchScans();
-  }, [fetchScans]);
+    void fetchSessions();
+  }, [fetchSessions]);
 
   const stats = useMemo(() => {
-    const safeScans = scans ?? [];
-    const total = safeScans.length;
-    const active = safeScans.filter((s) => s.status === 'running' || s.status === 'pending' || s.status === 'crawling' || s.status === 'analyzing').length;
-    const completed = safeScans.filter((s) => s.status === 'completed');
+    const safeSessions = sessions ?? [];
+    const total = safeSessions.length;
+    const active = safeSessions.filter((s) => s.status === 'running' || s.status === 'pending' || s.status === 'planning' || s.status === 'executing').length;
+    const completed = safeSessions.filter((s) => s.status === 'completed');
     const avgScore =
       completed.length > 0
         ? completed.reduce((sum, s) => sum + (s.score ?? 0), 0) / completed.length
         : 0;
-    const totalFindings = safeScans.reduce((sum, s) => sum + (s.findings?.length ?? 0), 0);
+    const totalFindings = safeSessions.reduce((sum, s) => sum + (s.findings?.length ?? 0), 0);
     return { total, active, avgScore, totalFindings };
-  }, [scans]);
+  }, [sessions]);
 
   const scoreDistribution = useMemo(() => {
-    const safeScans = scans ?? [];
+    const safeSessions = sessions ?? [];
     const buckets = [
       { name: 'Excellent (90+)', value: 0, color: '#10b981' },
       { name: 'Good (70-89)', value: 0, color: '#3b82f6' },
       { name: 'Fair (50-69)', value: 0, color: '#f59e0b' },
       { name: 'Poor (0-49)', value: 0, color: '#ef4444' },
     ];
-    for (const scan of safeScans) {
-      if (scan.score == null) continue;
-      if (scan.score >= 90) buckets[0]!.value++;
-      else if (scan.score >= 70) buckets[1]!.value++;
-      else if (scan.score >= 50) buckets[2]!.value++;
+    for (const session of safeSessions) {
+      if (session.score == null) continue;
+      if (session.score >= 90) buckets[0]!.value++;
+      else if (session.score >= 70) buckets[1]!.value++;
+      else if (session.score >= 50) buckets[2]!.value++;
       else buckets[3]!.value++;
     }
     return buckets;
-  }, [scans]);
+  }, [sessions]);
 
-  const recentScans = (scans ?? []).slice(0, 5);
+  const recentSessions = (sessions ?? []).slice(0, 5);
 
-  if (loading && (scans?.length ?? 0) === 0) {
+  if (loading && (sessions?.length ?? 0) === 0) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
@@ -81,13 +81,13 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-400">Overview of scan activity and results</p>
+        <p className="mt-1 text-sm text-slate-400">Overview of session activity and results</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Total Scans"
+          label="Total Sessions"
           value={stats.total}
           color="bg-blue-600/20"
           icon={
@@ -97,7 +97,7 @@ export const Dashboard: React.FC = () => {
           }
         />
         <StatCard
-          label="Active Scans"
+          label="Active Sessions"
           value={stats.active}
           color="bg-emerald-600/20"
           icon={
@@ -129,45 +129,45 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recent Scans */}
+        {/* Recent Sessions */}
         <Card className="lg:col-span-2">
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Recent Scans</h2>
-          {recentScans.length === 0 ? (
+          <h2 className="mb-4 text-lg font-semibold text-slate-100">Recent Sessions</h2>
+          {recentSessions.length === 0 ? (
             <EmptyState
-              title="No scans yet"
-              description="Create your first scan to get started."
+              title="No sessions yet"
+              description="Create your first session to get started."
             />
           ) : (
             <div className="space-y-3">
-              {recentScans.map((scan) => (
+              {recentSessions.map((session) => (
                 <div
-                  key={scan.id}
+                  key={session.id}
                   className="flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 p-3 transition-colors hover:bg-slate-700/30 cursor-pointer"
-                  onClick={() => navigate(`/scans/${scan.id}`)}
+                  onClick={() => navigate(`/sessions/${session.id}`)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      navigate(`/scans/${scan.id}`);
+                      navigate(`/sessions/${session.id}`);
                     }
                   }}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-slate-200">
-                      {scan.targetUrl}
+                      {session.targetUrl}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-400">
-                      {new Date(scan.createdAt).toLocaleString()}
+                      {new Date(session.createdAt).toLocaleString()}
                     </p>
                   </div>
                   <div className="ml-4 flex items-center gap-3">
-                    {scan.score != null && (
+                    {session.score != null && (
                       <span className="text-sm font-medium text-slate-300">
-                        Score: {Math.round(scan.score)}
+                        Score: {Math.round(session.score)}
                       </span>
                     )}
-                    <StatusBadge status={scan.status} />
+                    <StatusBadge status={session.status} />
                   </div>
                 </div>
               ))}
@@ -222,39 +222,39 @@ export const Dashboard: React.FC = () => {
 
       {/* Activity Timeline */}
       <Card>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Scan Activity</h2>
-        {scans.length === 0 ? (
+        <h2 className="mb-4 text-lg font-semibold text-slate-100">Session Activity</h2>
+        {sessions.length === 0 ? (
           <EmptyState
             title="No activity"
-            description="Scan activity will appear here."
+            description="Session activity will appear here."
           />
         ) : (
           <div className="relative space-y-4 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-700">
-            {recentScans.map((scan) => (
-              <div key={scan.id} className="relative flex items-start gap-3 pl-6">
+            {recentSessions.map((session) => (
+              <div key={session.id} className="relative flex items-start gap-3 pl-6">
                 <span
                   className={`absolute left-0 top-1.5 h-[15px] w-[15px] rounded-full border-2 ${
-                    scan.status === 'completed'
+                    session.status === 'completed'
                       ? 'border-emerald-500 bg-emerald-500/20'
-                      : scan.status === 'running'
+                      : session.status === 'running'
                         ? 'border-blue-500 bg-blue-500/20'
-                        : scan.status === 'failed'
+                        : session.status === 'failed'
                           ? 'border-red-500 bg-red-500/20'
                           : 'border-slate-500 bg-slate-500/20'
                   }`}
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-200">
-                    {scan.status === 'completed'
-                      ? `Scan completed`
-                      : scan.status === 'running'
-                        ? `Scan in progress`
-                        : scan.status === 'failed'
-                          ? `Scan failed`
-                          : `Scan created`}
+                    {session.status === 'completed'
+                      ? `Session completed`
+                      : session.status === 'running'
+                        ? `Session in progress`
+                        : session.status === 'failed'
+                          ? `Session failed`
+                          : `Session created`}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {scan.targetUrl} · {new Date(scan.createdAt).toLocaleString()}
+                    {session.targetUrl} · {new Date(session.createdAt).toLocaleString()}
                   </p>
                 </div>
               </div>

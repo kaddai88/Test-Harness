@@ -2,7 +2,7 @@ import type { Finding, AgentActivity } from '../types';
 
 type EventHandler = (data: unknown) => void;
 
-export class ScanWebSocket {
+export class SessionWebSocket {
   private ws: WebSocket | null = null;
   private listeners = new Map<string, EventHandler[]>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -77,26 +77,26 @@ export class ScanWebSocket {
     this.listeners.clear();
   }
 
-  /** scan:update — status change notification */
-  onScanUpdate(
+  /** session:update — status change notification */
+  onSessionUpdate(
     handler: (data: { sessionId: string; status: string }) => void
   ): () => void {
     const wrapped = (data: unknown) => {
       const msg = data as { sessionId?: string; status?: string };
       if (msg.sessionId && msg.status) handler({ sessionId: msg.sessionId, status: msg.status });
     };
-    this.on('scan:update', wrapped);
-    return () => this.off('scan:update', wrapped);
+    this.on('session:update', wrapped);
+    return () => this.off('session:update', wrapped);
   }
 
-  /** scan:finding — batch of findings from completed session */
+  /** session:finding — batch of findings from completed session */
   onFinding(handler: (findings: Finding[]) => void): () => void {
     const wrapped = (data: unknown) => {
       const msg = data as { findings?: Finding[] };
       if (msg.findings) handler(msg.findings);
     };
-    this.on('scan:finding', wrapped);
-    return () => this.off('scan:finding', wrapped);
+    this.on('session:finding', wrapped);
+    return () => this.off('session:finding', wrapped);
   }
 
   /** agent:activity — real-time step from the agent loop */
@@ -106,7 +106,7 @@ export class ScanWebSocket {
       // Build AgentActivity from flat server message
       const activity: AgentActivity = {
         id: `act_${msg.timestamp ?? Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        scanId: msg.sessionId as string | undefined,
+        sessionId: msg.sessionId as string | undefined,
         turn: (msg.turn as number) ?? 0,
         kind: (msg.kind as AgentActivity['kind']) ?? 'turn_started',
         tool: msg.tool as string | undefined,
@@ -177,4 +177,4 @@ export class ScanWebSocket {
   }
 }
 
-export const scanWebSocket = new ScanWebSocket();
+export const sessionWebSocket = new SessionWebSocket();

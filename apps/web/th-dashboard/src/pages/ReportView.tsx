@@ -16,7 +16,7 @@ const formatOptions = [
 ];
 
 interface ReportData {
-  scanId: string;
+  sessionId: string;
   url: string;
   score: number;
   summary: string;
@@ -89,8 +89,8 @@ export const ReportView: React.FC = () => {
         title="Failed to load report"
         description={error}
         action={
-          <Button variant="secondary" onClick={() => navigate(`/scans/${id}`)}>
-            Back to Scan
+          <Button variant="secondary" onClick={() => navigate(`/sessions/${id}`)}>
+            Back to Session
           </Button>
         }
       />
@@ -101,7 +101,7 @@ export const ReportView: React.FC = () => {
     return (
       <EmptyState
         title="No report available"
-        description="Complete a scan to generate a report."
+        description="Complete a session to generate a report."
         action={
           <Button variant="secondary" onClick={() => navigate('/')}>
             Go to Dashboard
@@ -124,7 +124,7 @@ export const ReportView: React.FC = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Scan Report</h1>
+          <h1 className="text-2xl font-bold text-slate-100">Session Report</h1>
           <p className="mt-1 text-sm text-slate-400">{report.url}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -136,8 +136,8 @@ export const ReportView: React.FC = () => {
           <Button variant="secondary" onClick={handleExport}>
             Export
           </Button>
-          <Button variant="secondary" onClick={() => navigate(`/scans/${id}`)}>
-            Back to Scan
+          <Button variant="secondary" onClick={() => navigate(`/sessions/${id}`)}>
+            Back to Session
           </Button>
         </div>
       </div>

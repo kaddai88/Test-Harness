@@ -88,7 +88,7 @@ export const Settings: React.FC = () => {
     <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Settings</h1>
-        <p className="mt-1 text-sm text-slate-400">Configure scan defaults and LLM provider</p>
+        <p className="mt-1 text-sm text-slate-400">Configure session defaults and LLM provider</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -126,9 +126,9 @@ export const Settings: React.FC = () => {
           </div>
         </Card>
 
-        {/* Scan Defaults */}
+        {/* Session Defaults */}
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Scan Defaults</h2>
+          <h2 className="mb-4 text-lg font-semibold text-slate-100">Session Defaults</h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
@@ -138,7 +138,7 @@ export const Settings: React.FC = () => {
                 onChange={(e) => update('maxTurns', e.target.value)}
                 min="1"
                 max="100"
-                helperText="Maximum agent reasoning turns per scan"
+                helperText="Maximum agent reasoning turns per session"
               />
               <Input
                 label="Timeout (seconds)"
@@ -147,7 +147,7 @@ export const Settings: React.FC = () => {
                 onChange={(e) => update('timeout', e.target.value)}
                 min="30"
                 max="3600"
-                helperText="Scan timeout in seconds"
+                helperText="Session timeout in seconds"
               />
             </div>
             <Select

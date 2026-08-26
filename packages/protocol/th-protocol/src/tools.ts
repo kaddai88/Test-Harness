@@ -15,7 +15,7 @@ export type ToolCategory = "browser" | "http" | "utility";
 
 /** Context passed to a tool during execution */
 export interface ToolContext {
-  readonly scanId: string;
+  readonly sessionId: string;
   readonly abortSignal: AbortSignal;
 }
 
