@@ -201,9 +201,21 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
   async type(selector: string, text: string, options?: ElementActionOptions): Promise<void> {
     if (!this.page) throw new Error("Browser not launched");
 
-    await this.page.fill(selector, text, {
-      timeout: options?.timeout ?? 30000,
-    });
+    const locator = this.page.locator(selector);
+
+    // Wait for element to be visible
+    await locator.waitFor({ state: "visible", timeout: options?.timeout ?? 30000 });
+
+    // Scroll into view
+    await locator.scrollIntoViewIfNeeded();
+
+    // Click to focus
+    await locator.click();
+
+    // Clear existing text and type
+    await locator.press("Control+a");
+    await locator.press("Backspace");
+    await locator.type(text, { delay: 50 });
   }
 
   async fillForm(formSelector: string, data: FormData): Promise<void> {
@@ -212,27 +224,47 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
     for (const [field, value] of Object.entries(data)) {
       // Try multiple selector strategies
       const selectors = [
-        `${formSelector} ${field}`,
         `${formSelector} [name="${field}"]`,
         `${formSelector} #${field}`,
-        field,
+        `${formSelector} input[placeholder*="${field}" i]`,
+        `${formSelector} input:has-text("${field}")`,
         `[name="${field}"]`,
         `#${field}`,
+        `input[placeholder*="${field}" i]`,
       ];
 
       let filled = false;
+      let lastError: Error | null = null;
+
       for (const selector of selectors) {
         try {
-          await this.page.fill(selector, value, { timeout: 2000 });
+          const locator = this.page.locator(selector).first();
+
+          // Wait for element to be visible
+          await locator.waitFor({ state: "visible", timeout: 3000 });
+
+          // Scroll into view
+          await locator.scrollIntoViewIfNeeded();
+
+          // Click to focus
+          await locator.click({ timeout: 2000 });
+
+          // Clear and fill
+          await locator.fill("", { timeout: 2000 });
+          await locator.fill(value, { timeout: 3000 });
+
           filled = true;
           break;
-        } catch {
+        } catch (err) {
+          lastError = err as Error;
           // Try next selector
         }
       }
 
       if (!filled) {
-        throw new Error(`Could not find field: ${field}`);
+        throw new Error(
+          `Could not fill field "${field}": ${lastError?.message ?? "Element not found or not interactive"}`
+        );
       }
     }
   }

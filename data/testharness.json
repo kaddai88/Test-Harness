@@ -21440,12 +21440,1313 @@
         "maxTurns": 99,
         "maxRetriesPerAction": 3
       },
-      "status": "planning",
+      "status": "failed",
       "createdAt": "2026-08-28T02:11:21.050Z",
       "startedAt": "2026-08-28T02:11:21.078Z",
-      "completedAt": null,
+      "completedAt": "2026-08-28T02:16:31.957Z",
       "createdBy": null,
-      "metadata": {}
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 21,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1787883083686
+          },
+          {
+            "kind": "stream",
+            "partial": "我将",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883087803
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883088007
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883088281
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883088482
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883088688
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883088894
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1787883089095
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对禅道项目管理系统进行功能性测试。首先导航到登录页面。\n\n",
+            "done": true,
+            "turn": 1,
+            "timestamp": 1787883089250
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+              "timeout": "15"
+            },
+            "turn": 1,
+            "timestamp": 1787883089250
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": false,
+            "turn": 1,
+            "timestamp": 1787883089252
+          },
+          {
+            "kind": "turn_started",
+            "turn": 2,
+            "timestamp": 1787883089252
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 2,
+            "timestamp": 1787883090878
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 2,
+            "timestamp": 1787883091080
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 2,
+            "timestamp": 1787883091284
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 2,
+            "timestamp": 1787883091490
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 2,
+            "timestamp": 1787883091678
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html"
+            },
+            "turn": 2,
+            "timestamp": 1787883091679
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": true,
+            "turn": 2,
+            "timestamp": 1787883094516
+          },
+          {
+            "kind": "turn_started",
+            "turn": 3,
+            "timestamp": 1787883094516
+          },
+          {
+            "kind": "stream",
+            "partial": "页面已",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1787883095914
+          },
+          {
+            "kind": "stream",
+            "partial": "页面已加载。让我截图查看登录页面结构。\n\n",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1787883096118
+          },
+          {
+            "kind": "stream",
+            "partial": "页面已加载。让我截图查看登录页面结构。\n\n",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1787883096324
+          },
+          {
+            "kind": "stream",
+            "partial": "页面已加载。让我截图查看登录页面结构。\n\n",
+            "done": true,
+            "turn": 3,
+            "timestamp": 1787883096341
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 3,
+            "timestamp": 1787883096342
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 3,
+            "timestamp": 1787883096478
+          },
+          {
+            "kind": "turn_started",
+            "turn": 4,
+            "timestamp": 1787883096478
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883099531
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883099853
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883100108
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883100315
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883100568
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1787883100808
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面已加载。现在我来填写登录表单。\n\n",
+            "done": true,
+            "turn": 4,
+            "timestamp": 1787883100841
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "#loginForm",
+              "data": "{\"account\": \"admin\", \"password\": \"abcd.1234\"}",
+              "submit": "#submit"
+            },
+            "turn": 4,
+            "timestamp": 1787883100841
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 4,
+            "timestamp": 1787883100842
+          },
+          {
+            "kind": "turn_started",
+            "turn": 5,
+            "timestamp": 1787883100842
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1787883102802
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1787883103005
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1787883103211
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1787883103435
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1787883103684
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 5,
+            "timestamp": 1787883103791
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "#loginForm",
+              "data": "{\"account\": \"admin\", \"password\": \"abcd.1234\"}",
+              "submit": "true"
+            },
+            "turn": 5,
+            "timestamp": 1787883103791
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 5,
+            "timestamp": 1787883103792
+          },
+          {
+            "kind": "turn_started",
+            "turn": 6,
+            "timestamp": 1787883103792
+          },
+          {
+            "kind": "stream",
+            "partial": "Let me try filling",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1787883106950
+          },
+          {
+            "kind": "stream",
+            "partial": "Let me try filling the form fields individually.\n\n",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1787883107224
+          },
+          {
+            "kind": "stream",
+            "partial": "Let me try filling the form fields individually.\n\n",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1787883107463
+          },
+          {
+            "kind": "stream",
+            "partial": "Let me try filling the form fields individually.\n\n",
+            "done": true,
+            "turn": 6,
+            "timestamp": 1787883107567
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "input[name=\"account\"]"
+            },
+            "turn": 6,
+            "timestamp": 1787883107568
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 6,
+            "timestamp": 1787883107631
+          },
+          {
+            "kind": "turn_started",
+            "turn": 7,
+            "timestamp": 1787883107632
+          },
+          {
+            "kind": "stream",
+            "partial": "让我",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883115335
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883115644
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883115846
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883116051
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883116254
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883116460
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883116664
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883116936
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1787883117139
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用HTTP请求直接登录。\n\n",
+            "done": true,
+            "turn": 7,
+            "timestamp": 1787883117283
+          },
+          {
+            "kind": "tool_call",
+            "tool": "http_request",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+              "method": "POST",
+              "headers": "Content-Type: application/x-www-form-urlencoded",
+              "body": "account=admin&password=abcd.1234"
+            },
+            "turn": 7,
+            "timestamp": 1787883117283
+          },
+          {
+            "kind": "tool_result",
+            "tool": "http_request",
+            "success": false,
+            "turn": 7,
+            "timestamp": 1787883117284
+          },
+          {
+            "kind": "turn_started",
+            "turn": 8,
+            "timestamp": 1787883117284
+          },
+          {
+            "kind": "stream",
+            "partial": "让我逐个填写表单",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1787883123051
+          },
+          {
+            "kind": "stream",
+            "partial": "让我逐个填写表单字段。\n\n",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1787883123375
+          },
+          {
+            "kind": "stream",
+            "partial": "让我逐个填写表单字段。\n\n",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1787883123647
+          },
+          {
+            "kind": "stream",
+            "partial": "让我逐个填写表单字段。\n\n",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1787883123850
+          },
+          {
+            "kind": "stream",
+            "partial": "让我逐个填写表单字段。\n\n",
+            "done": true,
+            "turn": 8,
+            "timestamp": 1787883123917
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "input[name=\"account\"]",
+              "data": "{\"value\": \"admin\"}"
+            },
+            "turn": 8,
+            "timestamp": 1787883123917
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 8,
+            "timestamp": 1787883123917
+          },
+          {
+            "kind": "turn_started",
+            "turn": 9,
+            "timestamp": 1787883123918
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883128582
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883128784
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883128991
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883129193
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883129397
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883129601
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1787883129857
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 9,
+            "timestamp": 1787883129928
+          },
+          {
+            "kind": "tool_call",
+            "tool": "http_request",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+              "method": "POST",
+              "body": "account=admin&password=abcd.1234"
+            },
+            "turn": 9,
+            "timestamp": 1787883129929
+          },
+          {
+            "kind": "tool_result",
+            "tool": "http_request",
+            "success": true,
+            "turn": 9,
+            "timestamp": 1787883130275
+          },
+          {
+            "kind": "turn_started",
+            "turn": 10,
+            "timestamp": 1787883130276
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883137266
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883137503
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883137707
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单。\n\n",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883138015
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单。\n\n",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883138217
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单。\n\n",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883138422
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单。\n\n",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1787883138624
+          },
+          {
+            "kind": "stream",
+            "partial": "登录页面使用了JavaScript AJAX提交，密码经过MD5加密。我需要通过浏览器来操作。让我重新导航到页面并使用浏览器工具填写表单。\n\n",
+            "done": true,
+            "turn": 10,
+            "timestamp": 1787883138679
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html"
+            },
+            "turn": 10,
+            "timestamp": 1787883138679
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": true,
+            "turn": 10,
+            "timestamp": 1787883139698
+          },
+          {
+            "kind": "turn_started",
+            "turn": 11,
+            "timestamp": 1787883139698
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1787883142887
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器工具填写登录表单。\n\n",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1787883143143
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器工具填写登录表单。\n\n",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1787883143347
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器工具填写登录表单。\n\n",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1787883143550
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器工具填写登录表单。\n\n",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1787883143755
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器工具填写登录表单。\n\n",
+            "done": true,
+            "turn": 11,
+            "timestamp": 1787883143928
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "#loginForm",
+              "data": "{\"account\": \"admin\", \"password\": \"abcd.1234\"}"
+            },
+            "turn": 11,
+            "timestamp": 1787883143928
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 11,
+            "timestamp": 1787883143929
+          },
+          {
+            "kind": "turn_started",
+            "turn": 12,
+            "timestamp": 1787883143929
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试直接",
+            "done": false,
+            "turn": 12,
+            "timestamp": 1787883161199
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试直接点击输入框并填写。\n\n",
+            "done": false,
+            "turn": 12,
+            "timestamp": 1787883161505
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试直接点击输入框并填写。\n\n",
+            "done": false,
+            "turn": 12,
+            "timestamp": 1787883161710
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试直接点击输入框并填写。\n\n",
+            "done": true,
+            "turn": 12,
+            "timestamp": 1787883161787
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "#account"
+            },
+            "turn": 12,
+            "timestamp": 1787883161787
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 12,
+            "timestamp": 1787883161843
+          },
+          {
+            "kind": "turn_started",
+            "turn": 13,
+            "timestamp": 1787883161843
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 13,
+            "timestamp": 1787883182351
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 13,
+            "timestamp": 1787883182554
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 13,
+            "timestamp": 1787883182757
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 13,
+            "timestamp": 1787883182830
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "#account",
+              "data": "admin"
+            },
+            "turn": 13,
+            "timestamp": 1787883182830
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 13,
+            "timestamp": 1787883182830
+          },
+          {
+            "kind": "turn_started",
+            "turn": 14,
+            "timestamp": 1787883182831
+          },
+          {
+            "kind": "stream",
+            "partial": "让我",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1787883205045
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填充表单并提交。\n\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1787883205335
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填充表单并提交。\n\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1787883205540
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填充表单并提交。\n\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1787883205795
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填充表单并提交。\n\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1787883206015
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填充表单并提交。\n\n",
+            "done": true,
+            "turn": 14,
+            "timestamp": 1787883206206
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "javascript:document.getElementById('account').value='admin';document.querySelector('input[name=\"password\"]').value='abcd.1234';document.getElementById('submit').click();"
+            },
+            "turn": 14,
+            "timestamp": 1787883206206
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": false,
+            "turn": 14,
+            "timestamp": 1787883206209
+          },
+          {
+            "kind": "turn_started",
+            "turn": 15,
+            "timestamp": 1787883206209
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883210909
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883211130
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883211334
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883211535
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883211742
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883211947
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1787883212150
+          },
+          {
+            "kind": "stream",
+            "partial": "让我通过HTTP请求方式登录，需要先获取随机数然后计算MD5。\n\n",
+            "done": true,
+            "turn": 15,
+            "timestamp": 1787883212157
+          },
+          {
+            "kind": "tool_call",
+            "tool": "http_request",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-refreshRandom",
+              "method": "GET"
+            },
+            "turn": 15,
+            "timestamp": 1787883212158
+          },
+          {
+            "kind": "tool_result",
+            "tool": "http_request",
+            "success": true,
+            "turn": 15,
+            "timestamp": 1787883212387
+          },
+          {
+            "kind": "turn_started",
+            "turn": 16,
+            "timestamp": 1787883212388
+          },
+          {
+            "kind": "stream",
+            "partial": "现在我",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1787883215673
+          },
+          {
+            "kind": "stream",
+            "partial": "现在我需要计算MD5加密的密码。让我使用Python来计算",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1787883215876
+          },
+          {
+            "kind": "stream",
+            "partial": "现在我需要计算MD5加密的密码。让我使用Python来计算。\n\n",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1787883216080
+          },
+          {
+            "kind": "stream",
+            "partial": "现在我需要计算MD5加密的密码。让我使用Python来计算。\n\n",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1787883216284
+          },
+          {
+            "kind": "stream",
+            "partial": "现在我需要计算MD5加密的密码。让我使用Python来计算。\n\n",
+            "done": true,
+            "turn": 16,
+            "timestamp": 1787883216371
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "#account"
+            },
+            "turn": 16,
+            "timestamp": 1787883216371
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 16,
+            "timestamp": 1787883216392
+          },
+          {
+            "kind": "turn_started",
+            "turn": 17,
+            "timestamp": 1787883216392
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1787883221852
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1787883222142
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1787883222345
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1787883222550
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1787883222754
+          },
+          {
+            "kind": "stream",
+            "partial": "让我使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": true,
+            "turn": 17,
+            "timestamp": 1787883222944
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html"
+            },
+            "turn": 17,
+            "timestamp": 1787883222944
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": true,
+            "turn": 17,
+            "timestamp": 1787883223929
+          },
+          {
+            "kind": "turn_started",
+            "turn": 18,
+            "timestamp": 1787883223930
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883226297
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883226551
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883226755
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883226959
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883227181
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1787883227435
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用正确的参数格式填写表单。\n\n",
+            "done": true,
+            "turn": 18,
+            "timestamp": 1787883227540
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "#loginForm",
+              "data": "{\"account\": \"admin\", \"password\": \"abcd.1234\"}",
+              "submit": "true"
+            },
+            "turn": 18,
+            "timestamp": 1787883227540
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 18,
+            "timestamp": 1787883227541
+          },
+          {
+            "kind": "turn_started",
+            "turn": 19,
+            "timestamp": 1787883227541
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用浏览",
+            "done": false,
+            "turn": 19,
+            "timestamp": 1787883233124
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 19,
+            "timestamp": 1787883233393
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": false,
+            "turn": 19,
+            "timestamp": 1787883233599
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用浏览器的JavaScript来填写表单并提交。\n\n",
+            "done": true,
+            "turn": 19,
+            "timestamp": 1787883233719
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "#account"
+            },
+            "turn": 19,
+            "timestamp": 1787883233719
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 19,
+            "timestamp": 1787883233761
+          },
+          {
+            "kind": "turn_started",
+            "turn": 20,
+            "timestamp": 1787883233761
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript",
+            "done": false,
+            "turn": 20,
+            "timestamp": 1787883241977
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填写表单并提交。\n\n",
+            "done": false,
+            "turn": 20,
+            "timestamp": 1787883242219
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填写表单并提交。\n\n",
+            "done": false,
+            "turn": 20,
+            "timestamp": 1787883242441
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试使用JavaScript直接填写表单并提交。\n\n",
+            "done": true,
+            "turn": 20,
+            "timestamp": 1787883242541
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "#account"
+            },
+            "turn": 20,
+            "timestamp": 1787883242541
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 20,
+            "timestamp": 1787883242558
+          },
+          {
+            "kind": "turn_started",
+            "turn": 21,
+            "timestamp": 1787883242558
+          }
+        ],
+        "score": 100,
+        "executionSummary": {
+          "overview": "Tested web navigation and form interaction capabilities. The agent navigated to a target page, captured a screenshot, and attempted to fill out form fields.",
+          "steps": [
+            {
+              "action": "Navigate to target webpage",
+              "result": "success",
+              "reason": "Reach the intended application page after an initial failed attempt"
+            },
+            {
+              "action": "Take screenshot",
+              "result": "success",
+              "reason": "Capture and verify the current state of the webpage"
+            },
+            {
+              "action": "Fill form fields",
+              "result": "failed",
+              "reason": "Attempt to input data into the form elements, which did not complete successfully"
+            }
+          ],
+          "findings": 0,
+          "conclusion": "Navigation and screenshot functionalities operated correctly, but form filling actions failed. The test session requires debugging of the form interaction mechanisms."
+        }
+      }
     }
   },
   "reports": {
