@@ -9,8 +9,23 @@ import { BrowserDriverDefinition, type BrowserDriver, type FormData as BrowserFo
 const inputSchema = z.object({
   formSelector: z.string().describe("CSS selector of the form element"),
   data: z
-    .record(z.string())
-    .describe("Map of field names/selectors to values to fill"),
+    .union([
+      z.record(z.string()),
+      z.string().transform((str) => {
+        try {
+          const parsed = JSON.parse(str);
+          if (typeof parsed === "object" && parsed !== null) {
+            return Object.fromEntries(
+              Object.entries(parsed).map(([k, v]) => [k, String(v)])
+            );
+          }
+          throw new Error("Parsed value is not an object");
+        } catch {
+          throw new Error(`Invalid JSON string for data: ${str}`);
+        }
+      }),
+    ])
+    .describe("Map of field names/selectors to values. Can be a JSON object or JSON string."),
   submit: z.boolean().optional().describe("Whether to submit the form after filling"),
 });
 

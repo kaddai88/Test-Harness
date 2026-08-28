@@ -22747,6 +22747,22 @@
           "conclusion": "Navigation and screenshot functionalities operated correctly, but form filling actions failed. The test session requires debugging of the form interaction mechanisms."
         }
       }
+    },
+    "80784c94-a3cd-469b-93f8-05ee76add8d9": {
+      "id": "80784c94-a3cd-469b-93f8-05ee76add8d9",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/abcd.1234登陆并进行功能性测试，尤其注意工作流的测试覆盖。",
+        "maxTurns": 99,
+        "maxRetriesPerAction": 3
+      },
+      "status": "planning",
+      "createdAt": "2026-08-28T02:23:25.017Z",
+      "startedAt": "2026-08-28T02:23:25.040Z",
+      "completedAt": null,
+      "createdBy": null,
+      "metadata": {}
     }
   },
   "reports": {
