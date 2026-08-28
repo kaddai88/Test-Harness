@@ -14,6 +14,7 @@ import { createMeasurePerformanceTool } from "./builtins/measure-performance.js"
 import { createAssertVisibleTool } from "./builtins/assert-visible.js";
 import { createAssertTextTool } from "./builtins/assert-text.js";
 import { createReportFindingTool } from "./builtins/report-finding.js";
+import { createExecuteJsTool } from "./builtins/execute-js.js";
 import { BrowserDriverDefinition } from "@test-harness/th-browser";
 import type { Tool } from "@test-harness/th-protocol";
 
@@ -27,6 +28,7 @@ export { createMeasurePerformanceTool } from "./builtins/measure-performance.js"
 export { createAssertVisibleTool } from "./builtins/assert-visible.js";
 export { createAssertTextTool } from "./builtins/assert-text.js";
 export { createReportFindingTool } from "./builtins/report-finding.js";
+export { createExecuteJsTool } from "./builtins/execute-js.js";
 
 /** Build the full set of built-in tools for a container. */
 export function createAllTools(container: THContainer): Tool[] {
@@ -45,6 +47,7 @@ export function createAllTools(container: THContainer): Tool[] {
       createMeasurePerformanceTool(container),
       createAssertVisibleTool(container),
       createAssertTextTool(container),
+      createExecuteJsTool(container),
     );
   } catch {
     // BrowserDriver not available — skip browser tools
