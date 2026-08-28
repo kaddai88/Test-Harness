@@ -12,6 +12,7 @@ const inputSchema = z.object({
     .union([
       z.record(z.string()),
       z.string().transform((str) => {
+        // Try JSON parse first
         try {
           const parsed = JSON.parse(str);
           if (typeof parsed === "object" && parsed !== null) {
@@ -19,13 +20,28 @@ const inputSchema = z.object({
               Object.entries(parsed).map(([k, v]) => [k, String(v)])
             );
           }
-          throw new Error("Parsed value is not an object");
         } catch {
-          throw new Error(`Invalid JSON string for data: ${str}`);
+          // Not JSON, try URL-encoded format
         }
+
+        // Try URL-encoded format: "key1=value1&key2=value2"
+        if (str.includes("=") && !str.startsWith("{")) {
+          const params = new URLSearchParams(str);
+          const result: Record<string, string> = {};
+          params.forEach((value, key) => {
+            result[key] = value;
+          });
+          if (Object.keys(result).length > 0) {
+            return result;
+          }
+        }
+
+        throw new Error(
+          `Cannot parse data. Expected JSON object or URL-encoded string, got: ${str.slice(0, 100)}`
+        );
       }),
     ])
-    .describe("Map of field names/selectors to values. Can be a JSON object or JSON string."),
+    .describe("Field data as JSON object, JSON string, or URL-encoded string (key1=value1&key2=value2)"),
   submit: z.boolean().optional().describe("Whether to submit the form after filling"),
 });
 
