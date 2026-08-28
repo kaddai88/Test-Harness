@@ -12,7 +12,14 @@ export interface Session {
   startedAt: string | null;
   completedAt: string | null;
   createdBy?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    executionSummary?: {
+      overview: string;
+      steps: Array<{ action: string; result: string; reason: string }>;
+      findings: number;
+      conclusion: string;
+    };
+  };
   score?: number;
   findings?: Finding[];
   progress?: number;
@@ -62,6 +69,7 @@ export interface SessionCreateRequest {
   url?: string;
   instructions?: string;
   maxTurns?: number;
+  maxRetriesPerAction?: number;
   timeout?: number;
 }
 

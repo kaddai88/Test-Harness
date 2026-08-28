@@ -13,9 +13,9 @@ const App: React.FC = () => (
     <Route element={<Layout />}>
       <Route path="/" element={<Dashboard />} />
       <Route path="/sessions/new" element={<NewSession />} />
+      <Route path="/sessions/:id/report" element={<ReportView />} />
       <Route path="/sessions/:id" element={<SessionDetail />} />
       <Route path="/history" element={<SessionHistory />} />
-      <Route path="/sessions/:id/report" element={<ReportView />} />
       <Route path="/settings" element={<Settings />} />
     </Route>
   </Routes>

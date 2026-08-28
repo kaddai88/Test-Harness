@@ -40,6 +40,12 @@ export interface AgentContext {
   /** Maximum allowed turns */
   maxTurns: number;
 
+  /** Max consecutive failures per tool before forcing strategy change */
+  maxRetriesPerAction: number;
+
+  /** Consecutive failure count per tool name */
+  toolFailureCounts: Map<string, number>;
+
   /** Abort signal for cancellation */
   abortSignal: AbortSignal;
 }

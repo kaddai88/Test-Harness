@@ -20,16 +20,15 @@ interface ReportData {
   url: string;
   score: number;
   summary: string;
-  categories: { name: string; score: number; findings: number }[];
   findings: {
     id: string;
     severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
     title: string;
     description: string;
-    recommendation: string;
-    category: string;
+    recommendation?: string;
   }[];
-  recommendations: string[];
+  /** Raw content for markdown/html formats */
+  rawContent?: string;
 }
 
 export const ReportView: React.FC = () => {
@@ -47,7 +46,47 @@ export const ReportView: React.FC = () => {
 
     api
       .getReport(id, format)
-      .then((data) => setReport(data as unknown as ReportData))
+      .then((resp) => {
+        // Markdown / HTML — raw text already in resp.content
+        if (resp.raw !== undefined) {
+          setReport({
+            sessionId: id,
+            url: '',
+            score: 0,
+            summary: '',
+            findings: [],
+            rawContent: resp.content,
+          });
+          return;
+        }
+
+        // JSON format — parse nested content string
+        try {
+          const inner = JSON.parse(resp.content) as {
+            targetUrl: string;
+            summary: { totalFindings: number; bySeverity: Record<string, number>; overallScore: number };
+            findings: Array<{ id: string; severity: string; title: string; description: string; recommendation?: string; evidence?: { url?: string } }>;
+            aiSummary: string;
+          };
+          const mapped: ReportData = {
+            sessionId: id,
+            url: inner.targetUrl,
+            score: inner.summary?.overallScore ?? 0,
+            summary: inner.aiSummary ?? '',
+            findings: inner.findings.map((f) => ({
+              id: f.id,
+              severity: f.severity as ReportData['findings'][number]['severity'],
+              title: f.title,
+              description: f.description,
+              recommendation: f.recommendation,
+            })),
+          };
+          setReport(mapped);
+        } catch {
+          setReport(null);
+          setError('Failed to parse report content');
+        }
+      })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Failed to load report');
       })
@@ -151,104 +190,59 @@ export const ReportView: React.FC = () => {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
             Executive Summary
           </h2>
-          <p className="text-sm leading-relaxed text-slate-300">{report.summary}</p>
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{report.summary}</p>
+          <div className="mt-4 grid grid-cols-1 gap-4">
             <div>
               <p className="text-xs text-slate-400">Total Findings</p>
               <p className="text-xl font-bold text-slate-100">{report.findings.length}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Categories</p>
-              <p className="text-xl font-bold text-slate-100">{report.categories.length}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">Recommendations</p>
-              <p className="text-xl font-bold text-slate-100">
-                {report.recommendations.length}
-              </p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Score Breakdown */}
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Score by Category</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {report.categories.map((cat) => (
-            <div
-              key={cat.name}
-              className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-4 text-center"
-            >
-              <p className="text-sm font-medium capitalize text-slate-300">{cat.name}</p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">{cat.score}</p>
-              <p className="text-xs text-slate-400">{cat.findings} findings</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Findings by Severity */}
       <Card>
         <h2 className="mb-4 text-lg font-semibold text-slate-100">Findings</h2>
-        <div className="space-y-6">
-          {severityOrder.map((severity) => {
-            const items = findingsBySeverity?.[severity];
-            if (!items || items.length === 0) return null;
-            return (
-              <div key={severity}>
-                <div className="mb-2 flex items-center gap-2">
-                  <SeverityBadge severity={severity} />
-                  <span className="text-sm text-slate-400">
-                    {items.length} finding{items.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {items.map((finding) => (
-                    <div
-                      key={finding.id}
-                      className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-medium text-slate-200">
-                          {finding.title}
-                        </h3>
-                        <span className="shrink-0 text-xs capitalize text-slate-400">
-                          {finding.category}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-400">{finding.description}</p>
-                      {finding.recommendation && (
-                        <p className="mt-2 rounded bg-slate-700/30 p-2 text-xs text-slate-300">
-                          <span className="font-medium text-slate-200">Fix: </span>
-                          {finding.recommendation}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Recommendations */}
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Recommendations</h2>
-        {report.recommendations.length === 0 ? (
-          <p className="text-sm text-slate-400">No recommendations at this time.</p>
+        {report.findings.length === 0 ? (
+          <p className="text-sm text-slate-400">No findings for this session.</p>
         ) : (
-          <ol className="space-y-3">
-            {report.recommendations.map((rec, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-400">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-slate-300">{rec}</span>
-              </li>
-            ))}
-          </ol>
+          <div className="space-y-6">
+            {severityOrder.map((severity) => {
+              const items = findingsBySeverity?.[severity];
+              if (!items || items.length === 0) return null;
+              return (
+                <div key={severity}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <SeverityBadge severity={severity} />
+                    <span className="text-sm text-slate-400">
+                      {items.length} finding{items.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {items.map((finding) => (
+                      <div
+                        key={finding.id}
+                        className="rounded-lg border border-slate-700/50 bg-slate-800/50 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm font-medium text-slate-200">
+                            {finding.title}
+                          </h3>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-400">{finding.description}</p>
+                        {finding.recommendation && (
+                          <p className="mt-2 rounded bg-slate-700/30 p-2 text-xs text-slate-300">
+                            <span className="font-medium text-slate-200">Fix: </span>
+                            {finding.recommendation}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </Card>
     </div>

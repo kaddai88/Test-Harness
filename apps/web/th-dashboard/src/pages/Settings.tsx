@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -10,11 +10,9 @@ interface SettingsState {
   apiKey: string;
   baseUrl: string;
   maxTurns: string;
+  maxRetriesPerAction: string;
   timeout: string;
   strategy: string;
-  maxDepth: string;
-  maxPages: string;
-  rateLimit: string;
 }
 
 const providerOptions = [
@@ -32,20 +30,42 @@ const strategyOptions = [
 
 const defaultSettings: SettingsState = {
   llmProvider: 'qwen',
-  llmModel: 'qwen-plus',
+  llmModel: 'qwen3.7-plus',
   apiKey: '',
   baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  maxTurns: '25',
-  timeout: '300',
+  maxTurns: '99',
+  maxRetriesPerAction: '3',
+  timeout: '600',
   strategy: 'adaptive',
-  maxDepth: '3',
-  maxPages: '50',
-  rateLimit: '10',
 };
 
+const STORAGE_KEY = 'th-dashboard-settings';
+
+function loadSettings(): SettingsState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...defaultSettings, ...parsed };
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return { ...defaultSettings };
+}
+
 export const Settings: React.FC = () => {
-  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
+  const [settings, setSettings] = useState<SettingsState>(loadSettings);
   const [saved, setSaved] = useState(false);
+
+  // Persist settings whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [settings]);
 
   const update = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -54,7 +74,7 @@ export const Settings: React.FC = () => {
 
   const getProviderDefaults = (provider: string): { model: string; baseUrl: string } => {
     const defaults: Record<string, { model: string; baseUrl: string }> = {
-      qwen: { model: 'qwen-plus', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+      qwen: { model: 'qwen3.7-plus', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
       openai: { model: 'gpt-4o', baseUrl: 'https://api.openai.com/v1' },
       deepseek: { model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com/v1' },
       ollama: { model: 'llama3.1', baseUrl: 'http://localhost:11434' },
@@ -76,7 +96,7 @@ export const Settings: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      localStorage.setItem('th-dashboard-settings', JSON.stringify(settings));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -113,7 +133,7 @@ export const Settings: React.FC = () => {
               label="Model"
               value={settings.llmModel}
               onChange={(e) => update('llmModel', e.target.value)}
-              placeholder="e.g. qwen-plus, gpt-4o, llama3.1"
+              placeholder="e.g. qwen3.7-plus, gpt-4o, llama3.1"
             />
             <Input
               label="API Key"
@@ -137,8 +157,17 @@ export const Settings: React.FC = () => {
                 value={settings.maxTurns}
                 onChange={(e) => update('maxTurns', e.target.value)}
                 min="1"
-                max="100"
-                helperText="Maximum agent reasoning turns per session"
+                max="200"
+                helperText="Maximum total agent turns per session"
+              />
+              <Input
+                label="Max Retries per Action"
+                type="number"
+                value={settings.maxRetriesPerAction}
+                onChange={(e) => update('maxRetriesPerAction', e.target.value)}
+                min="1"
+                max="10"
+                helperText="Max consecutive failures before forcing strategy change"
               />
               <Input
                 label="Timeout (seconds)"
@@ -155,40 +184,6 @@ export const Settings: React.FC = () => {
               value={settings.strategy}
               onChange={(e) => update('strategy', e.target.value)}
               options={strategyOptions}
-            />
-          </div>
-        </Card>
-
-        {/* Crawl Config */}
-        <Card>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Crawl Configuration</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              label="Max Depth"
-              type="number"
-              value={settings.maxDepth}
-              onChange={(e) => update('maxDepth', e.target.value)}
-              min="1"
-              max="10"
-              helperText="Link follow depth"
-            />
-            <Input
-              label="Max Pages"
-              type="number"
-              value={settings.maxPages}
-              onChange={(e) => update('maxPages', e.target.value)}
-              min="1"
-              max="1000"
-              helperText="Maximum pages to crawl"
-            />
-            <Input
-              label="Rate Limit (req/s)"
-              type="number"
-              value={settings.rateLimit}
-              onChange={(e) => update('rateLimit', e.target.value)}
-              min="1"
-              max="100"
-              helperText="Requests per second"
             />
           </div>
         </Card>

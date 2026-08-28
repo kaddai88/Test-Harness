@@ -19,7 +19,7 @@
   "dependencies": {
     "@test-harness/th-core": "workspace:*",
     "@test-harness/th-protocol": "workspace:*",
-    "puppeteer-core": "^24.0.0"
+    "playwright": "^1.50.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0"

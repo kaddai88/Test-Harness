@@ -18,6 +18,7 @@ export const SessionDetail: React.FC = () => {
     agentActivity,
     streamText,
     loading,
+    wsConnected,
     fetchSession,
     cancelSession,
     connectWebSocket,
@@ -25,16 +26,39 @@ export const SessionDetail: React.FC = () => {
 
   const streamEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to latest activity
-  useEffect(() => {
-    streamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [agentActivity.length, streamText]);
-
   useEffect(() => {
     if (id) {
       void fetchSession(id);
     }
   }, [id, fetchSession]);
+
+  const isActive = currentSession?.status === 'running' || currentSession?.status === 'pending' || currentSession?.status === 'planning' || currentSession?.status === 'executing';
+
+  // Load activities from metadata for completed sessions
+  const historicalActivities: AgentActivity[] = useMemo(() => {
+    const acts = (currentSession?.metadata?.activities as Record<string, unknown>[] | undefined) ?? [];
+    return acts.map((a, i) => ({
+      id: `hist_${i}`,
+      sessionId: currentSession?.id,
+      turn: (a.turn as number) ?? 0,
+      kind: (a.kind as AgentActivity['kind']) ?? 'turn_started',
+      tool: a.tool as string | undefined,
+      input: a.input as Record<string, unknown> | undefined,
+      success: a.success as boolean | undefined,
+      partial: a.partial as string | undefined,
+      done: a.done as boolean | undefined,
+      timestamp: (a.timestamp as number) ?? Date.now(),
+    }));
+  }, [currentSession?.id, currentSession?.metadata?.activities]);
+
+  // Use historical activities for completed sessions, live for active
+  const displayActivities = !isActive ? historicalActivities : agentActivity;
+  const groupedSteps = useMemo(() => groupActivitiesByTurn(displayActivities), [displayActivities]);
+
+  // Auto-scroll to latest activity (must come after displayActivities declaration)
+  useEffect(() => {
+    streamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [displayActivities.length, streamText]);
 
   useEffect(() => {
     if (!currentSession || currentSession.status === 'completed' || currentSession.status === 'failed' || currentSession.status === 'cancelled') {
@@ -44,8 +68,7 @@ export const SessionDetail: React.FC = () => {
     return disconnect;
   }, [currentSession?.status, connectWebSocket]);
 
-  // Group activities into logical turns for display
-  const groupedSteps = useMemo(() => groupActivitiesByTurn(agentActivity), [agentActivity]);
+  const phase = currentSession?.phase || currentSession?.status || '';
 
   if (loading && !currentSession) {
     return (
@@ -68,9 +91,6 @@ export const SessionDetail: React.FC = () => {
       />
     );
   }
-
-  const isActive = currentSession.status === 'running' || currentSession.status === 'pending' || currentSession.status === 'planning' || currentSession.status === 'executing';
-  const phase = currentSession.phase || currentSession.status;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -98,7 +118,7 @@ export const SessionDetail: React.FC = () => {
             </Button>
           )}
           {!isActive && currentSession.status === 'completed' && id && (
-            <Button variant="secondary" onClick={() => navigate(`/scans/${id}/report`)}>
+            <Button variant="secondary" onClick={() => navigate(`/sessions/${id}/report`)}>
               View Report
             </Button>
           )}
@@ -110,20 +130,37 @@ export const SessionDetail: React.FC = () => {
         <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2.5">
           <Spinner size="sm" />
           <span className="text-sm font-medium text-blue-300">
-            {phase === 'planning' ? '🧠 AI is generating test plan...' :
+            {phase === 'planning' ? ' AI is generating test plan...' :
              phase === 'executing' ? '🔧 Running browser tests...' :
              `⏳ ${phase}`}
+          </span>
+          <span className="ml-auto text-xs">
+            {wsConnected ? (
+              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-emerald-400"> WS connected</span>
+            ) : (
+              <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-red-400"> WS disconnected</span>
+            )}
           </span>
         </div>
       )}
 
-      {/* ── Main Chat Stream ── */}
+      {/* ── Main Chat Stream ─ */}
       <Card className="min-h-[400px] max-h-[70vh] overflow-y-auto scrollbar-thin">
-        {agentActivity.length === 0 && !streamText ? (
-          <EmptyState
-            title="Waiting for agent..."
-            description="The AI agent will show its steps here as it tests your site."
-          />
+        {displayActivities.length === 0 && !streamText ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            {wsConnected ? (
+              <>
+                <Spinner size="lg" />
+                <p className="mt-4 text-sm text-slate-400">Connecting to agent...</p>
+                <p className="mt-1 text-xs text-slate-500">WebSocket connected, waiting for events</p>
+              </>
+            ) : (
+              <EmptyState
+                title="WebSocket disconnected"
+                description="Unable to connect to the real-time event stream. Check your network connection and try refreshing the page."
+              />
+            )}
+          </div>
         ) : (
           <div className="space-y-3">
             {groupedSteps.map((group, gi) => (
@@ -134,7 +171,7 @@ export const SessionDetail: React.FC = () => {
             {streamText && (
               <div className="flex gap-3">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-blue-500 text-xs text-white">
-                  🤖
+
                 </div>
                 <div className="flex-1 rounded-xl rounded-tl-none bg-slate-800/80 px-4 py-3">
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300 font-mono">
@@ -150,7 +187,7 @@ export const SessionDetail: React.FC = () => {
         )}
       </Card>
 
-      {/* ── Findings ── */}
+      {/* ── Findings ─ */}
       {findings.length > 0 && (
         <Card>
           <h2 className="mb-3 text-lg font-semibold text-slate-100">
@@ -168,6 +205,52 @@ export const SessionDetail: React.FC = () => {
               .map((finding) => (
                 <FindingCard key={finding.id} finding={finding} />
               ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ── Execution Summary ── */}
+      {currentSession.metadata?.executionSummary && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold text-slate-100">Execution Summary</h2>
+          <div className="space-y-4">
+            {/* Overview */}
+            <div>
+              <p className="text-sm font-medium text-slate-200">Overview</p>
+              <p className="mt-1 text-sm text-slate-300">{currentSession.metadata.executionSummary.overview}</p>
+            </div>
+
+            {/* Steps */}
+            {currentSession.metadata.executionSummary.steps && currentSession.metadata.executionSummary.steps.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-slate-200">Key Steps</p>
+                <div className="mt-2 space-y-2">
+                  {currentSession.metadata.executionSummary.steps.map((step, i) => (
+                    <div key={i} className="flex items-start gap-2 rounded bg-slate-800/50 px-3 py-2">
+                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs ${
+                        step.result === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                        step.result === 'failed' ? 'bg-red-500/20 text-red-400' :
+                        'bg-slate-600/20 text-slate-400'
+                      }`}>
+                        {step.result === 'success' ? '✓' : step.result === 'failed' ? '✗' : '—'}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-200">{step.action}</p>
+                        {step.reason && <p className="text-xs text-slate-400 mt-0.5">{step.reason}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Conclusion */}
+            {currentSession.metadata.executionSummary.conclusion && (
+              <div>
+                <p className="text-sm font-medium text-slate-200">Conclusion</p>
+                <p className="mt-1 text-sm text-slate-300">{currentSession.metadata.executionSummary.conclusion}</p>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -269,7 +352,7 @@ const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
           <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs ${
             success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
           }`}>
-            {success ? '✓' : '✗'}
+            {success ? '✓' : ''}
           </div>
           <span className="text-xs text-slate-500">
             {activity.tool} {success ? 'completed' : 'failed'}
@@ -303,12 +386,12 @@ const FindingCard: React.FC<FindingCardProps> = ({ finding }) => (
       <p className="mt-2 text-xs text-blue-300/80">💡 {finding.recommendation}</p>
     )}
     {finding.evidence?.url && (
-      <p className="mt-1 text-xs text-slate-500 truncate">📍 {finding.evidence.url}</p>
+      <p className="mt-1 text-xs text-slate-500 truncate"> {finding.evidence.url}</p>
     )}
   </div>
 );
 
-// ── Helpers ──
+// ─ Helpers ──
 
 interface TurnGroup {
   turn: number;

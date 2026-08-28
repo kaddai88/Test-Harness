@@ -10,6 +10,7 @@ export type { ReportInput, ReportOutput } from "./generator.js";
 export {
   summarize,
   groupBySeverity,
+  calculateScore,
 } from "./aggregator.js";
 export type { SessionSummary, FindingsGroup } from "./aggregator.js";
 

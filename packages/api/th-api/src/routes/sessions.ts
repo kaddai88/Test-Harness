@@ -92,7 +92,17 @@ export async function handleListSessions(
     deps.repos.sessions.count(status ? { status } : undefined),
   ]);
 
-  sendJson(res, 200, { sessions, total, limit, offset });
+  sendJson(res, 200, {
+    sessions: sessions.map((s) => ({
+      ...s,
+      score: s.metadata?.score,
+      summary: s.metadata?.summary,
+      findings: (s.metadata?.findings as Finding[] | undefined) ?? [],
+    })),
+    total,
+    limit,
+    offset,
+  });
 }
 
 /** GET /api/v1/sessions/:id — get session detail with results. */
@@ -117,7 +127,7 @@ export async function handleGetSession(
   const findings =
     (session.metadata?.findings as Finding[] | undefined) ?? [];
 
-  sendJson(res, 200, { ...session, findings, summary: session.metadata?.summary });
+  sendJson(res, 200, { ...session, findings, summary: session.metadata?.summary, score: session.metadata?.score });
 }
 
 /** DELETE /api/v1/sessions/:id — delete a session. */

@@ -24,9 +24,10 @@ import {
   type Finding,
 } from "@test-harness/th-protocol";
 import { THContainer, valueProvider } from "@test-harness/th-core";
-import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
+import { BrowserDriverDefinition, PlaywrightBrowserProvider } from "@test-harness/th-browser";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
+import { calculateScore } from "@test-harness/th-report";
 import fs from "node:fs";
 
 export interface TestSessionJobProcessorOptions {
@@ -47,6 +48,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
   }
 
   private broadcast(type: string, sessionId: string, data: Record<string, unknown>): void {
+    console.log(`[Worker] broadcast ${type} for ${sessionId.slice(0,8)}`);
     this.wsHandler?.broadcast({ type, sessionId, ...data });
   }
 
@@ -67,7 +69,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         }
       }
 
-      const browserProvider = new PuppeteerBrowserProvider({ executablePath });
+      const browserProvider = new PlaywrightBrowserProvider({ executablePath });
       container.register(BrowserDriverDefinition, valueProvider(browserProvider));
       await browserProvider.launch({ headless: true });
       return true;
@@ -95,6 +97,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
     this.broadcast("session:status", sessionId, { status: "planning", message: "AI is generating test plan..." });
 
     const collectedFindings: Finding[] = [];
+    const collectedActivities: Record<string, unknown>[] = [];
     const disposables: Array<{ dispose(): void }> = [];
 
     try {
@@ -127,7 +130,8 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
 
       const config: SessionConfig = {
         strategy: typeof rawConfig.strategy === "string" ? rawConfig.strategy : "adaptive",
-        maxTurns: typeof rawConfig.maxTurns === "number" ? rawConfig.maxTurns : 20,
+        maxTurns: typeof rawConfig.maxTurns === "number" ? rawConfig.maxTurns : 99,
+        maxRetriesPerAction: typeof rawConfig.maxRetriesPerAction === "number" ? rawConfig.maxRetriesPerAction : 3,
         instructions: session.metadata?.instructions as string | undefined ?? instructions,
         llm: {
           provider: this.llm.id,
@@ -141,41 +145,49 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         },
       };
 
-      // ── Bridge Agent Loop events to WebSocket ──
+      // ─ Bridge Agent Loop events to WebSocket ──
       disposables.push(
         container.events.on(AgentTurnStartedEvent, (d) => {
-          this.broadcast("agent:activity", sessionId, {
+          const activity = {
             kind: "turn_started",
             turn: d.turnNumber,
             timestamp: Date.now(),
-          });
+          };
+          this.broadcast("agent:activity", sessionId, activity);
+          collectedActivities.push(activity);
         }),
         container.events.on(AgentStreamChunkEvent, (d) => {
-          this.broadcast("agent:activity", sessionId, {
+          const activity = {
             kind: "stream",
             partial: d.partialContent,
             done: d.done,
             turn: d.turnNumber,
             timestamp: Date.now(),
-          });
+          };
+          this.broadcast("agent:activity", sessionId, activity);
+          collectedActivities.push(activity);
         }),
         container.events.on(AgentToolCallEvent, (d) => {
-          this.broadcast("agent:activity", sessionId, {
+          const activity = {
             kind: "tool_call",
             tool: d.toolName,
             input: d.input,
             turn: d.turnNumber,
             timestamp: Date.now(),
-          });
+          };
+          this.broadcast("agent:activity", sessionId, activity);
+          collectedActivities.push(activity);
         }),
         container.events.on(AgentToolResultEvent, (d) => {
-          this.broadcast("agent:activity", sessionId, {
+          const activity = {
             kind: "tool_result",
             tool: d.toolName,
             success: d.success,
             turn: d.turnNumber,
             timestamp: Date.now(),
-          });
+          };
+          this.broadcast("agent:activity", sessionId, activity);
+          collectedActivities.push(activity);
         }),
       );
 
@@ -201,12 +213,28 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
             ? "cancelled"
             : "completed";
 
+      // Generate execution summary
+      let executionSummary = null;
+      try {
+        executionSummary = await this.generateExecutionSummary(
+          collectedActivities,
+          collectedFindings,
+          result.summary ?? ""
+        );
+      } catch (err) {
+        console.error('[Worker] Failed to generate execution summary:', err);
+      }
+
       await this.repos.sessions.updateStatus(sessionId, status);
       await this.repos.sessions.updateCompletedAt(sessionId);
+      const score = calculateScore(collectedFindings);
       await this.repos.sessions.updateMetadata(sessionId, {
         summary: result.summary ?? "",
         findings: collectedFindings,
         turns: result.turns,
+        activities: collectedActivities,
+        score,
+        executionSummary,
       });
 
       this.broadcast("session:update", sessionId, { status });
@@ -234,6 +262,60 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         error: errorMsg,
       });
       throw err;
+    }
+  }
+
+  /**
+   * Generate a structured execution summary from activities and findings.
+   */
+  private async generateExecutionSummary(
+    activities: Array<Record<string, unknown>>,
+    findings: Finding[],
+    finalSummary: string
+  ): Promise<Record<string, unknown> | null> {
+    if (activities.length === 0) return null;
+
+    const prompt = `You just completed a test session. Based on the following execution data, generate a concise structured summary in JSON format.
+
+Activities executed (${activities.length} total):
+${activities.slice(0, 50).map((a, i) => `${i+1}. [${a.kind}] ${a.tool ?? ''} - ${a.success !== undefined ? (a.success ? '✓' : '') : ''}`).join('\n')}
+
+Findings discovered: ${findings.length}
+${findings.map((f, i) => `${i+1}. [${f.severity}] ${f.title}`).join('\n')}
+
+Agent's final summary:
+${finalSummary}
+
+Generate a JSON object with this structure:
+{
+  "overview": "1-2 sentence overview of what was tested",
+  "steps": [
+    {"action": "what was done", "result": "success/failed/skipped", "reason": "why this step was taken"}
+  ],
+  "findings": ${findings.length},
+  "conclusion": "1-2 sentence conclusion"
+}
+
+Keep it concise. Use at most 10 steps (group similar actions). Respond with ONLY the JSON object, no markdown.`;
+
+    try {
+      const response = await this.llm.complete({
+        model: (this.llm as any).defaultModel ?? 'qwen-plus',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        maxTokens: 1000,
+      });
+
+      const content = response.content.trim();
+      // Try to extract JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      return null;
+    } catch (err) {
+      console.error('[Worker] LLM summary generation failed:', err);
+      return null;
     }
   }
 }

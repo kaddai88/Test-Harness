@@ -119,7 +119,9 @@ export class AgentLoop {
       state: new Map(),
       turnCount: 0,
       stepCount: 0,
-      maxTurns: options.config.maxTurns ?? 20,
+      maxTurns: options.config.maxTurns ?? 99,
+      maxRetriesPerAction: options.config.maxRetriesPerAction ?? 3,
+      toolFailureCounts: new Map(),
       abortSignal: abortController.signal,
     };
 
@@ -492,6 +494,32 @@ export class AgentLoop {
         error: result.error,
         duration: 0, // Duration tracked in post-execute
       });
+
+      // Track consecutive failures per tool
+      // Reset counter when switching to a different tool
+      const currentTool = toolCall.name;
+      const lastTool = context.state.get("lastTool") as string | undefined;
+
+      if (lastTool && lastTool !== currentTool) {
+        // Tool changed — reset all failure counters
+        context.toolFailureCounts.clear();
+      }
+      context.state.set("lastTool", currentTool);
+
+      if (result.success) {
+        context.toolFailureCounts.set(currentTool, 0);
+      } else {
+        const count = (context.toolFailureCounts.get(currentTool) ?? 0) + 1;
+        context.toolFailureCounts.set(currentTool, count);
+
+        // If tool hit max retries, inject system message to force strategy change
+        if (count >= context.maxRetriesPerAction) {
+          sessionLog.append("system/note", {
+            note: `⚠️ Tool "${currentTool}" has failed ${count} consecutive times. You MUST try a different approach — use a different tool, different selector, or different strategy. Do NOT repeat the same failing action.`,
+          });
+          logger.warn(`${currentTool} failed ${count}x — forcing strategy change`);
+        }
+      }
 
       toolResults.push({
         toolCallId: toolCall.id,

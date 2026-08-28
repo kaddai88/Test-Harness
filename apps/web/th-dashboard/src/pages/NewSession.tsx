@@ -12,14 +12,45 @@ export const NewSession: React.FC = () => {
   const [url, setUrl] = useState('');
   const [instructions, setInstructions] = useState('');
 
+  // Load settings from localStorage
+  const getSettingsMaxTurns = (): number | undefined => {
+    try {
+      const raw = localStorage.getItem('th-dashboard-settings');
+      if (raw) {
+        const settings = JSON.parse(raw);
+        if (settings.maxTurns) return parseInt(settings.maxTurns, 10);
+      }
+    } catch {
+      // Ignore
+    }
+    return undefined;
+  };
+
+  const getSettingsMaxRetries = (): number | undefined => {
+    try {
+      const raw = localStorage.getItem('th-dashboard-settings');
+      if (raw) {
+        const settings = JSON.parse(raw);
+        if (settings.maxRetriesPerAction) return parseInt(settings.maxRetriesPerAction, 10);
+      }
+    } catch {
+      // Ignore
+    }
+    return undefined;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
     try {
+      const maxTurns = getSettingsMaxTurns();
+      const maxRetries = getSettingsMaxRetries();
       const id = await createSession(
         url.trim(),
         instructions.trim() || undefined,
+        maxTurns,
+        maxRetries,
       );
       navigate(`/sessions/${id}`);
     } catch {

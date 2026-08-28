@@ -13,38 +13,46 @@ export class SessionWebSocket {
   connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Direct connection to backend ws server (ws library)
+    const wsUrl = 'ws://localhost:3000/ws';
+    console.log('[WebSocket] Connecting to', wsUrl);
+
+    // Reset reconnect attempts when manually connecting
+    this.reconnectAttempts = 0;
 
     try {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
+        console.log('[WebSocket] ✅ Connected');
         this.reconnectAttempts = 0;
         this.emit('connected', { connected: true });
       };
 
       this.ws.onmessage = (event) => {
+        console.log('[WebSocket] 📩 Raw message:', (event.data as string).slice(0, 120));
         try {
           const message = JSON.parse(event.data as string);
+          console.log('[WebSocket] 📩 Event:', message.type, message.sessionId?.slice(0,8));
           // Server sends flat messages (no `payload` wrapper) — emit entire message
           this.emit(message.type, message);
-        } catch {
-          console.warn('Failed to parse WebSocket message:', event.data);
+        } catch (err) {
+          console.warn('[WebSocket] Failed to parse message:', event.data, err);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('[WebSocket] ❌ Error:', error);
         this.emit('error', { error: 'WebSocket connection error' });
       };
 
       this.ws.onclose = () => {
+        console.log('[WebSocket] 🔌 Disconnected, will reconnect');
         this.emit('disconnected', { connected: false });
         this.scheduleReconnect();
       };
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      console.error('[WebSocket] Failed to create WebSocket:', error);
       this.scheduleReconnect();
     }
   }

@@ -62,6 +62,7 @@ export interface LLMConfig {
 export interface SessionConfig {
   strategy: "sequential" | "parallel" | "adaptive" | string;
   maxTurns?: number;
+  maxRetriesPerAction?: number;
   instructions?: string;
   llm: LLMConfig;
 }

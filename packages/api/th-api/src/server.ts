@@ -4,7 +4,6 @@
  * No external framework dependencies. Routes are dispatched manually.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { Duplex } from "node:stream";
 import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import type { TaskQueue } from "@test-harness/th-queue";
 import { applyCors, getPathname, sendJson } from "./http.js";
@@ -41,9 +40,8 @@ export class APIServer {
       });
     });
 
-    this.server.on("upgrade", (req, socket, head) => {
-      this.handleUpgrade(req, socket as Duplex, head as Buffer);
-    });
+    // Attach WebSocket handler to the HTTP server
+    this.ws.attach(this.server);
   }
 
   async start(): Promise<void> {
@@ -76,14 +74,6 @@ export class APIServer {
   }
 
   // ── Internal ──
-
-  private handleUpgrade(
-    req: IncomingMessage,
-    socket: Duplex,
-    head: Buffer
-  ): void {
-    this.ws.handleUpgrade(req, socket, head);
-  }
 
   private async handleRequest(
     req: IncomingMessage,

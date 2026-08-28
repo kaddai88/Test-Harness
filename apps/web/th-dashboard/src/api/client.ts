@@ -39,6 +39,8 @@ export const api = {
         targetUrl: data.targetUrl ?? data.url,
         scanConfig: {
           instructions: data.instructions,
+          maxTurns: data.maxTurns,
+          maxRetriesPerAction: data.maxRetriesPerAction,
         },
       }),
     }).then(handleResponse<SessionCreateResponse>),
@@ -48,10 +50,20 @@ export const api = {
       if (!r.ok) throw new Error(`Failed to cancel session: ${r.statusText}`);
     }),
 
-  getReport: (id: string, format: string): Promise<Record<string, unknown>> =>
-    fetch(`${API_BASE}/sessions/${id}/report?format=${format}`).then(
-      handleResponse<Record<string, unknown>>
-    ),
+  getReport: (id: string, format: string): Promise<{ content: string; raw?: string }> =>
+    fetch(`${API_BASE}/sessions/${id}/report?format=${format}`).then(async (r) => {
+      if (!r.ok) {
+        const text = await r.text().catch(() => '');
+        throw new Error(`API error ${r.status}: ${text || r.statusText}`);
+      }
+      const contentType = r.headers.get('content-type') ?? '';
+      if (contentType.includes('application/json')) {
+        return r.json() as Promise<{ content: string }>;
+      }
+      // Markdown or HTML — return raw text
+      const text = await r.text();
+      return { content: text, raw: text };
+    }),
 
   getHealth: (): Promise<HealthStatus> =>
     fetch(`${API_BASE}/health`).then(handleResponse<HealthStatus>),

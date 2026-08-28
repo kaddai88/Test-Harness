@@ -10,7 +10,7 @@
 import { THContainer, valueProvider } from "@test-harness/th-core";
 import { OllamaProvider } from "@test-harness/th-llm-ollama";
 import { QwenProvider } from "@test-harness/th-llm-qwen";
-import { BrowserDriverDefinition, PuppeteerBrowserProvider } from "@test-harness/th-browser";
+import { BrowserDriverDefinition, PlaywrightBrowserProvider } from "@test-harness/th-browser";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import type { LLMProvider, Finding, SessionTarget, SessionConfig } from "@test-harness/th-protocol";
@@ -58,7 +58,7 @@ export async function runTest(
   // Register browser driver
   if (!options.noBrowser) {
     try {
-      const browserProvider = new PuppeteerBrowserProvider();
+      const browserProvider = new PlaywrightBrowserProvider();
       container.register(BrowserDriverDefinition, valueProvider(browserProvider));
       await browserProvider.launch({ headless: true });
       terminal.success("Browser automation enabled (Puppeteer)");
@@ -89,7 +89,8 @@ export async function runTest(
   const target: SessionTarget = { url, scope: "page" };
   const config: SessionConfig = {
     strategy: "adaptive",
-    maxTurns: options.maxTurns ?? 20,
+    maxTurns: options.maxTurns ?? 99,
+    maxRetriesPerAction: 3,
     instructions: options.instructions,
     llm: {
       provider: llmProvider.id,
