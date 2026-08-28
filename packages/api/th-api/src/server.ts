@@ -9,6 +9,7 @@ import type { TaskQueue } from "@test-harness/th-queue";
 import { applyCors, getPathname, sendJson } from "./http.js";
 import { dispatchSessionRoute } from "./routes/sessions.js";
 import { dispatchReportRoute } from "./routes/reports.js";
+import { dispatchSettingsRoute } from "./routes/settings.js";
 import { handleHealth, handleStatus } from "./routes/health.js";
 import { WebSocketHandler } from "./websocket.js";
 
@@ -16,6 +17,7 @@ export interface APIServerOptions {
   port?: number;
   repos: DatabaseRepositories;
   queue: TaskQueue;
+  envPath?: string;
 }
 
 export class APIServer {
@@ -24,11 +26,13 @@ export class APIServer {
   private readonly port: number;
   private readonly repos: DatabaseRepositories;
   private readonly queue: TaskQueue;
+  private readonly envPath: string;
 
   constructor(opts: APIServerOptions) {
     this.port = opts.port ?? 3000;
     this.repos = opts.repos;
     this.queue = opts.queue;
+    this.envPath = opts.envPath ?? ".env";
     this.ws = new WebSocketHandler();
 
     this.server = createServer((req, res) => {
@@ -118,6 +122,12 @@ export class APIServer {
       repos: this.repos,
     }, pathname);
     if (handled3) return;
+
+    // Settings routes
+    const handled4 = await dispatchSettingsRoute(req, res, {
+      envPath: this.envPath,
+    }, pathname);
+    if (handled4) return;
 
     // 404
     sendJson(res, 404, { error: "Not found" });

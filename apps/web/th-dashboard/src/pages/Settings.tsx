@@ -96,7 +96,24 @@ export const Settings: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Save to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+
+      // Also save to server (.env file)
+      fetch('/api/v1/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      }).then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('Settings saved to server:', data.message);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to save settings to server:', err);
+        });
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {

@@ -269,6 +269,7 @@ export class TestHarnessServer {
       port,
       repos: this.db,
       queue: this.queue,
+      envPath: process.env.ENV_PATH ?? ".env",
     });
     await this.api.start();
 
