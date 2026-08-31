@@ -95,7 +95,6 @@ export class OpenAIProvider implements LLMProvider {
   constructor(config?: OpenAIProviderConfig) {
     this.id = "openai";
     this.name = "OpenAI";
-    this.baseUrl = config?.baseUrl ?? "https://api.openai.com/v1";
     this.defaultModel = config?.defaultModel ?? "gpt-4o";
     this.apiKey = config?.apiKey ?? getEnvVar("OPENAI_API_KEY") ?? "";
     this.timeout = config?.timeout ?? 120_000;
@@ -107,6 +106,12 @@ export class OpenAIProvider implements LLMProvider {
       "json_mode",
       "system_prompt",
     ];
+
+    // Normalize base URL: remove trailing slash and /v1 suffix
+    let base = config?.baseUrl ?? "https://api.openai.com/v1";
+    base = base.replace(/\/$/, ""); // Remove trailing slash
+    base = base.replace(/\/v1$/, ""); // Remove /v1 suffix if present
+    this.baseUrl = base;
   }
 
   async complete(params: CompletionParams): Promise<ModelResponse> {
