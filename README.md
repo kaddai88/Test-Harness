@@ -75,9 +75,9 @@ built as a TypeScript monorepo. It is architecturally inspired by
 │Provider│ │ Registry │ │ Driver │ │Generator │
 │        │ │          │ │        │ │          │
 │┌──────┐│ │┌──────┐ │ │┌──────┐│ │┌───────┐│
-││Ollama││ ││nav   │ │ ││Pupp- ││ ││ JSON  ││
-││OpenAI││ ││click │ │ ││eteer ││ ││  MD   ││
-││Qwen  ││ ││fill  │ │ ││(Chr) ││ ││ HTML  ││
+││Ollama││ ││nav   │ │ ││Play- ││ ││ JSON  ││
+││OpenAI││ ││click │ │ ││wright││ ││  MD   ││
+││Qwen  ││ ││fill  │ │ ││ MCP  ││ ││ HTML  ││
 ││Stub  ││ ││assert│ │ │└──────┘│ │└───────┘│
 │└──────┘│ ││screen│ │ │        │ │          │
 │        │ ││http  │ │ │        │ │          │

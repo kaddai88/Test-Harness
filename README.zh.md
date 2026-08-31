@@ -76,9 +76,9 @@ Test-Harness 是一个生产级的、AI 驱动的网站测试平台，采用 Typ
 │Provider│ │ Registry │ │ Driver │ │Generator │
 │        │ │          │ │        │ │          │
 │┌──────┐│ │┌──────┐ │ │┌──────┐│ │┌───────┐│
-││Ollama││ ││nav   │ │ ││Pupp- ││ ││ JSON  ││
-││OpenAI││ ││click │ │ ││eteer ││ ││  MD   ││
-││Qwen  ││ ││fill  │ │ ││(Chr) ││ ││ HTML  ││
+││Ollama││ ││nav   │ │ ││Play- ││ ││ JSON  ││
+││OpenAI││ ││click │ │ ││wright││ ││  MD   ││
+││Qwen  ││ ││fill  │ │ ││ MCP  ││ ││ HTML  ││
 ││Stub  ││ ││assert│ │ │└──────┘│ │└───────┘│
 │└──────┘│ ││screen│ │ │        │ │          │
 │        │ ││http  │ │ │        │ │          │
