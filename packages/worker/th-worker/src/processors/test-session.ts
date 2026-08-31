@@ -24,7 +24,7 @@ import {
   type Finding,
 } from "@test-harness/th-protocol";
 import { THContainer, valueProvider } from "@test-harness/th-core";
-import { BrowserDriverDefinition, PlaywrightBrowserProvider } from "@test-harness/th-browser";
+import { BrowserDriverDefinition, PlaywrightBrowserProvider, PlaywrightMCPProvider } from "@test-harness/th-browser";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import { calculateScore } from "@test-harness/th-report";
@@ -55,23 +55,37 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
   /** Launch a headless Chrome browser and register it in the container. */
   private async launchBrowser(container: THContainer): Promise<boolean> {
     try {
-      const chromePaths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
-      ];
+      const useMCP = process.env.BROWSER_MODE === "mcp";
 
-      let executablePath: string | undefined;
-      for (const path of chromePaths) {
-        if (path && fs.existsSync(path)) {
-          executablePath = path;
-          break;
+      if (useMCP) {
+        // Use Playwright MCP server
+        const browserProvider = new PlaywrightMCPProvider({
+          serverUrl: process.env.PLAYWRIGHT_MCP_URL ?? "http://localhost:3001",
+        });
+        container.register(BrowserDriverDefinition, valueProvider(browserProvider));
+        await browserProvider.launch({ headless: true });
+        console.log('[Worker] Using Playwright MCP server');
+      } else {
+        // Use local Playwright
+        const chromePaths = [
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+          process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+        ];
+
+        let executablePath: string | undefined;
+        for (const path of chromePaths) {
+          if (path && fs.existsSync(path)) {
+            executablePath = path;
+            break;
+          }
         }
-      }
 
-      const browserProvider = new PlaywrightBrowserProvider({ executablePath });
-      container.register(BrowserDriverDefinition, valueProvider(browserProvider));
-      await browserProvider.launch({ headless: true });
+        const browserProvider = new PlaywrightBrowserProvider({ executablePath });
+        container.register(BrowserDriverDefinition, valueProvider(browserProvider));
+        await browserProvider.launch({ headless: true });
+        console.log('[Worker] Using local Playwright');
+      }
       return true;
     } catch (err) {
       console.log('[Worker] Browser not available:', err instanceof Error ? err.message : String(err));

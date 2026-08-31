@@ -107,11 +107,9 @@ export class OpenAIProvider implements LLMProvider {
       "system_prompt",
     ];
 
-    // Normalize base URL: remove trailing slash and /v1 suffix
+    // Normalize base URL: remove trailing slash only
     let base = config?.baseUrl ?? "https://api.openai.com/v1";
-    base = base.replace(/\/$/, ""); // Remove trailing slash
-    base = base.replace(/\/v1$/, ""); // Remove /v1 suffix if present
-    this.baseUrl = base;
+    this.baseUrl = base.replace(/\/$/, ""); // Remove trailing slash only
   }
 
   async complete(params: CompletionParams): Promise<ModelResponse> {
@@ -122,6 +120,9 @@ export class OpenAIProvider implements LLMProvider {
     }
 
     const body = this.buildRequestBody(params, false);
+
+    console.log('[OpenAI] Request URL:', `${this.baseUrl}/chat/completions`);
+    console.log('[OpenAI] API Key starts with:', this.apiKey.slice(0, 10));
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -135,10 +136,13 @@ export class OpenAIProvider implements LLMProvider {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
+          "X-API-Key": this.apiKey,
         },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
+
+      console.log('[OpenAI] Response status:', response.status);
 
       if (!response.ok) {
         const text = await response.text();
@@ -171,6 +175,7 @@ export class OpenAIProvider implements LLMProvider {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
+          "X-API-Key": this.apiKey,
         },
         body: JSON.stringify(body),
         signal: controller.signal,

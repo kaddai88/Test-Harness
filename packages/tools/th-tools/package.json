@@ -17,9 +17,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@test-harness/th-browser": "workspace:*",
     "@test-harness/th-core": "workspace:*",
     "@test-harness/th-protocol": "workspace:*",
-    "@test-harness/th-browser": "workspace:*",
+    "undici": "^8.10.0",
     "zod": "^3.24.0"
   }
 }

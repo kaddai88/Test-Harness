@@ -28,3 +28,5 @@ export type {
 // Provider
 export { PlaywrightBrowserProvider } from "./playwright-provider.js";
 export type { PlaywrightBrowserProviderConfig } from "./playwright-provider.js";
+export { PlaywrightMCPProvider } from "./playwright-mcp-provider.js";
+export type { PlaywrightMCPConfig } from "./playwright-mcp-provider.js";

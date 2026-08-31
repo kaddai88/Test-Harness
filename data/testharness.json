@@ -46040,6 +46040,1749 @@
         "score": 100,
         "executionSummary": null
       }
+    },
+    "09f3f65e-9ea2-42d7-af55-346f551966cd": {
+      "id": "09f3f65e-9ea2-42d7-af55-346f551966cd",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T01:37:56.248Z",
+      "startedAt": "2026-08-31T01:37:56.322Z",
+      "completedAt": "2026-08-31T01:38:01.680Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788140278775
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "c7c1c112-ee8a-47b1-977d-ddfa619e7f3c": {
+      "id": "c7c1c112-ee8a-47b1-977d-ddfa619e7f3c",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并对所有模块进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T01:41:52.360Z",
+      "startedAt": "2026-08-31T01:41:52.438Z",
+      "completedAt": "2026-08-31T01:41:57.863Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788140515178
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "3fbbc109-cee3-4f7d-bbd1-ddffb154cd8f": {
+      "id": "3fbbc109-cee3-4f7d-bbd1-ddffb154cd8f",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并对所有模块进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T02:13:02.899Z",
+      "startedAt": "2026-08-31T02:13:02.942Z",
+      "completedAt": "2026-08-31T02:13:08.798Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788142386031
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "77e9f556-f9f8-4b42-a926-ddddd56bb46e": {
+      "id": "77e9f556-f9f8-4b42-a926-ddddd56bb46e",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T02:21:33.593Z",
+      "startedAt": "2026-08-31T02:21:33.641Z",
+      "completedAt": "2026-08-31T02:21:38.418Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788142896245
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "0f6336b3-8678-4ee5-bfb7-54f981cffc49": {
+      "id": "0f6336b3-8678-4ee5-bfb7-54f981cffc49",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并对系统进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T02:27:56.820Z",
+      "startedAt": "2026-08-31T02:27:56.857Z",
+      "completedAt": "2026-08-31T02:28:01.575Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788143279789
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "d9a14788-8475-4f1a-bf2d-6f138fc74f43": {
+      "id": "d9a14788-8475-4f1a-bf2d-6f138fc74f43",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234对系统进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T03:10:22.065Z",
+      "startedAt": "2026-08-31T03:10:22.115Z",
+      "completedAt": "2026-08-31T03:10:30.956Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788145824805
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "853d2a62-b0a5-4855-ac92-5d222494f5ed": {
+      "id": "853d2a62-b0a5-4855-ac92-5d222494f5ed",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆系统并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T03:12:45.056Z",
+      "startedAt": "2026-08-31T03:12:45.125Z",
+      "completedAt": "2026-08-31T03:12:51.510Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788145967744
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "2b70d2e8-a3f6-4807-aef5-5544937c173a": {
+      "id": "2b70d2e8-a3f6-4807-aef5-5544937c173a",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆系统并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "cancelled",
+      "createdAt": "2026-08-31T03:15:03.872Z",
+      "startedAt": "2026-08-31T03:15:03.917Z",
+      "completedAt": "2026-08-31T03:15:50.316Z",
+      "createdBy": null,
+      "metadata": {}
+    },
+    "c1af1727-44ea-4168-977a-d1c6db1d9c97": {
+      "id": "c1af1727-44ea-4168-977a-d1c6db1d9c97",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并对系统进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T03:16:20.136Z",
+      "startedAt": "2026-08-31T03:16:20.173Z",
+      "completedAt": "2026-08-31T03:16:26.036Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788146183142
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "59031080-8b01-40a8-8932-cd68b6589e30": {
+      "id": "59031080-8b01-40a8-8932-cd68b6589e30",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登录系统并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T03:25:40.017Z",
+      "startedAt": "2026-08-31T03:25:40.086Z",
+      "completedAt": "2026-08-31T03:25:48.169Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788146742977
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "610fabc2-503a-4add-9d13-0fb03fd6a9d2": {
+      "id": "610fabc2-503a-4add-9d13-0fb03fd6a9d2",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆系统并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T04:15:27.345Z",
+      "startedAt": "2026-08-31T04:15:27.388Z",
+      "completedAt": "2026-08-31T04:15:40.599Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 2,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788149730020
+          },
+          {
+            "kind": "stream",
+            "partial": "I'll",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1788149733574
+          },
+          {
+            "kind": "stream",
+            "partial": "I'll start by navigating to the target page and understanding its structure, then proceed with functional testing using the provided credentials.",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1788149733851
+          },
+          {
+            "kind": "stream",
+            "partial": "I'll start by navigating to the target page and understanding its structure, then proceed with functional testing using the provided credentials.",
+            "done": true,
+            "turn": 1,
+            "timestamp": 1788149733886
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html"
+            },
+            "turn": 1,
+            "timestamp": 1788149733888
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": true,
+            "turn": 1,
+            "timestamp": 1788149736694
+          },
+          {
+            "kind": "turn_started",
+            "turn": 2,
+            "timestamp": 1788149736694
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
+    },
+    "b0753de2-1795-4c94-a150-3f160300a3a7": {
+      "id": "b0753de2-1795-4c94-a150-3f160300a3a7",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆系统并进行功能性测试。",
+        "maxTurns": 200,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-31T04:17:16.442Z",
+      "startedAt": "2026-08-31T04:17:16.494Z",
+      "completedAt": "2026-08-31T04:21:40.544Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 33,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1788149839155
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对这个禅道系统进行功能性测试。首先导航",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1788149844784
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对这个禅道系统进行功能性测试。首先导航到目标页面，了解页面结构。\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1788149845356
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对这个禅道系统进行功能性测试。首先导航到目标页面，了解页面结构。\n",
+            "done": false,
+            "turn": 1,
+            "timestamp": 1788149845633
+          },
+          {
+            "kind": "stream",
+            "partial": "我将开始对这个禅道系统进行功能性测试。首先导航到目标页面，了解页面结构。\n",
+            "done": true,
+            "turn": 1,
+            "timestamp": 1788149845737
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html"
+            },
+            "turn": 1,
+            "timestamp": 1788149845739
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": true,
+            "turn": 1,
+            "timestamp": 1788149848521
+          },
+          {
+            "kind": "turn_started",
+            "turn": 2,
+            "timestamp": 1788149848521
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 2,
+            "timestamp": 1788149852211
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 2,
+            "timestamp": 1788149852213
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 2,
+            "timestamp": 1788149852213
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 2,
+            "timestamp": 1788149852326
+          },
+          {
+            "kind": "turn_started",
+            "turn": 3,
+            "timestamp": 1788149852327
+          },
+          {
+            "kind": "stream",
+            "partial": "页面加载成功！这是禅道系统的登录页面。我可以看到用户名",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1788149858698
+          },
+          {
+            "kind": "stream",
+            "partial": "页面加载成功！这是禅道系统的登录页面。我可以看到用户名和密码输入框。现在我将使用admin/Abcd.1234进行登录。\n",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1788149859205
+          },
+          {
+            "kind": "stream",
+            "partial": "页面加载成功！这是禅道系统的登录页面。我可以看到用户名和密码输入框。现在我将使用admin/Abcd.1234进行登录。\n",
+            "done": false,
+            "turn": 3,
+            "timestamp": 1788149859740
+          },
+          {
+            "kind": "stream",
+            "partial": "页面加载成功！这是禅道系统的登录页面。我可以看到用户名和密码输入框。现在我将使用admin/Abcd.1234进行登录。\n",
+            "done": true,
+            "turn": 3,
+            "timestamp": 1788149859741
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "form",
+              "data": "{\"account\": \"admin\", \"password\": \"Abcd.1234\"}",
+              "submit": "true"
+            },
+            "turn": 3,
+            "timestamp": 1788149859741
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 3,
+            "timestamp": 1788149859742
+          },
+          {
+            "kind": "turn_started",
+            "turn": 4,
+            "timestamp": 1788149859742
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1788149863911
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1788149864212
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 4,
+            "timestamp": 1788149865515
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 4,
+            "timestamp": 1788149865516
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "form",
+              "data": "{\"account\": \"admin\", \"password\": \"Abcd.1234\"}",
+              "submit": "true"
+            },
+            "turn": 4,
+            "timestamp": 1788149865516
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": false,
+            "turn": 4,
+            "timestamp": 1788149865516
+          },
+          {
+            "kind": "turn_started",
+            "turn": 5,
+            "timestamp": 1788149865517
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1788149870287
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 5,
+            "timestamp": 1788149870601
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 5,
+            "timestamp": 1788149870602
+          },
+          {
+            "kind": "tool_call",
+            "tool": "fill_form",
+            "input": {
+              "formSelector": "form",
+              "data": "{\"account\": \"admin\", \"password\": \"Abcd.1234\"}"
+            },
+            "turn": 5,
+            "timestamp": 1788149870602
+          },
+          {
+            "kind": "tool_result",
+            "tool": "fill_form",
+            "success": true,
+            "turn": 5,
+            "timestamp": 1788149870897
+          },
+          {
+            "kind": "turn_started",
+            "turn": 6,
+            "timestamp": 1788149870897
+          },
+          {
+            "kind": "stream",
+            "partial": "表单已填写。现在我需要点击登录",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1788149874159
+          },
+          {
+            "kind": "stream",
+            "partial": "表单已填写。现在我需要点击登录按钮来提交表单。\n",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1788149874635
+          },
+          {
+            "kind": "stream",
+            "partial": "表单已填写。现在我需要点击登录按钮来提交表单。\n",
+            "done": false,
+            "turn": 6,
+            "timestamp": 1788149874841
+          },
+          {
+            "kind": "stream",
+            "partial": "表单已填写。现在我需要点击登录按钮来提交表单。\n",
+            "done": true,
+            "turn": 6,
+            "timestamp": 1788149874842
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "button[type=\"submit\"]"
+            },
+            "turn": 6,
+            "timestamp": 1788149874842
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": true,
+            "turn": 6,
+            "timestamp": 1788149874867
+          },
+          {
+            "kind": "turn_started",
+            "turn": 7,
+            "timestamp": 1788149874868
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1788149878943
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 7,
+            "timestamp": 1788149880160
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 7,
+            "timestamp": 1788149880161
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 7,
+            "timestamp": 1788149880161
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 7,
+            "timestamp": 1788149880318
+          },
+          {
+            "kind": "turn_started",
+            "turn": 8,
+            "timestamp": 1788149880318
+          },
+          {
+            "kind": "stream",
+            "partial": "登录操作已执行。",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1788149887111
+          },
+          {
+            "kind": "stream",
+            "partial": "登录操作已执行。让我查看当前页面的内容，确认登录状态。\n",
+            "done": false,
+            "turn": 8,
+            "timestamp": 1788149887556
+          },
+          {
+            "kind": "stream",
+            "partial": "登录操作已执行。让我查看当前页面的内容，确认登录状态。\n",
+            "done": true,
+            "turn": 8,
+            "timestamp": 1788149887682
+          },
+          {
+            "kind": "tool_call",
+            "tool": "assert_visible",
+            "input": {
+              "selector": "body"
+            },
+            "turn": 8,
+            "timestamp": 1788149887683
+          },
+          {
+            "kind": "tool_result",
+            "tool": "assert_visible",
+            "success": true,
+            "turn": 8,
+            "timestamp": 1788149887717
+          },
+          {
+            "kind": "turn_started",
+            "turn": 9,
+            "timestamp": 1788149887717
+          },
+          {
+            "kind": "stream",
+            "partial": "让我检查当前URL来确认登录是否成功。\n",
+            "done": false,
+            "turn": 9,
+            "timestamp": 1788149891976
+          },
+          {
+            "kind": "stream",
+            "partial": "让我检查当前URL来确认登录是否成功。\n",
+            "done": true,
+            "turn": 9,
+            "timestamp": 1788149891977
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "return window.location.href;"
+            },
+            "turn": 9,
+            "timestamp": 1788149891978
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 9,
+            "timestamp": 1788149891982
+          },
+          {
+            "kind": "turn_started",
+            "turn": 10,
+            "timestamp": 1788149891982
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！URL已从登录页面重定向到 `",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1788149896440
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！URL已从登录页面重定向到 `my.html`。让我截图查看当前页面并开始功能性测试。\n",
+            "done": false,
+            "turn": 10,
+            "timestamp": 1788149897096
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！URL已从登录页面重定向到 `my.html`。让我截图查看当前页面并开始功能性测试。\n",
+            "done": true,
+            "turn": 10,
+            "timestamp": 1788149897100
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 10,
+            "timestamp": 1788149897101
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 10,
+            "timestamp": 1788149897174
+          },
+          {
+            "kind": "turn_started",
+            "turn": 11,
+            "timestamp": 1788149897174
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！已进入禅道系统的用户首页(my.html)。现在让我",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1788149903730
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！已进入禅道系统的用户首页(my.html)。现在让我测试系统的各种功能模块。我将点击导航菜单检查各个功能",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1788149909204
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！已进入禅道系统的用户首页(my.html)。现在让我测试系统的各种功能模块。我将点击导航菜单检查各个功能。\n",
+            "done": false,
+            "turn": 11,
+            "timestamp": 1788149909540
+          },
+          {
+            "kind": "stream",
+            "partial": "登录成功！已进入禅道系统的用户首页(my.html)。现在让我测试系统的各种功能模块。我将点击导航菜单检查各个功能。\n",
+            "done": true,
+            "turn": 11,
+            "timestamp": 1788149909541
+          },
+          {
+            "kind": "tool_call",
+            "tool": "assert_visible",
+            "input": {
+              "selector": "#mainMenu"
+            },
+            "turn": 11,
+            "timestamp": 1788149909541
+          },
+          {
+            "kind": "tool_result",
+            "tool": "assert_visible",
+            "success": true,
+            "turn": 11,
+            "timestamp": 1788149909544
+          },
+          {
+            "kind": "turn_started",
+            "turn": 12,
+            "timestamp": 1788149909544
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 12,
+            "timestamp": 1788149913153
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 12,
+            "timestamp": 1788149913659
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 12,
+            "timestamp": 1788149913708
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "return document.querySelectorAll('a, .menu').length + \" elements found\";"
+            },
+            "turn": 12,
+            "timestamp": 1788149913708
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 12,
+            "timestamp": 1788149913710
+          },
+          {
+            "kind": "turn_started",
+            "turn": 13,
+            "timestamp": 1788149913710
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看页面上的",
+            "done": false,
+            "turn": 13,
+            "timestamp": 1788149923284
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看页面上的主要菜单导航链接。\n",
+            "done": true,
+            "turn": 13,
+            "timestamp": 1788149923438
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "var menus = []; \ndocument.querySelectorAll('a').forEach(function(a) {\n    if (a.href && a.href.includes('zentao') && a.textContent.trim()) {\n        menus.push(a.textContent.trim() + ' -> ' + a.href);\n    }\n}); \nreturn menus.slice(0, 20).join('\\n');"
+            },
+            "turn": 13,
+            "timestamp": 1788149923438
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 13,
+            "timestamp": 1788149923441
+          },
+          {
+            "kind": "turn_started",
+            "turn": 14,
+            "timestamp": 1788149923442
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看主要的门户导航链接。\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1788149928074
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看主要的门户导航链接。\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1788149928527
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看主要的门户导航链接。\n",
+            "done": false,
+            "turn": 14,
+            "timestamp": 1788149929457
+          },
+          {
+            "kind": "stream",
+            "partial": "让我查看主要的门户导航链接。\n",
+            "done": true,
+            "turn": 14,
+            "timestamp": 1788149929621
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "var menus = []; \ndocument.querySelectorAll('.sidebar a, .sidebar-menu a, #navbar a, .nav a, header a, .menu-title, .app-title').forEach(function(el) {\n    if (el.textContent.trim()) {\n        menus.push(el.textContent.trim());\n    }\n}); \nreturn menus.slice(0, 30).join('\\n');"
+            },
+            "turn": 14,
+            "timestamp": 1788149929622
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 14,
+            "timestamp": 1788149929624
+          },
+          {
+            "kind": "turn_started",
+            "turn": 15,
+            "timestamp": 1788149929624
+          },
+          {
+            "kind": "stream",
+            "partial": "让我点击进入\"项目\"模块进行测试。\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1788149933663
+          },
+          {
+            "kind": "stream",
+            "partial": "让我点击进入\"项目\"模块进行测试。\n",
+            "done": false,
+            "turn": 15,
+            "timestamp": 1788149933908
+          },
+          {
+            "kind": "stream",
+            "partial": "让我点击进入\"项目\"模块进行测试。\n",
+            "done": true,
+            "turn": 15,
+            "timestamp": 1788149933971
+          },
+          {
+            "kind": "tool_call",
+            "tool": "click_element",
+            "input": {
+              "selector": "a[href*=\"project\"]"
+            },
+            "turn": 15,
+            "timestamp": 1788149933971
+          },
+          {
+            "kind": "tool_result",
+            "tool": "click_element",
+            "success": false,
+            "turn": 15,
+            "timestamp": 1788149943982
+          },
+          {
+            "kind": "turn_started",
+            "turn": 16,
+            "timestamp": 1788149943983
+          },
+          {
+            "kind": "stream",
+            "partial": "\n让我通过JavaScript来执行点击操作。\n",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1788149953228
+          },
+          {
+            "kind": "stream",
+            "partial": "\n让我通过JavaScript来执行点击操作。\n",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1788149956341
+          },
+          {
+            "kind": "stream",
+            "partial": "\n让我通过JavaScript来执行点击操作。\n",
+            "done": false,
+            "turn": 16,
+            "timestamp": 1788149956962
+          },
+          {
+            "kind": "stream",
+            "partial": "\n让我通过JavaScript来执行点击操作。\n",
+            "done": true,
+            "turn": 16,
+            "timestamp": 1788149956963
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "\n// 找到项目链接并点击\nvar projectLinks = document.querySelectorAll('a[data-value=\"project\"]');\nif (projectLinks.length > 0) {\n    projectLinks[0].click();\n    return \"Clicked project link\";\n}\nreturn \"Project link not found\";\n"
+            },
+            "turn": 16,
+            "timestamp": 1788149956964
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 16,
+            "timestamp": 1788149956967
+          },
+          {
+            "kind": "turn_started",
+            "turn": 17,
+            "timestamp": 1788149956967
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 17,
+            "timestamp": 1788149961770
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 17,
+            "timestamp": 1788149961822
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 17,
+            "timestamp": 1788149961822
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 17,
+            "timestamp": 1788149961897
+          },
+          {
+            "kind": "turn_started",
+            "turn": 18,
+            "timestamp": 1788149961898
+          },
+          {
+            "kind": "stream",
+            "partial": "让我直接导航到项目页面进行测试。\n",
+            "done": false,
+            "turn": 18,
+            "timestamp": 1788149969608
+          },
+          {
+            "kind": "stream",
+            "partial": "让我直接导航到项目页面进行测试。\n",
+            "done": true,
+            "turn": 18,
+            "timestamp": 1788149969609
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/project.html"
+            },
+            "turn": 18,
+            "timestamp": 1788149969610
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": false,
+            "turn": 18,
+            "timestamp": 1788149972664
+          },
+          {
+            "kind": "turn_started",
+            "turn": 19,
+            "timestamp": 1788149972664
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 19,
+            "timestamp": 1788149980891
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 19,
+            "timestamp": 1788149980937
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/project.html"
+            },
+            "turn": 19,
+            "timestamp": 1788149980938
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": false,
+            "turn": 19,
+            "timestamp": 1788149982962
+          },
+          {
+            "kind": "turn_started",
+            "turn": 20,
+            "timestamp": 1788149982962
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 20,
+            "timestamp": 1788149987352
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 20,
+            "timestamp": 1788149987718
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 20,
+            "timestamp": 1788149987719
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "window.location.href = 'http://185.200.65.4:82/zentao/project.html';"
+            },
+            "turn": 20,
+            "timestamp": 1788149987720
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 20,
+            "timestamp": 1788149987729
+          },
+          {
+            "kind": "turn_started",
+            "turn": 21,
+            "timestamp": 1788149987730
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 21,
+            "timestamp": 1788149994546
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 21,
+            "timestamp": 1788149994675
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "return window.location.href;"
+            },
+            "turn": 21,
+            "timestamp": 1788149994676
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 21,
+            "timestamp": 1788149994680
+          },
+          {
+            "kind": "turn_started",
+            "turn": 22,
+            "timestamp": 1788149994681
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 22,
+            "timestamp": 1788149998265
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 22,
+            "timestamp": 1788149998272
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 22,
+            "timestamp": 1788149998272
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 22,
+            "timestamp": 1788149998341
+          },
+          {
+            "kind": "turn_started",
+            "turn": 23,
+            "timestamp": 1788149998341
+          },
+          {
+            "kind": "stream",
+            "partial": "我已进入项目页面。让我继续测试禅道系统的其他功能模块。我将尝试",
+            "done": false,
+            "turn": 23,
+            "timestamp": 1788150010416
+          },
+          {
+            "kind": "stream",
+            "partial": "我已进入项目页面。让我继续测试禅道系统的其他功能模块。我将尝试访问产品页面进行测试。\n",
+            "done": true,
+            "turn": 23,
+            "timestamp": 1788150010566
+          },
+          {
+            "kind": "tool_call",
+            "tool": "navigate_to",
+            "input": {
+              "url": "http://185.200.65.4:82/zentao/product.html"
+            },
+            "turn": 23,
+            "timestamp": 1788150010566
+          },
+          {
+            "kind": "tool_result",
+            "tool": "navigate_to",
+            "success": false,
+            "turn": 23,
+            "timestamp": 1788150013475
+          },
+          {
+            "kind": "turn_started",
+            "turn": 24,
+            "timestamp": 1788150013475
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 24,
+            "timestamp": 1788150019790
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 24,
+            "timestamp": 1788150020995
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 24,
+            "timestamp": 1788150020995
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "window.location.href = 'http://185.200.65.4:82/zentao/product-all.html';"
+            },
+            "turn": 24,
+            "timestamp": 1788150020996
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 24,
+            "timestamp": 1788150021003
+          },
+          {
+            "kind": "turn_started",
+            "turn": 25,
+            "timestamp": 1788150021003
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 25,
+            "timestamp": 1788150027074
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 25,
+            "timestamp": 1788150032169
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 25,
+            "timestamp": 1788150032169
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 25,
+            "timestamp": 1788150032170
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 25,
+            "timestamp": 1788150032237
+          },
+          {
+            "kind": "turn_started",
+            "turn": 26,
+            "timestamp": 1788150032237
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅",
+            "done": false,
+            "turn": 26,
+            "timestamp": 1788150042451
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅道系统的其他核心功能模块。我将检查执行和测试功能。\n",
+            "done": false,
+            "turn": 26,
+            "timestamp": 1788150043411
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅道系统的其他核心功能模块。我将检查执行和测试功能。\n",
+            "done": false,
+            "turn": 26,
+            "timestamp": 1788150043969
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅道系统的其他核心功能模块。我将检查执行和测试功能。\n",
+            "done": false,
+            "turn": 26,
+            "timestamp": 1788150046897
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅道系统的其他核心功能模块。我将检查执行和测试功能。\n",
+            "done": false,
+            "turn": 26,
+            "timestamp": 1788150054042
+          },
+          {
+            "kind": "stream",
+            "partial": "产品页面已加载成功。让我继续测试禅道系统的其他核心功能模块。我将检查执行和测试功能。\n",
+            "done": true,
+            "turn": 26,
+            "timestamp": 1788150054043
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "window.location.href = 'http://185.200.65.4:82/zentao/execution-task-0.html';"
+            },
+            "turn": 26,
+            "timestamp": 1788150054043
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 26,
+            "timestamp": 1788150054050
+          },
+          {
+            "kind": "turn_started",
+            "turn": 27,
+            "timestamp": 1788150054050
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 27,
+            "timestamp": 1788150060069
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 27,
+            "timestamp": 1788150060086
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 27,
+            "timestamp": 1788150060086
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 27,
+            "timestamp": 1788150060147
+          },
+          {
+            "kind": "turn_started",
+            "turn": 28,
+            "timestamp": 1788150060147
+          },
+          {
+            "kind": "stream",
+            "partial": "执行",
+            "done": false,
+            "turn": 28,
+            "timestamp": 1788150070313
+          },
+          {
+            "kind": "stream",
+            "partial": "执行任务页面已成功加载。让我继续检查测试模块。\n",
+            "done": false,
+            "turn": 28,
+            "timestamp": 1788150070551
+          },
+          {
+            "kind": "stream",
+            "partial": "执行任务页面已成功加载。让我继续检查测试模块。\n",
+            "done": false,
+            "turn": 28,
+            "timestamp": 1788150071135
+          },
+          {
+            "kind": "stream",
+            "partial": "执行任务页面已成功加载。让我继续检查测试模块。\n",
+            "done": false,
+            "turn": 28,
+            "timestamp": 1788150071379
+          },
+          {
+            "kind": "stream",
+            "partial": "执行任务页面已成功加载。让我继续检查测试模块。\n",
+            "done": true,
+            "turn": 28,
+            "timestamp": 1788150071380
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "window.location.href = 'http://185.200.65.4:82/zentao/testbug-all.html';"
+            },
+            "turn": 28,
+            "timestamp": 1788150071380
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 28,
+            "timestamp": 1788150071388
+          },
+          {
+            "kind": "turn_started",
+            "turn": 29,
+            "timestamp": 1788150071388
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 29,
+            "timestamp": 1788150076120
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": false,
+            "turn": 29,
+            "timestamp": 1788150076618
+          },
+          {
+            "kind": "stream",
+            "partial": "",
+            "done": true,
+            "turn": 29,
+            "timestamp": 1788150076619
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 29,
+            "timestamp": 1788150076619
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 29,
+            "timestamp": 1788150076675
+          },
+          {
+            "kind": "turn_started",
+            "turn": 30,
+            "timestamp": 1788150076676
+          },
+          {
+            "kind": "stream",
+            "partial": "页面内容看起来被重定向了。让我检查",
+            "done": false,
+            "turn": 30,
+            "timestamp": 1788150083598
+          },
+          {
+            "kind": "stream",
+            "partial": "页面内容看起来被重定向了。让我检查当前页面状态并尝试进行完整的功能性测试。我将检查用户界面并",
+            "done": false,
+            "turn": 30,
+            "timestamp": 1788150084172
+          },
+          {
+            "kind": "stream",
+            "partial": "页面内容看起来被重定向了。让我检查当前页面状态并尝试进行完整的功能性测试。我将检查用户界面并访问更多的功能模块。\n",
+            "done": false,
+            "turn": 30,
+            "timestamp": 1788150084868
+          },
+          {
+            "kind": "stream",
+            "partial": "页面内容看起来被重定向了。让我检查当前页面状态并尝试进行完整的功能性测试。我将检查用户界面并访问更多的功能模块。\n",
+            "done": false,
+            "turn": 30,
+            "timestamp": 1788150085338
+          },
+          {
+            "kind": "stream",
+            "partial": "页面内容看起来被重定向了。让我检查当前页面状态并尝试进行完整的功能性测试。我将检查用户界面并访问更多的功能模块。\n",
+            "done": true,
+            "turn": 30,
+            "timestamp": 1788150085412
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "return {url: window.location.href, title: document.title, bodyContent: document.body ? document.body.innerHTML.substring(0, 500) : 'no body'}"
+            },
+            "turn": 30,
+            "timestamp": 1788150085412
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 30,
+            "timestamp": 1788150085417
+          },
+          {
+            "kind": "turn_started",
+            "turn": 31,
+            "timestamp": 1788150085417
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试导航到后台管理",
+            "done": false,
+            "turn": 31,
+            "timestamp": 1788150089826
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试导航到后台管理页面进行更多功能测试。\n",
+            "done": false,
+            "turn": 31,
+            "timestamp": 1788150090346
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试导航到后台管理页面进行更多功能测试。\n",
+            "done": false,
+            "turn": 31,
+            "timestamp": 1788150090602
+          },
+          {
+            "kind": "stream",
+            "partial": "让我尝试导航到后台管理页面进行更多功能测试。\n",
+            "done": true,
+            "turn": 31,
+            "timestamp": 1788150090766
+          },
+          {
+            "kind": "tool_call",
+            "tool": "execute_js",
+            "input": {
+              "script": "window.location.href = 'http://185.200.65.4:82/zentao/index.php?m=admin';"
+            },
+            "turn": 31,
+            "timestamp": 1788150090766
+          },
+          {
+            "kind": "tool_result",
+            "tool": "execute_js",
+            "success": true,
+            "turn": 31,
+            "timestamp": 1788150090768
+          },
+          {
+            "kind": "turn_started",
+            "turn": 32,
+            "timestamp": 1788150090768
+          },
+          {
+            "kind": "stream",
+            "partial": "让我检查当前页面并继续测试。\n",
+            "done": false,
+            "turn": 32,
+            "timestamp": 1788150095699
+          },
+          {
+            "kind": "stream",
+            "partial": "让我检查当前页面并继续测试。\n",
+            "done": false,
+            "turn": 32,
+            "timestamp": 1788150095946
+          },
+          {
+            "kind": "stream",
+            "partial": "让我检查当前页面并继续测试。\n",
+            "done": true,
+            "turn": 32,
+            "timestamp": 1788150095966
+          },
+          {
+            "kind": "tool_call",
+            "tool": "take_screenshot",
+            "input": {},
+            "turn": 32,
+            "timestamp": 1788150095966
+          },
+          {
+            "kind": "tool_result",
+            "tool": "take_screenshot",
+            "success": true,
+            "turn": 32,
+            "timestamp": 1788150096042
+          },
+          {
+            "kind": "turn_started",
+            "turn": 33,
+            "timestamp": 1788150096042
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
     }
   },
   "reports": {

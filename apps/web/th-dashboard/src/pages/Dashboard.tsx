@@ -29,7 +29,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, color }) => (
 );
 
 export const Dashboard: React.FC = () => {
-  const { sessions, loading, fetchSessions } = useSessionStore();
+  const { sessions, totalSessions, loading, fetchSessions } = useSessionStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
 
   const stats = useMemo(() => {
     const safeSessions = sessions ?? [];
-    const total = safeSessions.length;
+    const total = totalSessions ?? safeSessions.length;
     const active = safeSessions.filter((s) => s.status === 'running' || s.status === 'pending' || s.status === 'planning' || s.status === 'executing').length;
     const completed = safeSessions.filter((s) => s.status === 'completed');
     const avgScore =
@@ -47,7 +47,7 @@ export const Dashboard: React.FC = () => {
         : 0;
     const totalFindings = safeSessions.reduce((sum, s) => sum + (s.findings?.length ?? 0), 0);
     return { total, active, avgScore, totalFindings };
-  }, [sessions]);
+  }, [sessions, totalSessions]);
 
   const scoreDistribution = useMemo(() => {
     const safeSessions = sessions ?? [];

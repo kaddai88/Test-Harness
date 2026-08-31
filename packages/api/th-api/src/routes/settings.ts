@@ -44,7 +44,7 @@ export async function handleUpdateSettings(
       if (body.apiKey) envLines.push(`DASHSCOPE_API_KEY=${body.apiKey}`);
       if (body.llmModel) envLines.push(`QWEN_MODEL=${body.llmModel}`);
       if (body.baseUrl) envLines.push(`DASHSCOPE_BASE_URL=${body.baseUrl}`);
-    } else if (body.llmProvider === "openai") {
+    } else if (body.llmProvider === "openai" || body.llmProvider === "commandcode") {
       if (body.apiKey) envLines.push(`OPENAI_API_KEY=${body.apiKey}`);
       if (body.llmModel) envLines.push(`OPENAI_MODEL=${body.llmModel}`);
       if (body.baseUrl) envLines.push(`OPENAI_BASE_URL=${body.baseUrl}`);
