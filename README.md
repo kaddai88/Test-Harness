@@ -21,26 +21,34 @@ built as a TypeScript monorepo. It is architecturally inspired by
 [Cordis](https://github.com/cordiverse/cordis) plugin framework:
 
 **Everything is a plugin** — LLM adapters, tools, storage backends compose through a unified plugin container.
-and storage backends all register behind typed *service definitions* with
-*waterfall* extension points for interception.
 
 ### Key Features
 
 - **AI Agent Loop** — LLM decides what to test, in what order, and how to interpret results (DSH-style architecture with SessionLog, waterfall events, Turn→Step pipeline)
 - **Session Log** — Append-only event log; all model-visible content is reconstructable from the log
 - **Waterfall Events** — Around-middleware at every pipeline stage (pre-step, request, pre/post-execute)
-- **Streaming LLM** — Real-time terminal and WebSocket progress during scans
-- **Browser Tools** — navigate, click, fill, screenshot, assert (Puppeteer-backed)
-- **3 LLM Adapters** — Ollama (local), OpenAI, DeepSeek with failover support
+- **Streaming LLM** — Real-time terminal and WebSocket progress during tests
+- **Browser Automation** — navigate, click, fill, screenshot, assert (Playwright via MCP or local)
+- **Playwright MCP** — Connect to @playwright/mcp server for standardized browser automation
+- **Multiple LLM Providers** — OpenAI-compatible APIs, Ollama (local), DeepSeek with failover support
 - **Full Web Platform** — REST API + WebSocket + React Dashboard
 - **Production Ready** — Graceful shutdown, rate limiting, Docker deployment, CI/CD
+
+### Current Configuration
+
+| Component | Value |
+|-----------|-------|
+| **LLM Provider** | OpenAI-compatible API |
+| **Model** | minimax/minimax-m2.7-free |
+| **Browser Mode** | Playwright MCP (`BROWSER_MODE=mcp`) |
+| **MCP Server** | `@playwright/mcp` on `http://localhost:3001/mcp` |
 
 ### Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                           Client Layer                                   │
-│   CLI (th scan)    React Dashboard    REST API    WebSocket (real-time)  │
+│   CLI (th test)    React Dashboard    REST API    WebSocket (real-time) │
 └──────────┬──────────────┬──────────────────┬───────────────┬────────────┘
            │              │                  │               │
            ▼              ▼                  ▼               ▼
