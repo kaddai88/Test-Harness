@@ -29,10 +29,20 @@ Test-Harness 是一个生产级的、AI 驱动的网站测试平台，采用 Typ
 - **Session Log** — 仅追加的事件日志；所有模型可见内容均可从日志中重建
 - **Waterfall 事件** — 每个管线阶段都支持 around-middleware 拦截（pre-step、request、pre/post-execute）
 - **LLM 流式输出** — 测试过程中的实时终端和 WebSocket 进度推送
-- **浏览器工具** — navigate、click、fill、screenshot、assert（基于 Puppeteer）
-- **3+ 个 LLM 适配器** — Ollama（本地）、OpenAI、Qwen（DashScope），支持故障转移
+- **浏览器自动化** — navigate、click、fill、screenshot、assert（通过 Playwright MCP 或本地）
+- **Playwright MCP** — 连接 @playwright/mcp 服务器进行标准化浏览器自动化
+- **多 LLM 提供商** — OpenAI 兼容 API、Ollama（本地）、DeepSeek，支持故障转移
 - **完整 Web 平台** — REST API + WebSocket + React Dashboard
 - **生产就绪** — 优雅停机、速率限制、Docker 部署、CI/CD
+
+### 当前配置
+
+| 组件 | 值 |
+|------|-----|
+| **LLM 提供商** | OpenAI 兼容 API |
+| **模型** | minimax/minimax-m2.7-free |
+| **浏览器模式** | Playwright MCP (`BROWSER_MODE=mcp`) |
+| **MCP 服务器** | `@playwright/mcp` 运行在 `http://localhost:3001/mcp` |
 
 ### 系统架构
 
