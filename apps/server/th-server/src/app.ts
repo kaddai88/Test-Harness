@@ -224,6 +224,7 @@ export class TestHarnessServer {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       return new OpenAIProvider({
+        baseUrl: process.env.OPENAI_BASE_URL,
         defaultModel: process.env.OPENAI_MODEL ?? "gpt-4o",
       });
     }

@@ -45982,6 +45982,35 @@
         "score": 100,
         "executionSummary": null
       }
+    },
+    "14a7edad-0f3e-4b7e-8bd8-5c78a517b1cf": {
+      "id": "14a7edad-0f3e-4b7e-8bd8-5c78a517b1cf",
+      "targetUrl": "http://185.200.65.4:82/zentao/user-login-L3plbnRhby8=.html",
+      "targetConfig": {},
+      "scanConfig": {
+        "instructions": "使用admin/Abcd.1234登陆并对所有模块进行功能性测试。",
+        "maxTurns": 99,
+        "maxRetriesPerAction": 3
+      },
+      "status": "failed",
+      "createdAt": "2026-08-28T08:26:38.542Z",
+      "startedAt": "2026-08-28T08:26:38.595Z",
+      "completedAt": "2026-08-28T08:27:02.332Z",
+      "createdBy": null,
+      "metadata": {
+        "summary": "",
+        "findings": [],
+        "turns": 1,
+        "activities": [
+          {
+            "kind": "turn_started",
+            "turn": 1,
+            "timestamp": 1787905601116
+          }
+        ],
+        "score": 100,
+        "executionSummary": null
+      }
     }
   },
   "reports": {
