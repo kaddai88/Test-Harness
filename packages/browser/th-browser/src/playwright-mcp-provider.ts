@@ -5,7 +5,7 @@
  * Provides standardized browser automation tools for AI agents.
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { spawn } from "node:child_process";
 import type { BrowserDriver, BrowserLaunchOptions, NavigationOptions, ElementActionOptions, FormData, ScreenshotOptions, PageInfo, PerformanceMetrics, ConsoleMessage, NetworkRequest, DiscoveredFeature, ElementInfo } from "./types.js";
 
@@ -50,22 +50,17 @@ export class PlaywrightMCPProvider implements BrowserDriver {
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
-    // Connect MCP client
+    // Connect MCP client using Streamable HTTP transport
     this.client = new Client(
       { name: "test-harness", version: "1.0.0" },
       { capabilities: {} }
     );
 
-    const transport = new SSEClientTransport(new URL(this.config.serverUrl!));
+    const transport = new StreamableHTTPClientTransport(new URL(this.config.serverUrl!));
     await this.client.connect(transport);
     this.isConnected = true;
 
-    // Initialize browser with options
-    if (options) {
-      await this.callTool("browser_navigate", {
-        url: "about:blank",
-      });
-    }
+    console.log('[MCP] Connected to Playwright MCP server');
   }
 
   /** Disconnect client and stop server */

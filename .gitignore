@@ -35,3 +35,4 @@ pnpm-debug.log*
 
 # Vite
 apps/web/th-dashboard/node_modules/
+.playwright-mcp/

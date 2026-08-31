@@ -1,0 +1,28 @@
+- main [ref=f7e2]:
+  - generic [ref=f7e9]:
+    - generic [ref=f7e10]:
+      - heading "禅道软件项目管理系统" [level=2] [ref=f7e11]
+      - button "简体" [ref=f7e13] [cursor=pointer]
+    - table [ref=f7e16]:
+      - rowgroup [ref=f7e17]:
+        - row [ref=f7e18]:
+          - cell "用户名" [ref=f7e19]
+        - row [ref=f7e20]:
+          - cell [ref=f7e21]:
+            - textbox [active] [ref=f7e22]
+        - row [ref=f7e23]:
+          - cell "密码" [ref=f7e24]
+        - row [ref=f7e25]:
+          - cell [ref=f7e26]:
+            - textbox [ref=f7e27]
+        - row [ref=f7e28]:
+          - cell " 保持登录" [ref=f7e29]:
+            - generic [ref=f7e30]:
+              - checkbox " 保持登录" [ref=f7e31]
+              - generic [ref=f7e32] [cursor=pointer]:  保持登录
+          - cell [ref=f7e33]:
+            - link "忘记密码" [ref=f7e34] [cursor=pointer]:
+              - /url: /zentao/user-reset.html
+        - row [ref=f7e35]:
+          - cell [ref=f7e36]:
+            - button "登录" [ref=f7e37] [cursor=pointer]
