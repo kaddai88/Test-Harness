@@ -189,7 +189,7 @@ npx vitest run                  # 运行所有测试
 | 包名 | 说明 |
 |---|---|
 | `@test-harness/th-tools` | 工具框架 + 内置浏览器/HTTP 工具（三阶段 prepare→dispatch→finalize 管线） |
-| `@test-harness/th-browser` | 浏览器能力接缝 + Puppeteer 实现 |
+| `@test-harness/th-browser` | 浏览器能力接缝 + Playwright MCP 实现 |
 
 ### 基础设施
 
@@ -240,7 +240,7 @@ pnpm run clean               # 清理所有 dist/ 目录
 - ✅ Agent Loop（Session Log、Waterfall 事件、LLM 流式输出）
 - ✅ 三阶段工具执行管线 + 超时控制
 - ✅ 3+ 个 LLM 适配器（Ollama、OpenAI、Qwen）+ 故障转移
-- ✅ 浏览器工具（基于 Puppeteer）
+- ✅ 浏览器工具（基于 Playwright MCP）
 - ✅ REST API（sessions/reports/health 端点）+ WebSocket 实时网关
 - ✅ React Dashboard（6 个页面，实时测试进度）
 - ✅ JSON 文件持久化（Repository 模式）

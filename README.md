@@ -188,7 +188,7 @@ See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
 | Package | Description |
 |---|---|
 | `@test-harness/th-tools` | Tool framework + built-in browser/HTTP tools (3-stage prepare→dispatch→finalize pipeline) |
-| `@test-harness/th-browser` | Browser capability seam + Puppeteer implementation |
+| `@test-harness/th-browser` | Browser capability seam + Playwright MCP implementation |
 
 ### Infrastructure
 
@@ -258,7 +258,7 @@ All 4 phases complete — **production-ready**:
 - 📋 Kubernetes manifests + Helm charts
 - 📋 Scheduled scans + scan comparison
 - 📋 White-label reports
-- 📋 Browser-based crawling (Puppeteer/Playwright)
+- 📋 Browser-based crawling (enhanced Playwright MCP)
 - 📋 Anti-bot / proxy support
 
 ## License
