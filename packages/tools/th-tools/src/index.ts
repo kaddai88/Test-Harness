@@ -14,7 +14,7 @@ import { createMeasurePerformanceTool } from "./builtins/measure-performance.js"
 import { createAssertVisibleTool } from "./builtins/assert-visible.js";
 import { createAssertTextTool } from "./builtins/assert-text.js";
 import { createReportFindingTool } from "./builtins/report-finding.js";
-import { createExecuteJsTool } from "./builtins/execute-js.js";
+import { createObserveTool } from "./builtins/observe.js";
 import { BrowserDriverDefinition } from "@test-harness/th-browser";
 import type { Tool } from "@test-harness/th-protocol";
 
@@ -47,7 +47,8 @@ export function createAllTools(container: THContainer): Tool[] {
       createMeasurePerformanceTool(container),
       createAssertVisibleTool(container),
       createAssertTextTool(container),
-      createExecuteJsTool(container),
+      createObserveTool(container),
+      // createExecuteJsTool(container), // Disabled: agent was abusing it
     );
   } catch {
     // BrowserDriver not available — skip browser tools
