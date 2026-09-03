@@ -5,7 +5,7 @@
 
 ![CI](https://github.com/kaddai88/Test_Harness_v2/actions/workflows/ci.yml/badge.svg)
 ![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)
-![Packages](https://img.shields.io/badge/packages-17-blue)
+![Packages](https://img.shields.io/badge/packages-18-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -31,6 +31,8 @@ Test-Harness 是一个生产级的、AI 驱动的网站测试平台，采用 Typ
 - **LLM 流式输出** — 测试过程中的实时终端和 WebSocket 进度推送
 - **浏览器自动化** — navigate、click、fill、screenshot、assert（通过 Playwright MCP 或本地）
 - **Playwright MCP** — 连接 @playwright/mcp 服务器进行标准化浏览器自动化
+- **泛化层** — 无需硬编码选择器即可跨站点测试：DOM 降采样（50k→200-500 元素）、SmartLocator（5 级降级）、SiteProfile（自学习站点知识）、observe→find→act 范式
+- **自学习站点画像** — 从历史会话中自动发现认证/表单/导航模式；跨 session 持久化，使后续测试更快更可靠
 - **多 LLM 提供商** — OpenAI 兼容 API、Ollama（本地）、DeepSeek，支持故障转移
 - **完整 Web 平台** — REST API + WebSocket + React Dashboard
 - **生产就绪** — 优雅停机、速率限制、Docker 部署、CI/CD
@@ -188,8 +190,8 @@ npx vitest run                  # 运行所有测试
 
 | 包名 | 说明 |
 |---|---|
-| `@test-harness/th-tools` | 工具框架 + 内置浏览器/HTTP 工具（三阶段 prepare→dispatch→finalize 管线） |
-| `@test-harness/th-browser` | 浏览器能力接缝 + Playwright MCP 实现 |
+| `@test-harness/th-tools` | 工具框架 + 16 个内置工具：浏览器/HTTP + 泛化工具（observe_page、find_element、extract_data、explore_site、configure_site） |
+| `@test-harness/th-browser` | 浏览器能力接缝 + Playwright MCP + 泛化层（DOM 降采样、SmartLocator、SiteProfile、跨 session 缓存持久化） |
 
 ### 基础设施
 
@@ -217,7 +219,7 @@ npx vitest run                  # 运行所有测试
 pnpm install                 # 安装依赖
 pnpm run build               # 构建所有包
 pnpm run typecheck           # 类型检查所有包
-npx vitest run               # 运行所有测试
+npx vitest run               # 运行所有测试（70 个测试，6 个套件）
 pnpm run clean               # 清理所有 dist/ 目录
 ```
 
@@ -225,7 +227,7 @@ pnpm run clean               # 清理所有 dist/ 目录
 
 ## 项目状态
 
-全部 4 个阶段完成 — **生产就绪**：
+全部 5 个阶段完成 — **生产就绪**：
 
 | 阶段 | 范围 | 包数 | 状态 |
 |---|---|---|---|
@@ -233,14 +235,18 @@ pnpm run clean               # 清理所有 dist/ 目录
 | **Phase 2** | 核心增强 | 16 | ✅ 完成 |
 | **Phase 3** | Web 平台 | 21 | ✅ 完成 |
 | **Phase 4** | 生产就绪 | 22 | ✅ 完成 |
+| **Phase 5** | 泛化层 | 18 | ✅ 完成 |
 
 ### 已完成
 
 - ✅ 插件框架（DI 容器、4 模式事件总线、效果系统）
 - ✅ Agent Loop（Session Log、Waterfall 事件、LLM 流式输出）
 - ✅ 三阶段工具执行管线 + 超时控制
-- ✅ 3+ 个 LLM 适配器（Ollama、OpenAI、Qwen）+ 故障转移
-- ✅ 浏览器工具（基于 Playwright MCP）
+- ✅ 3+ 个 LLM 适配器（Ollama、OpenAI、DeepSeek）+ 故障转移
+- ✅ 16 个内置工具，含 5 个泛化工具（observe_page、find_element、extract_data、explore_site、configure_site）
+- ✅ 泛化层：DOM 降采样、SmartLocator（5 级降级）、SiteProfile 自学习
+- ✅ 跨 session 缓存持久化 — 一次会话中学到的选择器在下次会话中复用
+- ✅ observe→find→act 范式 — Agent 用语义方式发现页面元素，替代硬编码 CSS/XPath
 - ✅ REST API（sessions/reports/health 端点）+ WebSocket 实时网关
 - ✅ React Dashboard（6 个页面，实时测试进度）
 - ✅ JSON 文件持久化（Repository 模式）
@@ -248,7 +254,7 @@ pnpm run clean               # 清理所有 dist/ 目录
 - ✅ 报告生成（JSON / Markdown / HTML）
 - ✅ 优雅停机、速率限制、Docker 部署
 - ✅ GitHub Actions CI/CD（Node 20 + 22 矩阵）
-- ✅ 34 个通过测试
+- ✅ 70 个通过测试
 - ✅ 完整文档（API、插件开发指南、贡献指南）
 
 ### 未来规划
@@ -259,6 +265,8 @@ pnpm run clean               # 清理所有 dist/ 目录
 - 📋 Kubernetes 部署 + Helm Charts
 - 📋 定时测试 + 结果对比
 - 📋 白标报告
+- 📋 测试意图 DSL / 自然语言测试用例解析
+- 📋 自适应探索策略（WebProber 模式）
 - 📋 反爬虫 / 代理支持
 
 ## 许可证

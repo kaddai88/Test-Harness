@@ -14,7 +14,12 @@ import { createMeasurePerformanceTool } from "./builtins/measure-performance.js"
 import { createAssertVisibleTool } from "./builtins/assert-visible.js";
 import { createAssertTextTool } from "./builtins/assert-text.js";
 import { createReportFindingTool } from "./builtins/report-finding.js";
-import { createObserveTool } from "./builtins/observe.js";
+import { createBrowserEvaluateTool } from "./builtins/browser-evaluate.js";
+import { createFindElementTool } from "./builtins/find-element.js";
+import { createObservePageTool } from "./builtins/observe-page.js";
+import { createExtractDataTool } from "./builtins/extract-data.js";
+import { createExploreSiteTool } from "./builtins/explore-site.js";
+import { createConfigureSiteTool } from "./builtins/configure-site.js";
 import { BrowserDriverDefinition } from "@test-harness/th-browser";
 import type { Tool } from "@test-harness/th-protocol";
 
@@ -29,6 +34,11 @@ export { createAssertVisibleTool } from "./builtins/assert-visible.js";
 export { createAssertTextTool } from "./builtins/assert-text.js";
 export { createReportFindingTool } from "./builtins/report-finding.js";
 export { createExecuteJsTool } from "./builtins/execute-js.js";
+export { createFindElementTool } from "./builtins/find-element.js";
+export { createObservePageTool } from "./builtins/observe-page.js";
+export { createExtractDataTool } from "./builtins/extract-data.js";
+export { createExploreSiteTool } from "./builtins/explore-site.js";
+export { createConfigureSiteTool } from "./builtins/configure-site.js";
 
 /** Build the full set of built-in tools for a container. */
 export function createAllTools(container: THContainer): Tool[] {
@@ -47,7 +57,12 @@ export function createAllTools(container: THContainer): Tool[] {
       createMeasurePerformanceTool(container),
       createAssertVisibleTool(container),
       createAssertTextTool(container),
-      createObserveTool(container),
+      createBrowserEvaluateTool(container),
+      createFindElementTool(container),
+      createObservePageTool(container),
+      createExtractDataTool(container),
+      createExploreSiteTool(container),
+      createConfigureSiteTool(container),
       // createExecuteJsTool(container), // Disabled: agent was abusing it
     );
   } catch {

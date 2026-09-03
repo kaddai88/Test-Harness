@@ -17,9 +17,14 @@ import type {
   NetworkRequest,
   DiscoveredFeature,
   ElementInfo,
+  DistilledPage,
+  FindElementResult,
 } from "./types.js";
+import type { CachedElement } from "./site-profile.js";
 
 import { chromium, type Browser, type Page, type Response } from "playwright";
+import { SmartLocator } from "./smart-locator.js";
+import { DISTILL_SCRIPT } from "./distill-dom.js";
 
 export interface PlaywrightBrowserProviderConfig {
   /** Browser executable path */
@@ -44,6 +49,7 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
   private consoleMessages: ConsoleMessage[] = [];
   private networkRequests: NetworkRequest[] = [];
   private requestStartTime = new Map<string, number>();
+  private smartLocator: SmartLocator;
 
   constructor(config?: PlaywrightBrowserProviderConfig) {
     this.config = {
@@ -53,6 +59,7 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
       browserType: "chromium",
       ...config,
     };
+    this.smartLocator = new SmartLocator(this as unknown as BrowserDriver);
   }
 
   async launch(options?: BrowserLaunchOptions): Promise<void> {
@@ -553,5 +560,171 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
     } catch {
       return false;
     }
+  }
+
+  // ─── v0.0.80 Enhanced Capabilities ───
+
+  async hover(selector: string): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    await this.page.hover(selector);
+  }
+
+  async pressKey(key: string): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    await this.page.keyboard.press(key);
+  }
+
+  async handleDialog(accept: boolean, promptText?: string): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    this.page.once('dialog', async (dialog) => {
+      if (accept) {
+        await dialog.accept(promptText);
+      } else {
+        await dialog.dismiss();
+      }
+    });
+  }
+
+  async uploadFile(paths: string[]): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    // Set up file chooser handler before triggering
+    const [fileChooser] = await Promise.all([
+      this.page.waitForEvent('filechooser'),
+      // The file chooser should already be pending; if not, this will timeout
+    ]).catch(() => [] as any);
+    if (fileChooser) {
+      await fileChooser.setFiles(paths);
+    }
+  }
+
+  async getSnapshot(options?: { depth?: number; boxes?: boolean }): Promise<string> {
+    if (!this.page) throw new Error("Browser not launched");
+    // Use Playwright's aria snapshot (modern API)
+    try {
+      const snapshot = await this.page.locator('body').ariaSnapshot();
+      return snapshot;
+    } catch {
+      // Fallback: return page text content
+      return await this.page.evaluate(() => document.body.innerText);
+    }
+  }
+
+  async findInPage(options: { text?: string; regex?: string }): Promise<string> {
+    if (!this.page) throw new Error("Browser not launched");
+    if (options.text) {
+      const result = await this.page.evaluate((text) => {
+        const body = document.body.innerText;
+        const idx = body.toLowerCase().indexOf(text.toLowerCase());
+        if (idx === -1) return 'Not found';
+        const start = Math.max(0, idx - 50);
+        const end = Math.min(body.length, idx + text.length + 50);
+        return '...' + body.slice(start, end) + '...';
+      }, options.text);
+      return result;
+    }
+    if (options.regex) {
+      const result = await this.page.evaluate((pattern) => {
+        const body = document.body.innerText;
+        const re = new RegExp(pattern);
+        const match = body.match(re);
+        if (!match) return 'Not found';
+        const idx = match.index ?? 0;
+        const start = Math.max(0, idx - 50);
+        const end = Math.min(body.length, idx + match[0].length + 50);
+        return '...' + body.slice(start, end) + '...';
+      }, options.regex);
+      return result;
+    }
+    return 'No text or regex provided';
+  }
+
+  async manageTabs(action: "list" | "new" | "close" | "select", index?: number, url?: string): Promise<any> {
+    if (!this.page) throw new Error("Browser not launched");
+    const context = this.page.context();
+    const pages = context.pages();
+    switch (action) {
+      case 'list':
+        return pages.map((p, i) => ({ index: i, url: p.url(), title: p.title() }));
+      case 'new': {
+        const newPage = await context.newPage();
+        if (url) await newPage.goto(url);
+        return { index: pages.length, url: newPage.url() };
+      }
+      case 'close':
+        if (index !== undefined && pages[index]) {
+          await pages[index].close();
+        } else {
+          await this.page.close();
+        }
+        return 'closed';
+      case 'select':
+        if (index !== undefined && pages[index]) {
+          await pages[index].bringToFront();
+          return { index, url: pages[index].url() };
+        }
+        throw new Error(`Tab index ${index} not found`);
+      default:
+        throw new Error(`Unknown tab action: ${action}`);
+    }
+  }
+
+  async drag(startSelector: string, endSelector: string): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    const start = this.page.locator(startSelector);
+    const end = this.page.locator(endSelector);
+    await start.dragTo(end);
+  }
+
+  async drop(targetSelector: string, options?: { paths?: string[]; data?: Record<string, string> }): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    // Use dispatchEvent for drop simulation
+    const target = this.page.locator(targetSelector);
+    if (options?.data) {
+      await target.dispatchEvent('drop', { dataTransfer: { data: options.data } });
+    }
+  }
+
+  async getCookie(name: string): Promise<any> {
+    if (!this.page) throw new Error("Browser not launched");
+    const context = this.page.context();
+    const cookies = await context.cookies();
+    return cookies.find(c => c.name === name) ?? null;
+  }
+
+  async deleteCookie(name: string): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    const context = this.page.context();
+    const url = this.page.url();
+    await context.clearCookies({ name });
+  }
+
+  async clearCookies(): Promise<void> {
+    if (!this.page) throw new Error("Browser not launched");
+    const context = this.page.context();
+    await context.clearCookies();
+  }
+
+  // ─── Generalization Layer ───
+
+  async distillDom(): Promise<DistilledPage> {
+    if (!this.page) throw new Error("Browser not launched");
+    try {
+      const result = await this.page.evaluate(DISTILL_SCRIPT);
+      return typeof result === 'string' ? JSON.parse(result) : result as DistilledPage;
+    } catch {
+      return { url: '', title: '', elements: [], elementCount: 0, structure: { hasForms: false, formCount: 0, hasTables: false, hasIframes: false, iframeCount: 0 } };
+    }
+  }
+
+  async findElement(hint: string, selector?: string): Promise<FindElementResult> {
+    return await this.smartLocator.findElement(hint, selector);
+  }
+
+  getSiteCache(): CachedElement[] {
+    return this.smartLocator.getCache();
+  }
+
+  setSiteCache(cache: CachedElement[]): void {
+    this.smartLocator.setCache(cache);
   }
 }

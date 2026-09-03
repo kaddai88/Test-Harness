@@ -1,0 +1,200 @@
+/**
+ * DOM Distillation — reduce a full page DOM to an LLM-consumable summary.
+ *
+ * Raw DOM can be 50,000+ nodes / 100K+ tokens. Distillation extracts only
+ * interactive elements (buttons, inputs, links, selects) with their semantic
+ * attributes (text, ARIA role, label, placeholder), assigning each a numbered
+ * ref (@e1, @e2...) for the LLM to reference.
+ *
+ * This is the key enabler for cross-site generalization: the LLM sees
+ * "what's on the page" in semantic terms, not CSS selectors.
+ *
+ * Inspired by:
+ * - Browser-Use DOM distillation
+ * - Playwright MCP browser_snapshot
+ * - Prune4Web (AAAI 2025)
+ */
+
+import type { DistilledElement, DistilledPage } from "./types.js";
+
+export type { DistilledElement, DistilledPage };
+
+/**
+ * JavaScript code to execute in the browser for DOM distillation.
+ * This runs via browser_run_code_unsafe or browser_evaluate.
+ *
+ * Strategy:
+ * 1. Walk the DOM, find all interactive elements
+ * 2. Skip hidden/disabled elements
+ * 3. Extract semantic attributes (text, role, label, placeholder)
+ * 4. Generate CSS selector and XPath for each
+ * 5. Assign numbered refs (@e1, @e2, ...)
+ */
+export const DISTILL_SCRIPT = `
+() => {
+  const INTERACTIVE_TAGS = 'a,button,input,select,textarea,[role="button"],[role="link"],[role="textbox"],[role="checkbox"],[role="radio"],[role="tab"],[role="menuitem"],[onclick],[contenteditable="true"]';
+  
+  function getRole(el) {
+    if (el.getAttribute('role')) return el.getAttribute('role');
+    const tag = el.tagName.toLowerCase();
+    const roleMap = {
+      'a': 'link', 'button': 'button', 'input': 'textbox',
+      'select': 'combobox', 'textarea': 'textbox',
+    };
+    if (tag === 'input') {
+      const type = (el.type || 'text').toLowerCase();
+      const typeRoleMap = {
+        'submit': 'button', 'button': 'button', 'reset': 'button',
+        'checkbox': 'checkbox', 'radio': 'radio', 'email': 'textbox',
+        'password': 'textbox', 'search': 'textbox', 'tel': 'textbox',
+        'url': 'textbox', 'number': 'spinbutton',
+      };
+      return typeRoleMap[type] || 'textbox';
+    }
+    return roleMap[tag] || 'generic';
+  }
+  
+  function isVisible(el) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return false;
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    return true;
+  }
+  
+  function getSelector(el) {
+    if (el.id) return '#' + CSS.escape(el.id);
+    if (el.name && el.tagName) return el.tagName.toLowerCase() + '[name="' + el.name + '"]';
+    // Generate unique CSS path
+    const parts = [];
+    let current = el;
+    while (current && current !== document.body && current !== document.documentElement) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) { parts.unshift('#' + CSS.escape(current.id)); break; }
+      const parent = current.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.children).filter(c => c.tagName === current.tagName);
+        if (siblings.length > 1) {
+          const idx = siblings.indexOf(current) + 1;
+          part += ':nth-of-type(' + idx + ')';
+        }
+      }
+      parts.unshift(part);
+      current = parent;
+    }
+    return parts.join(' > ');
+  }
+  
+  function getXPath(el) {
+    const parts = [];
+    let current = el;
+    while (current && current.nodeType === 1) {
+      let index = 1;
+      let sibling = current.previousSibling;
+      while (sibling) {
+        if (sibling.nodeType === 1 && sibling.tagName === current.tagName) index++;
+        sibling = sibling.previousSibling;
+      }
+      parts.unshift(current.tagName.toLowerCase() + '[' + index + ']');
+      current = current.parentNode;
+    }
+    return '/' + parts.join('/');
+  }
+  
+  function getText(el) {
+    // For inputs, use value/placeholder; for others, use textContent
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea') {
+      return el.value || el.placeholder || '';
+    }
+    if (tag === 'select') {
+      const selected = el.options[el.selectedIndex];
+      return selected ? selected.text : '';
+    }
+    return (el.textContent || '').trim().slice(0, 100);
+  }
+  
+  // Main extraction
+  const elements = [];
+  const seen = new Set();
+  const allInteractive = document.querySelectorAll(INTERACTIVE_TAGS);
+  
+  let idx = 0;
+  for (const el of allInteractive) {
+    // Skip duplicates (e.g., element matching multiple selectors)
+    if (seen.has(el)) continue;
+    seen.add(el);
+    
+    // Skip hidden/disabled elements
+    if (!isVisible(el)) continue;
+    if (el.disabled || el.readOnly) continue;
+    // Skip hidden inputs (they can't be interacted with via UI)
+    if (el.tagName.toLowerCase() === 'input' && el.type === 'hidden') continue;
+    
+    idx++;
+    const rect = el.getBoundingClientRect();
+    elements.push({
+      ref: '@e' + idx,
+      index: idx,
+      tag: el.tagName.toLowerCase(),
+      text: getText(el),
+      role: getRole(el),
+      ariaLabel: el.getAttribute('aria-label') || '',
+      placeholder: el.placeholder || '',
+      name: el.name || '',
+      type: el.type || '',
+      id: el.id || '',
+      interactive: true,
+      selector: getSelector(el),
+      xpath: getXPath(el),
+      box: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
+    });
+  }
+  
+  // Page structure summary
+  const forms = document.querySelectorAll('form');
+  const iframes = document.querySelectorAll('iframe');
+  
+  return JSON.stringify({
+    url: location.href,
+    title: document.title,
+    elements: elements,
+    elementCount: elements.length,
+    structure: {
+      hasForms: forms.length > 0,
+      formCount: forms.length,
+      hasTables: document.querySelectorAll('table').length > 0,
+      hasIframes: iframes.length > 0,
+      iframeCount: iframes.length
+    }
+  });
+}
+`;
+
+/**
+ * Format distilled elements as a human-readable summary for LLM consumption.
+ * This is the text that gets sent to the LLM as page context.
+ */
+export function formatDistilledForLLM(page: DistilledPage): string {
+  const lines: string[] = [];
+  lines.push(`Page: ${page.title}`);
+  lines.push(`URL: ${page.url}`);
+  lines.push(`Interactive elements: ${page.elementCount}`);
+  if (page.structure.hasForms) lines.push(`Forms: ${page.structure.formCount}`);
+  if (page.structure.hasIframes) lines.push(`Iframes: ${page.structure.iframeCount}`);
+  lines.push('');
+  lines.push('Elements:');
+  
+  for (const el of page.elements) {
+    const parts = [el.ref];
+    parts.push(`[${el.role}]`);
+    if (el.text) parts.push(`"${el.text.slice(0, 50)}"`);
+    if (el.ariaLabel) parts.push(`aria="${el.ariaLabel}"`);
+    if (el.placeholder) parts.push(`placeholder="${el.placeholder}"`);
+    if (el.name) parts.push(`name="${el.name}"`);
+    if (el.id) parts.push(`id="${el.id}"`);
+    lines.push('  ' + parts.join(' '));
+  }
+  
+  return lines.join('\n');
+}

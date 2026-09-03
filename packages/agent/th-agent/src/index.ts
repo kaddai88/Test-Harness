@@ -28,3 +28,4 @@ export type {
   RequestConfigEvent,
 } from "./session.js";
 export { SYSTEM_PROMPT, buildSessionPlanningPrompt } from "./prompts/system.js";
+export type { SiteHints } from "./prompts/system.js";

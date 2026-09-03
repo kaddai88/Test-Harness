@@ -4,7 +4,7 @@
 
 ![CI](https://github.com/kaddai88/Test_Harness_v2/actions/workflows/ci.yml/badge.svg)
 ![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen)
-![Packages](https://img.shields.io/badge/packages-17-blue)
+![Packages](https://img.shields.io/badge/packages-18-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
 ![pnpm](https://img.shields.io/badge/pnpm-10-F69220)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -30,6 +30,8 @@ built as a TypeScript monorepo. It is architecturally inspired by
 - **Streaming LLM** — Real-time terminal and WebSocket progress during tests
 - **Browser Automation** — navigate, click, fill, screenshot, assert (Playwright via MCP or local)
 - **Playwright MCP** — Connect to @playwright/mcp server for standardized browser automation
+- **Generalization Layer** — Cross-site testing without hardcoded selectors: DOM distillation (50k→200-500 elements), SmartLocator (5-level fallback), SiteProfile (self-learning site knowledge), observe→find→act paradigm
+- **Self-Learning Site Profiles** — Automatically discovers auth/form/navigation patterns from session history; persists across sessions for faster, more reliable future tests
 - **Multiple LLM Providers** — OpenAI-compatible APIs, Ollama (local), DeepSeek with failover support
 - **Full Web Platform** — REST API + WebSocket + React Dashboard
 - **Production Ready** — Graceful shutdown, rate limiting, Docker deployment, CI/CD
@@ -151,7 +153,7 @@ docker compose logs -f server
 ### Tests
 
 ```bash
-npx vitest run                  # 84 tests across 7 suites
+npx vitest run                  # 70 tests across 6 suites
 ```
 
 See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
@@ -187,8 +189,8 @@ See [docs/API.md](docs/API.md) for the full REST + WebSocket endpoint reference.
 
 | Package | Description |
 |---|---|
-| `@test-harness/th-tools` | Tool framework + built-in browser/HTTP tools (3-stage prepare→dispatch→finalize pipeline) |
-| `@test-harness/th-browser` | Browser capability seam + Playwright MCP implementation |
+| `@test-harness/th-tools` | Tool framework + 16 built-in tools: browser/HTTP + generalization (observe_page, find_element, extract_data, explore_site, configure_site) |
+| `@test-harness/th-browser` | Browser capability seam + Playwright MCP + Generalization Layer (DOM distillation, SmartLocator, SiteProfile, cross-session cache persistence) |
 
 ### Infrastructure
 
@@ -224,7 +226,7 @@ Requires **Node 20+** and **pnpm 10** (managed by corepack).
 
 ## Project Status
 
-All 4 phases complete — **production-ready**:
+All 5 phases complete — **production-ready**:
 
 | Phase | Scope | Packages | Status |
 |---|---|---|---|
@@ -232,6 +234,7 @@ All 4 phases complete — **production-ready**:
 | **Phase 2** | Core Enhancement | 16 | ✅ Complete |
 | **Phase 3** | Web Platform | 21 | ✅ Complete |
 | **Phase 4** | Production Hardening | 22 | ✅ Complete |
+| **Phase 5** | Generalization Layer | 18 | ✅ Complete |
 
 ### What's Done
 
@@ -239,15 +242,18 @@ All 4 phases complete — **production-ready**:
 - ✅ Agent Loop with Session Log, Waterfall events, Streaming LLM
 - ✅ 3-stage tool execution pipeline with timeout control
 - ✅ 3 LLM adapters (Ollama, OpenAI, DeepSeek) with failover
-- ✅ 9 detection plugins across 4 categories (22 detectors)
+- ✅ 16 built-in tools including 5 generalization tools (observe_page, find_element, extract_data, explore_site, configure_site)
+- ✅ Generalization Layer: DOM distillation, SmartLocator (5-level fallback), SiteProfile self-learning
+- ✅ Cross-session cache persistence — selectors learned in one session are reused in the next
+- ✅ observe→find→act paradigm — agent discovers pages semantically instead of hardcoded CSS/XPath
 - ✅ REST API (9 endpoints) + WebSocket real-time gateway
 - ✅ React Dashboard (6 pages, real-time scan progress)
-- ✅ SQLite persistence with repository pattern
+- ✅ JSON file persistence with repository pattern
 - ✅ Task queue with priority and retry
 - ✅ Report generation (JSON / Markdown / HTML)
 - ✅ Graceful shutdown, rate limiting, Docker deployment
 - ✅ GitHub Actions CI/CD (Node 20 + 22 matrix)
-- ✅ 84 passing unit tests
+- ✅ 70 passing unit tests
 - ✅ Comprehensive documentation (API, Plugin Dev Guide, Contributing)
 
 ### What's Next (Future)
@@ -258,7 +264,8 @@ All 4 phases complete — **production-ready**:
 - 📋 Kubernetes manifests + Helm charts
 - 📋 Scheduled scans + scan comparison
 - 📋 White-label reports
-- 📋 Browser-based crawling (enhanced Playwright MCP)
+- 📋 Test intent DSL / natural language test case parsing
+- 📋 Adaptive exploration strategy (WebProber-style)
 - 📋 Anti-bot / proxy support
 
 ## License

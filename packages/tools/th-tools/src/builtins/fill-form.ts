@@ -42,7 +42,7 @@ const inputSchema = z.object({
       }),
     ])
     .describe("Field data as JSON object, JSON string, or URL-encoded string (key1=value1&key2=value2)"),
-  submit: z.boolean().optional().describe("Whether to submit the form after filling"),
+  submit: z.boolean().optional().describe("Whether to submit the form after filling (default: true)").default(true),
 });
 
 const outputSchema = z.object({

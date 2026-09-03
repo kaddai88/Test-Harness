@@ -24,7 +24,18 @@ import {
   type Finding,
 } from "@test-harness/th-protocol";
 import { THContainer, valueProvider } from "@test-harness/th-core";
-import { BrowserDriverDefinition, PlaywrightBrowserProvider, PlaywrightMCPProvider } from "@test-harness/th-browser";
+import {
+  BrowserDriverDefinition,
+  PlaywrightBrowserProvider,
+  PlaywrightMCPProvider,
+  loadSiteCache,
+  persistSiteCache,
+  loadSiteProfile,
+  saveSiteProfile,
+  enrichSiteProfile,
+} from "@test-harness/th-browser";
+import type { SessionActivity } from "@test-harness/th-browser";
+import type { SiteHints } from "@test-harness/th-agent";
 import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import { calculateScore } from "@test-harness/th-report";
@@ -122,6 +133,18 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       const browserReady = await this.launchBrowser(container);
       if (browserReady) {
         this.broadcast("session:status", sessionId, { status: "executing", message: "Browser ready" });
+
+        // Phase 2: Load site cache from previous sessions
+        try {
+          const browser = container.get(BrowserDriverDefinition) as import("@test-harness/th-browser").BrowserDriver;
+          const cachedElements = loadSiteCache(targetUrl);
+          if (cachedElements.length > 0) {
+            browser.setSiteCache(cachedElements);
+            console.log(`[Worker] Loaded ${cachedElements.length} cached selectors for ${targetUrl}`);
+          }
+        } catch (err) {
+          console.warn('[Worker] Failed to load site cache:', err instanceof Error ? err.message : String(err));
+        }
       } else {
         this.broadcast("session:status", sessionId, { status: "executing", message: "Crawling without browser" });
       }
@@ -203,7 +226,29 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
           this.broadcast("agent:activity", sessionId, activity);
           collectedActivities.push(activity);
         }),
+        // Workflow state change event
+        container.events.on("agent:workflow_state" as any, (d: any) => {
+          this.broadcast("agent:workflow_state", sessionId, {
+            previousState: d.previousState,
+            newState: d.newState,
+            message: d.message,
+            timestamp: Date.now(),
+          });
+        }),
       );
+
+      // ── Build SiteHints from profile ──
+      const siteHints: SiteHints | undefined = (() => {
+        try {
+          const profile = loadSiteProfile(targetUrl);
+          if (!profile) return undefined;
+          const hints: SiteHints = { name: profile.name };
+          // We could extract auth patterns here if stored in the profile
+          return hints;
+        } catch {
+          return undefined;
+        }
+      })();
 
       // ── Run the Agent Loop ──
       const loop = new AgentLoop();
@@ -215,10 +260,53 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         toolRegistry: registry,
         eventBus: container.events,
         container,
+        siteHints,
       });
 
       // ── Persist results ──
       disposables.forEach((d) => d.dispose());
+
+      // Phase 2: Persist updated site cache after session
+      if (browserReady) {
+        try {
+          const browser = container.get(BrowserDriverDefinition) as import("@test-harness/th-browser").BrowserDriver;
+          const updatedCache = browser.getSiteCache();
+          if (updatedCache.length > 0) {
+            persistSiteCache(targetUrl, updatedCache);
+            console.log(`[Worker] Saved ${updatedCache.length} cached selectors for ${targetUrl}`);
+          }
+
+          // Phase 3: Enrich site profile with learned patterns
+          const existingProfile = loadSiteProfile(targetUrl);
+          const activities: SessionActivity[] = collectedActivities.map(a => ({
+            kind: String(a.kind ?? ''),
+            tool: a.tool as string | undefined,
+            input: a.input as Record<string, unknown> | undefined,
+            success: a.success as boolean | undefined,
+            turn: a.turn as number | undefined,
+            timestamp: a.timestamp as number | undefined,
+          }));
+          const enrichment = enrichSiteProfile(
+            existingProfile ? {
+              name: existingProfile.name,
+              baseUrl: existingProfile.baseUrl,
+              forms: [],
+              navigations: [],
+              constraints: {},
+              elementCache: existingProfile.elementCache,
+              updatedAt: existingProfile.updatedAt,
+            } : null,
+            targetUrl,
+            activities,
+            updatedCache
+          );
+          if (enrichment.authDiscovered || enrichment.formsDiscovered > 0 || enrichment.navigationsDiscovered > 0 || enrichment.constraintsDiscovered) {
+            console.log(`[Worker] Enriched site profile: ${enrichment.summary}`);
+          }
+        } catch (err) {
+          console.warn('[Worker] Failed to enrich site profile:', err instanceof Error ? err.message : String(err));
+        }
+      }
 
       const status =
         result.status === "failed"

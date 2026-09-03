@@ -130,6 +130,25 @@ export class SessionWebSocket {
     return () => this.off('agent:activity', wrapped);
   }
 
+  /** agent:workflow_state — workflow state machine transition */
+  onWorkflowState(
+    handler: (data: { sessionId: string; previousState: string; newState: string; message: string }) => void
+  ): () => void {
+    const wrapped = (data: unknown) => {
+      const msg = data as { sessionId?: string; previousState?: string; newState?: string; message?: string };
+      if (msg.sessionId && msg.newState) {
+        handler({
+          sessionId: msg.sessionId,
+          previousState: msg.previousState ?? '',
+          newState: msg.newState,
+          message: msg.message ?? '',
+        });
+      }
+    };
+    this.on('agent:workflow_state', wrapped);
+    return () => this.off('agent:workflow_state', wrapped);
+  }
+
   /** session:status — phase transition (planning → executing → etc.) */
   onSessionStatus(
     handler: (data: { sessionId: string; status: string; message?: string }) => void

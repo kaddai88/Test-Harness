@@ -32,7 +32,7 @@ export const SessionDetail: React.FC = () => {
     }
   }, [id, fetchSession]);
 
-  const isActive = currentSession?.status === 'running' || currentSession?.status === 'pending' || currentSession?.status === 'planning' || currentSession?.status === 'executing';
+  const isActive: boolean = !!(currentSession?.status === 'running' || currentSession?.status === 'pending' || currentSession?.status === 'planning' || currentSession?.status === 'executing');
 
   // Load activities from metadata for completed sessions
   const historicalActivities: AgentActivity[] = useMemo(() => {
@@ -68,7 +68,7 @@ export const SessionDetail: React.FC = () => {
     return disconnect;
   }, [currentSession?.status, connectWebSocket]);
 
-  const phase = currentSession?.phase || currentSession?.status || '';
+  const phase: string = currentSession ? ((currentSession.phase as string) || (currentSession.status as string) || '') : '';
 
   if (loading && !currentSession) {
     return (
@@ -125,7 +125,6 @@ export const SessionDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Phase indicator (during active runs) ── */}
       {isActive && (
         <div className="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2.5">
           <Spinner size="sm" />
@@ -144,7 +143,24 @@ export const SessionDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ── Main Chat Stream ─ */}
+      {Boolean(currentSession.metadata?.workflowState) && (() => {
+        const wfState = String(currentSession.metadata?.workflowState ?? '');
+        const wfMessage = currentSession.metadata?.workflowMessage ? String(currentSession.metadata.workflowMessage) : null;
+        return (
+          <div className="flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-2">
+            <span className="text-sm font-medium text-purple-300">
+              状态机：{wfState}
+            </span>
+            {wfMessage && (
+              <span className="text-xs text-purple-400">
+                — {wfMessage}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Main Chat Stream ── */}
       <Card className="min-h-[400px] max-h-[70vh] overflow-y-auto scrollbar-thin">
         {displayActivities.length === 0 && !streamText ? (
           <div className="flex flex-col items-center justify-center py-16">

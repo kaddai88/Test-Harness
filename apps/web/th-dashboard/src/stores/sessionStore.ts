@@ -224,6 +224,23 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       }
     });
 
+    // Workflow state change
+    const unsubWorkflow = sessionWebSocket.onWorkflowState(({ sessionId, newState, message }) => {
+      const { currentSession } = get();
+      if (currentSession && currentSession.id === sessionId) {
+        set({
+          currentSession: {
+            ...currentSession,
+            metadata: {
+              ...currentSession.metadata,
+              workflowState: newState,
+              workflowMessage: message,
+            },
+          },
+        });
+      }
+    });
+
     return () => {
       console.log('[Store] WebSocket cleanup');
       sessionWebSocket.off('connected', onConnected);
@@ -234,6 +251,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       unsubActivity();
       unsubSessionStatus();
       unsubCompleted();
+      unsubWorkflow();
       sessionWebSocket.disconnect();
       set({ wsConnected: false });
     };

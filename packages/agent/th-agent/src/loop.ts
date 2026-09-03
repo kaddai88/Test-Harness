@@ -44,9 +44,19 @@ import type {
 } from "./context.js";
 import type { ToolRegistry } from "@test-harness/th-tools";
 import type { EventBusImpl } from "@test-harness/th-core";
-import { SYSTEM_PROMPT, buildSessionPlanningPrompt } from "./prompts/system.js";
+import { SYSTEM_PROMPT, buildSessionPlanningPrompt, type SiteHints } from "./prompts/system.js";
 import { SessionLog } from "./session.js";
 import { StreamAssembler } from "./assembler.js";
+import {
+  WorkflowState,
+  WORKFLOW_TRANSITIONS,
+  getAllowedTools,
+  getStatePrompt,
+  updateWorkflowContext,
+  tryTransition,
+  createInitialContext,
+  type WorkflowContext,
+} from "./workflow.js";
 
 /** Logger interface for the agent loop */
 export interface AgentLogger {
@@ -80,6 +90,8 @@ export interface AgentLoopOptions {
   container: import("@test-harness/th-core").THContainer;
   logger?: AgentLogger;
   signal?: AbortSignal;
+  /** Phase 2: Site-specific hints from SiteProfile for generalized testing */
+  siteHints?: SiteHints;
 }
 
 export class AgentLoop {
@@ -107,7 +119,7 @@ export class AgentLoop {
     // Create the session log — the single source of truth
     const sessionLog = new SessionLog();
 
-    const context: AgentContext = {
+    const context: AgentContext & { workflow: WorkflowContext; workflowState: WorkflowState } = {
       sessionId: options.sessionId,
       target: options.target,
       config: options.config,
@@ -123,6 +135,8 @@ export class AgentLoop {
       maxRetriesPerAction: options.config.maxRetriesPerAction ?? 3,
       toolFailureCounts: new Map(),
       abortSignal: abortController.signal,
+      workflow: createInitialContext(options.config.maxTurns ?? 99),
+      workflowState: WorkflowState.INIT,
     };
 
     logger.info(`Starting session for ${options.target.url}`);
@@ -137,7 +151,8 @@ export class AgentLoop {
       content: buildSessionPlanningPrompt(
         options.target.url,
         availableTools,
-        options.config.instructions as string | undefined
+        options.config.instructions as string | undefined,
+        options.siteHints
       ),
     });
 
@@ -241,7 +256,7 @@ export class AgentLoop {
    * 3. Tool call execution (with waterfall for pre/post processing)
    */
   private async executeTurn(
-    context: AgentContext,
+    context: AgentContext & { workflow: WorkflowContext; workflowState: WorkflowState },
     logger: AgentLogger
   ): Promise<TurnResult> {
     const { sessionLog, eventBus } = context;
@@ -249,9 +264,13 @@ export class AgentLoop {
     context.stepCount++;
     const step = context.stepCount;
 
+    // ── Workflow: Add state-specific prompt ──
+    const statePrompt = getStatePrompt(context.workflowState);
+    const enhancedSystemPrompt = SYSTEM_PROMPT + '\n\n' + statePrompt;
+
     // ── Step 1: Pre-step waterfall ──
     // Derive messages from session log
-    const messages = sessionLog.deriveMessages(SYSTEM_PROMPT);
+    const messages = sessionLog.deriveMessages(enhancedSystemPrompt);
 
     // Fire pre-step waterfall — plugins can modify or reject
     const preStepResult = await eventBus.waterfall(AgentPreStepEvent, {
@@ -285,7 +304,14 @@ export class AgentLoop {
     );
 
     // Build tool schemas
-    const toolSchemas: ToolSchema[] = context.toolRegistry.getSchemas();
+    let toolSchemas: ToolSchema[] = context.toolRegistry.getSchemas();
+
+    // ── Workflow: Filter tools based on current state ──
+    const allowedTools = getAllowedTools(context.workflowState);
+    if (allowedTools !== null) {
+      toolSchemas = toolSchemas.filter(ts => allowedTools.includes(ts.name));
+      logger.info(`[Workflow] State=${context.workflowState}, allowed tools: ${allowedTools.join(', ')}`);
+    }
 
     // Request waterfall — plugins can modify model config
     const requestConfig = await eventBus.waterfall(AgentRequestEvent, {
@@ -395,6 +421,46 @@ export class AgentLoop {
       });
 
       logger.toolCall(toolCall.name, toolCall.arguments);
+
+      // ── LOGIN GUARD: Track login success and block re-login ──
+      // Login is confirmed when agent navigates to a NON-login page.
+      // Once logged in, block any navigate_to to login page URLs.
+      const toolArgs = toolCall.arguments as Record<string, unknown>;
+
+      // Detect login success: navigating to a non-login URL means login worked
+      if (toolCall.name === "navigate_to") {
+        const navUrl = String(toolArgs.url ?? "");
+        const loginConfirmed = context.state.get("loginConfirmed") as boolean ?? false;
+
+        if (!loginConfirmed && !navUrl.toLowerCase().includes("login")) {
+          // Agent navigated to a non-login page — login was successful
+          context.state.set("loginConfirmed", true);
+          // Block the original target URL if it's a login page
+          const targetUrl = context.target.url;
+          if (targetUrl.toLowerCase().includes("login")) {
+            const blocked = (context.state.get("blockedUrls") as string[]) ?? [];
+            if (!blocked.includes(targetUrl)) blocked.push(targetUrl);
+            context.state.set("blockedUrls", blocked);
+          }
+          logger.info(`[LoginGuard] Login confirmed. Blocking: ${targetUrl}`);
+        }
+
+        // Block re-login navigation
+        if (loginConfirmed && navUrl.toLowerCase().includes("login")) {
+          logger.warn(`[LoginGuard] BLOCKED navigate_to: ${navUrl}`);
+          const errorMsg = `BLOCKED: You are already logged in. Do NOT navigate to login pages. Navigate to the target module instead. URL: "${navUrl}"`;
+          sessionLog.append("tool/result", {
+            turn: context.turnCount, step, callId: toolCall.id,
+            name: toolCall.name, success: false, error: errorMsg, data: null, duration: 0,
+          });
+          toolResults.push({ toolCallId: toolCall.id, name: toolCall.name, success: false, error: errorMsg, data: null });
+          await eventBus.emit(AgentToolCallEvent, {
+            sessionId: context.sessionId, turnNumber: context.turnCount, toolName: toolCall.name, input: toolCall.arguments });
+          await eventBus.emit(AgentToolResultEvent, {
+            sessionId: context.sessionId, turnNumber: context.turnCount, toolName: toolCall.name, success: false, duration: 0 });
+          continue;
+        }
+      }
 
       // Emit tool call event
       await eventBus.emit(AgentToolCallEvent, {
@@ -528,6 +594,61 @@ export class AgentLoop {
         data: result.data,
         error: result.error,
       });
+
+      // ── Workflow: Update context based on tool execution ──
+      context.workflow = updateWorkflowContext(
+        context.workflow,
+        toolCall.name,
+        toolCall.arguments as Record<string, unknown>,
+        result.success,
+        result.data as Record<string, unknown> | undefined
+      );
+    }
+
+    // ── Workflow: Check state transitions ──
+    const previousState = context.workflowState;
+    const transitionResult = tryTransition(context.workflow, context.workflowState);
+
+    if (transitionResult.fired) {
+      // Find the matching transition to get the target state
+      for (const t of WORKFLOW_TRANSITIONS) {
+        if (t.from === previousState && t.key === transitionResult.transitionKey) {
+          context.workflowState = t.to;
+          break;
+        }
+      }
+      // Record coverage
+      if (transitionResult.transitionKey && !context.workflow.traversedTransitions.includes(transitionResult.transitionKey)) {
+        context.workflow.traversedTransitions.push(transitionResult.transitionKey);
+      }
+      // Log invariant violations
+      if (!transitionResult.invariantOk && transitionResult.invariantViolation) {
+        context.workflow.invariantViolations.push(
+          `${previousState}→${context.workflowState}: ${transitionResult.invariantViolation}`
+        );
+        logger.warn(`[Workflow] Invariant violation: ${transitionResult.invariantViolation}`);
+      }
+      logger.info(`[Workflow] ${transitionResult.message} (${previousState} → ${context.workflowState})`);
+      logger.info(`[Workflow] Coverage: [${context.workflow.traversedTransitions.join(', ')}]`);
+      sessionLog.append("system/note", {
+        note: `[Workflow] ${previousState} → ${context.workflowState} | coverage: [${context.workflow.traversedTransitions.join(', ')}]`,
+      });
+
+      await eventBus.emit("agent:workflow_state" as any, {
+        sessionId: context.sessionId,
+        previousState,
+        newState: context.workflowState,
+        message: transitionResult.message,
+      });
+    }
+
+    // Check if workflow is done
+    if (context.workflowState === WorkflowState.DONE) {
+      return {
+        complete: true,
+        response: { content: response.content },
+        toolResults,
+      };
     }
 
     return {

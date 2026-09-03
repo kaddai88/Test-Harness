@@ -23,7 +23,33 @@ export type {
   NetworkRequest,
   DiscoveredFeature,
   ElementInfo,
+  DistilledElement,
+  DistilledPage,
+  FindElementResult,
 } from "./types.js";
+
+// Generalization Layer
+export type {
+  SiteProfile,
+  AuthPattern,
+  FormPattern,
+  NavigationPattern,
+  SiteConstraints,
+  CachedElement,
+} from "./site-profile.js";
+export { createDefaultSiteProfile } from "./site-profile.js";
+export { SmartLocator } from "./smart-locator.js";
+export type { SmartLocatorOptions } from "./smart-locator.js";
+export { DISTILL_SCRIPT, formatDistilledForLLM } from "./distill-dom.js";
+export {
+  loadSiteProfile,
+  saveSiteProfile,
+  persistSiteCache,
+  loadSiteCache,
+} from "./site-profile-store.js";
+export type { SiteProfileData } from "./site-profile-store.js";
+export { enrichSiteProfile } from "./site-profile-enricher.js";
+export type { SessionActivity, EnrichmentResult } from "./site-profile-enricher.js";
 
 // Provider
 export { PlaywrightBrowserProvider } from "./playwright-provider.js";
