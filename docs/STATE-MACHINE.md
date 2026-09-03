@@ -5,22 +5,24 @@
 ## 状态定义
 
 | 状态 | 含义 | 允许的工具 |
-|------|------|-----------|
-| `INIT` | 初始阶段 — 判断是否需要登录 | 全部 |
-| `LOGIN` | 登录阶段 — 填写凭据并验证 | fill_form, click_element, browser_evaluate, take_screenshot, navigate_to |
-| `NAVIGATE` | 导航阶段 — 前往目标测试模块 | navigate_to, browser_evaluate, take_screenshot, click_element |
-| `TEST` | 测试阶段 — 执行功能测试 | navigate_to, click_element, fill_form, browser_evaluate, take_screenshot, assert_visible, assert_text, report_finding |
+|------|------|----------|
+| `INIT` | 初始阶段 — 判断是否需要登录 | 全部（含 explore_site） |
+| `LOGIN` | 登录阶段 — 填写凭据并验证 | fill_form, click_element, browser_evaluate, take_screenshot, navigate_to, **observe_page, find_element, extract_data, explore_site, configure_site** |
+| `NAVIGATE` | 导航阶段 — 前往目标测试模块 | navigate_to, browser_evaluate, take_screenshot, click_element, **observe_page, find_element, explore_site** |
+| `TEST` | 测试阶段 — 执行功能测试 | navigate_to, click_element, fill_form, browser_evaluate, take_screenshot, assert_visible, assert_text, report_finding, **observe_page, find_element, extract_data, explore_site, configure_site** |
 | `REPORT` | 报告阶段 — 总结发现 | report_finding, browser_evaluate |
 | `DONE` | 结束 | 无 |
+
+> **加粗** 工具为 Phase 5 泛化层新增。Agent 到达新页面后应优先使用 `observe_page` 发现元素，再用 `find_element` 语义定位。
 
 ## 状态转换表
 
 | # | 起始状态 | 输入/事件 | Guard 条件 | 目标状态 | 输出/动作 |
 |---|---------|----------|-----------|---------|----------|
-| 1 | INIT | browser_evaluate 返回页面信息 | URL含 login/signin/auth 或 HTML含 password 字段 | LOGIN | Agent 看到 LOGIN prompt，开始登录流程 |
-| 2 | INIT | browser_evaluate 返回页面信息 | 无登录表单 且 URL不含login | NAVIGATE | 跳过登录（cookie 免登录），直接导航 |
-| 3 | LOGIN | fill_form + browser_evaluate | loginSubmitted && 页面非登录页 | NAVIGATE | 登录成功，进入导航阶段 |
-| 4 | LOGIN | browser_evaluate 仍在登录页 | 页面仍含 password 字段 | **LOGIN（自环）** | 登录失败，Agent 重试 |
+| 1 | INIT | observe_page / explore_site 返回页面信息 | URL含 login/signin/auth 或 HTML含 password 字段 | LOGIN | Agent 看到 LOGIN prompt，开始登录流程 |
+| 2 | INIT | observe_page / explore_site 返回页面信息 | 无登录表单 且 URL不含login | NAVIGATE | 跳过登录（cookie 免登录），直接导航 |
+| 3 | LOGIN | find_element + fill_form + click_element | loginSubmitted && 页面非登录页 | NAVIGATE | 登录成功，进入导航阶段 |
+| 4 | LOGIN | observe_page 仍在登录页 | 页面仍含 password 字段 | **LOGIN（自环）** | 登录失败，Agent 重试 |
 | 5 | NAVIGATE | navigate_to 成功 | targetReached = true | TEST | 到达目标模块，开始测试 |
 | 6 | TEST | 测试操作成功 | testExecuted && (stagnantTurns ≥ 5 \|\| 关键转换已覆盖) | REPORT | 测试完成，生成报告 |
 | 7 | TEST | 测试操作（click/fill/assert） | 操作成功 | **TEST（自环）** | 继续测试 |

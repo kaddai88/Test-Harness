@@ -471,10 +471,29 @@ const response = await llm.complete({ model: "llama3.1", messages: [...] });
 | Definition | Implemented by | Consumed by |
 |---|---|---|
 | `LLMProvider` | `th-llm-ollama`, `th-llm-openai`, `th-llm-deepseek` | `th-agent` |
-| `DetectionPlugin` | `th-detect-security`, `th-detect-performance`, ... | `th-detection` (runner) |
-| `Tool` | `th-tools` (built-ins) | `th-agent` |
+| `BrowserDriver` | `th-browser` (Playwright MCP, Playwright local) | `th-tools` (browser tools), `th-worker` |
+| `Tool` | `th-tools` (16 built-ins incl. generalization) | `th-agent` |
 | `TaskQueue` | `th-queue` | `th-api`, `th-worker` |
 | `DatabaseRepositories` | `th-persistence` | `th-api`, `th-worker` |
+
+### Generalization Layer (Phase 5)
+
+The browser package includes a **generalization layer** for cross-site testing without hardcoded selectors:
+
+| Component | Purpose |
+|---|---|
+| `SmartLocator` | 5-level element locator: cache → semantic → DOM distillation → CSS → XPath |
+| `SiteProfile` | Site knowledge: auth patterns, form patterns, navigation patterns, constraints |
+| `distill-dom.ts` | Reduces 50k+ DOM nodes to 200-500 interactive elements with ref IDs |
+| `site-profile-store` | File-based persistence (`.site-profiles/<hostname>.json`) |
+| `site-profile-enricher` | Auto-learns patterns from session activities |
+
+Generalization tools available to the agent:
+- `observe_page` — discover interactive elements semantically
+- `find_element` — locate elements by semantic hint (e.g. "登录按钮")
+- `extract_data` — extract structured page content
+- `explore_site` — discover site structure (navigation, auth, forms)
+- `configure_site` — manually configure site-specific hints
 
 ---
 

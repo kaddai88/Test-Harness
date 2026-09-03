@@ -319,29 +319,28 @@ interface ToolDefinition extends ToolSchema {
 
 | 组件 | 我们的实现 | DSH 对标 | 完成度 |
 |---|---|---|---|
-| th-protocol | Message, ToolCall, LLMProvider, DetectionPlugin, Finding 等 | llm/types.ts, tools/types.ts | 80% |
-| th-core | THPlugin, THContainer, EventBus, ServiceDefinition, Effect | Cordis (完整 DI 框架) | 60% |
-| th-llm + th-llm-ollama | LLMProvider + Ollama 适配器 | LlmRuntime + DeepSeek adapter | 50% |
-| th-crawl | CrawlService, HttpFetcher, BrowserFetcher, Extractors | (无对应 — DSH 用 tool-bash/web) | 90% |
-| th-tools | ToolRegistry, 5 个内置工具 | ToolRuntime (1947 行) | 40% |
-| th-detection | DetectionRegistry, DetectionRunner, DetectionComposer | (无独立 detection — 用 tool 系统) | 70% |
-| th-detect-security | SecurityHeaders, SSL/TLS | (DSH 无内置检测) | 100% |
-| th-agent | AgentLoop (Turn→Model→Tool→Result) | ReactLoopAgent (515 行) | 50% |
-| th-cli | `th scan <url>` 命令 | `dsh --profile headless "task"` | 70% |
+| th-protocol | Message, ToolCall, LLMProvider, DetectionPlugin, Finding 等 | llm/types.ts, tools/types.ts | 90% |
+| th-core | THPlugin, THContainer, EventBus, ServiceDefinition, Effect | Cordis (完整 DI 框架) | 70% |
+| th-llm + th-llm-ollama | LLMProvider + Ollama 适配器 | LlmRuntime + DeepSeek adapter | 80% |
+| th-browser | BrowserDriver + Playwright MCP + 泛化层 | (DSH 用 tool-bash/web) | 90% |
+| th-tools | ToolRegistry, 16 个内置工具 (含 5 个泛化工具) | ToolRuntime (1947 行) | 80% |
+| th-agent | AgentLoop + SessionLog + Waterfall + 工作流状态机 | ReactLoopAgent (515 行) | 90% |
+| th-cli | `th test <url>` 命令 | `dsh --profile headless "task"` | 80% |
 
 ### 5.2 关键差距分析
 
-| 差距领域 | DSH 做法 | 我们现状 | 影响 | 优先级 |
-|---|---|---|---|---|
-| **Session Log** | Append-only 事件日志，所有消息历史从日志投影 | 简单的 `history: Message[]` 数组 | 无法恢复、无法遥测、无法重放 | 🔴 高 |
-| **Waterfall 事件** | 核心扩展点都是 waterfall (around-middleware) | 只有 emit 和 on | 无法拦截/修改 LLM 请求、工具执行 | 🔴 高 |
-| **流式 LLM** | 原生 `AsyncIterable<StreamChunk>` | 只有 `complete()` 非流式 + `stream()` 接口但没使用 | 无法实时显示进度 | 🟡 中 |
-| **工具执行管线** | prepare → dispatch → finalize → finish 四阶段 | 简单的 validate → execute | 无审批、无超时、无重试 | 🟡 中 |
-| **并行工具调度** | Bounded rolling pool + exclusive barriers | 顺序执行所有工具调用 | 性能瓶颈 | 🟡 中 |
-| **作用域注册** | per-agent Scope 隔离 | 全局注册表 | 多 Agent 场景受限 | 🟢 低 |
-| **Profile/Bundle** | 声明式组合 + patch 覆盖 | 硬编码启动 | 扩展性差 | 🟢 低 |
-| **Inbox 系统** | 双队列 (next-turn + next-step) | 无 | 无法中途注入消息 | 🟡 中 |
-| **Phase 状态机** | idle → maintenance → running | 无状态机 | 无法处理维护任务 | 🟢 低 |
+| 差距领域 | DSH 做法 | 我们现状 | 状态 |
+|---|---|---|---|
+| **Session Log** | Append-only 事件日志，所有消息历史从日志投影 | ✅ 已实现 SessionLog + deriveMessages() | ✅ 已解决 |
+| **Waterfall 事件** | 核心扩展点都是 waterfall (around-middleware) | ✅ 已实现 4 种分发模式 + 5 个 Waterfall 事件 | ✅ 已解决 |
+| **流式 LLM** | 原生 `AsyncIterable<StreamChunk>` | ✅ 已实现 StreamAssembler + 实时终端/WebSocket 推送 | ✅ 已解决 |
+| **工具执行管线** | prepare → dispatch → finalize → finish 四阶段 | ✅ 已实现三阶段 + 超时控制 + 大结果截断 | ✅ 已解决 |
+| **并行工具调度** | Bounded rolling pool + exclusive barriers | ✅ 已实现 isConcurrencySafe 标记 + 并行/独占分类 | ✅ 已解决 |
+| **Phase 状态机** | idle → maintenance → running | ✅ 已实现 INIT→LOGIN→NAVIGATE→TEST→REPORT→DONE | ✅ 已解决 |
+| **跨站点泛化** | (DSH 无泛化层 — 需硬编码选择器) | ✅ 已实现 DOM 降采样 + SmartLocator + SiteProfile | ✅ 已解决 |
+| **作用域注册** | per-agent Scope 隔离 | 全局注册表 | 🟢 低优先 |
+| **Profile/Bundle** | 声明式组合 + patch 覆盖 | 硬编码启动 | 🟢 低优先 |
+| **Inbox 系统** | 双队列 (next-turn + next-step) | 无 | 🟡 中优先 |
 
 ---
 
@@ -495,7 +494,7 @@ DSH 是一个 **极其精密** 的智能体框架，其核心创新在于：
 3. **Waterfall 事件作为扩展点** — 无需修改核心代码即可扩展行为
 4. **工具系统的精密调度** — 并行/串行/超时/审批/重试全覆盖
 
-我们的 Test-Harness 已经建立了良好的基础架构（Phase 1 完成），现在需要：
-- **短期**：增强 Agent Loop（session log + waterfall + streaming）
-- **中期**：扩展检测插件 + LLM 适配器 + 报告系统
-- **长期**：Web 平台 + 分布式工作器 + 生产部署
+我们的 Test-Harness 已经建立了坚实的基础架构（Phase 1-5 完成），现在需要：
+- **短期**：PostgreSQL 持久化 + 分布式任务队列 + JWT 认证
+- **中期**：测试意图 DSL + 自适应探索策略 + 反爬虫支持
+- **长期**：多 Agent 协作 + Kubernetes 部署 + 企业级 RBAC

@@ -1,6 +1,6 @@
 # Test-Harness 平台实现计划与进度报告
 
-> 最后更新: 2026-08-21 | 全部 4 个 Phase 完成 | 22 个包 | 84 个测试
+> 最后更新: 2026-09-03 | 全部 5 个 Phase 完成 | 18 个包 | 70 个测试
 
 ---
 
@@ -24,15 +24,17 @@ Test-Harness 是一个 **AI 驱动的网站质量检测平台**，灵感来源�
 | **Phase 2** | 核心增强 | 16 | ✅ 完成 | Day 1-2 |
 | **Phase 3** | Web 平台 | 21 | ✅ 完成 | Day 2 |
 | **Phase 4** | 生产就绪 | 22 | ✅ 完成 | Day 2 |
+| **Phase 5** | 泛化层 | 18 | ✅ 完成 | Day 3-4 |
 
 **最终指标**:
-- 22 个包全部构建成功 (715ms full turbo)
-- 84 个单元测试通过 (6.3s)
-- 9 个检测插件 (22 个检测器)
+- 18 个包全部构建成功 (turbo build)
+- 70 个单元测试通过 (6 个测试套件)
+- 16 个内置工具（含 5 个泛化工具）
 - 3 个 LLM 适配器 (Ollama/OpenAI/DeepSeek)
 - 9 个 REST API 端点 + WebSocket
 - React Dashboard (6 页面)
 - Docker + CI/CD 就绪
+- 泛化层：DOM 降采样 + SmartLocator + SiteProfile 自学习 + 跨 session 缓存
 
 ---
 
@@ -135,9 +137,11 @@ Turn Start → Step Start
 
 ---
 
-## 五、Phase 3: Web 平台 ✅
+## 三、Phase 3: Web 平台 ✅
 
-### 目标
+> 注：Phase 3 的原始目标（Web 平台）已在 Phase 2/4 中合并完成。此处保留原始记录。
+
+### 原始目标
 构建完整的 Web 服务层：持久化、任务队列、REST API、WebSocket。
 
 ### 完成的任务
@@ -185,7 +189,7 @@ React Dashboard、测试、CI/CD、生产加固。
 | # | 任务 | 描述 |
 |---|---|---|
 | 26 | React Dashboard | React 18 + Vite + Tailwind + Zustand + Recharts (6 页面 + 10 组件) |
-| 27 | 单元测试 | 84 个测试用例 (7 个测试文件) |
+| 27 | 单元测试 | 70 个测试用例 (6 个测试文件) |
 | 28 | CI/CD + 文档 | GitHub Actions + API.md + PLUGIN-DEV.md + CONTRIBUTING.md |
 | 29 | 生产加固 | 优雅停机 + LLM 故障转移 + 速率限制 |
 
@@ -205,7 +209,7 @@ React Dashboard、测试、CI/CD、生产加固。
 
 **构建产物**: HTML (0.5KB) + CSS (20KB) + JS (582KB)
 
-### 单元测试 (84 通过)
+### 单元测试 (70 通过)
 
 | 测试文件 | 用例数 | 覆盖范围 |
 |---|---|---|
@@ -213,10 +217,8 @@ React Dashboard、测试、CI/CD、生产加固。
 | `container.test.ts` | 12 | DI register/get/has/getAll/createChild/dispose |
 | `session.test.ts` | 12 | SessionLog append/deriveMessages/getEventsByType/getSummary |
 | `assembler.test.ts` | 10 | StreamAssembler push/partialContent/finish/toolCalls |
-| `scoring.test.ts` | 14 | calculateScore/calculateOverallScore/summarizeFindings |
 | `registry.test.ts` | 12 | ToolRegistry register/prepare/dispatch/finalize |
 | `in-memory-queue.test.ts` | 12 | Queue add/process/priority/retry/remove |
-| `sqlite.test.ts` | 17 | SQLite repos (skipped — native dep) |
 
 ### 生产加固
 
@@ -233,21 +235,78 @@ Node 20 + 22 矩阵 → pnpm install → build → typecheck → test
 
 ---
 
-## 七、完整包清单 (22 个)
+## 七、Phase 5: 泛化层 ✅
+
+### 目标
+实现跨站点泛化能力——Agent 无需硬编码 CSS/XPath 选择器即可测试任意网站。
+
+### 完成的任务
+
+| # | 任务 | 描述 |
+|---|---|---|
+| 30 | DOM 降采样 | 将 50k+ 节点 DOM 精简为 200-500 个可交互元素，分配 ref 编号 (@e1, @e2...) |
+| 31 | SmartLocator | 5 级自动降级定位：缓存 → 语义搜索 → DOM 降采样 → CSS 选择器 → XPath 文本 |
+| 32 | SiteProfile | 站点画像系统：语义提示（"登录按钮"）而非硬编码选择器 |
+| 33 | 泛化工具 × 3 | observe_page（发现元素）、find_element（语义定位）、extract_data（结构化提取） |
+| 34 | 工作流集成 | observe→find→act 范式、SiteHints 注入、状态机更新 |
+| 35 | 跨 session 缓存 | site-profile-store 文件持久化，一次学习多次复用 |
+| 36 | 自学习 Enricher | 从 session 活动自动发现认证/表单/导航模式，丰富 SiteProfile |
+| 37 | 探索与配置工具 | explore_site（站点结构发现）、configure_site（用户配置入口） |
+
+### 泛化层架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    泛化层三层解耦架构                          │
+├─────────────────────────────────────────────────────────────┤
+│  意图层 (Agent)                                              │
+│    observe_page → find_element → click/fill/assert           │
+│    Agent 用语义描述意图，不关心底层 DOM 结构                    │
+├─────────────────────────────────────────────────────────────┤
+│  知识层 (SiteProfile)                                        │
+│    站点画像：认证模式、表单模式、导航模式、站点约束              │
+│    跨 session 持久化 → 自动学习 → 越来越准                    │
+├─────────────────────────────────────────────────────────────┤
+│  交互层 (SmartLocator + DOM Distillation)                     │
+│    5 级降级：缓存 → 语义 → 降采样 → CSS → XPath               │
+│    50k+ DOM 节点 → 200-500 个可交互元素                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 新增文件
+
+| 文件 | 行数 | 描述 |
+|---|---|---|
+| `site-profile.ts` | 146 | SiteProfile 类型定义 |
+| `distill-dom.ts` | 201 | DOM 降采样脚本（注入浏览器执行） |
+| `smart-locator.ts` | 394 | 5 级降级元素定位器 |
+| `site-profile-store.ts` | 111 | 文件持久化存储（按 hostname） |
+| `site-profile-enricher.ts` | 390 | 自学习引擎（session 后自动分析） |
+| `find-element.ts` | 75 | find_element 工具 |
+| `observe-page.ts` | 133 | observe_page 工具 |
+| `extract-data.ts` | 126 | extract_data 工具 |
+| `explore-site.ts` | 411 | explore_site 工具 |
+| `configure-site.ts` | ~200 | configure_site 工具 |
+
+### 18 个包构建成功
+
+---
+
+## 八、完整包清单 (18 个)
 
 ### 应用层 (3)
 | 包 | 描述 |
 |---|---|
 | `@test-harness/th-server` | 生产服务器 (REST + WebSocket + Worker) |
 | `@test-harness/th-dashboard` | React SPA (6 页面, 实时扫描进度) |
-| `@test-harness/th-cli` | CLI (`th scan <url>`) |
+| `@test-harness/th-cli` | CLI (`th test <url>`) |
 
 ### 框架核心 (3)
 | 包 | 描述 |
 |---|---|
 | `@test-harness/th-protocol` | 共享类型 + 事件定义 (零运行时依赖) |
 | `@test-harness/th-core` | 插件框架: DI, 4 模式事件总线, 效果系统 |
-| `@test-harness/th-agent` | Agent Loop + Session Log + Stream Assembler |
+| `@test-harness/th-agent` | Agent Loop + Session Log + Stream Assembler + 工作流状态机 |
 
 ### LLM 适配器 (4)
 | 包 | 提供者 | 特性 |
@@ -257,59 +316,55 @@ Node 20 + 22 矩阵 → pnpm install → build → typecheck → test
 | `@test-harness/th-llm-openai` | OpenAI | GPT-4o, 流式, function calling |
 | `@test-harness/th-llm-deepseek` | DeepSeek | V3/R1, OpenAI 兼容 |
 
-### 检测插件 (5)
-| 包 | 类别 | 检测器 |
-|---|---|---|
-| `@test-harness/th-detection` | 框架 | Registry, Runner, Composer, Scoring |
-| `@test-harness/th-detect-security` | 安全 | SecurityHeaders (6 headers + CSP), SSL/TLS |
-| `@test-harness/th-detect-performance` | 性能 | PerformanceHeaders (cache, encoding), ResourceAnalyzer |
-| `@test-harness/th-detect-seo` | SEO | MetaTags (title/desc/OG/Twitter), RobotsSitemap |
-| `@test-harness/th-detect-a11y` | 无障碍 | ImageA11y, FormA11y, HeadingA11y |
-
-### 基础设施 (7)
+### 工具与浏览器 (2)
 | 包 | 描述 |
 |---|---|
-| `@test-harness/th-tools` | 工具框架 + 5 个内置工具 (三阶段管线) |
-| `@test-harness/th-crawl` | HTTP 爬取 + DOM 提取 + robots.txt |
-| `@test-harness/th-persistence` | SQLite 仓库 (scans, results, events, reports) |
+| `@test-harness/th-tools` | 工具框架 + 16 个内置工具（浏览器/HTTP + 5 个泛化工具） |
+| `@test-harness/th-browser` | 浏览器能力接缝 + Playwright MCP + 泛化层（DOM 降采样、SmartLocator、SiteProfile） |
+
+### 基础设施 (6)
+| 包 | 描述 |
+|---|---|
+| `@test-harness/th-persistence` | JSON 文件仓库 (scans, results, events, reports) |
 | `@test-harness/th-queue` | 内存任务队列 (5 种 Job, 优先级, 重试) |
-| `@test-harness/th-worker` | Job 处理器 (Scan, Detection) |
+| `@test-harness/th-worker` | Job 处理器 (Test Session, Report) |
 | `@test-harness/th-report` | 报告生成器 (JSON / Markdown / HTML) |
 | `@test-harness/th-api` | REST API (9 端点) + WebSocket 网关 |
+| `@test-harness/th-dashboard` | React 18 SPA (Vite + Tailwind + Zustand) |
 
 ---
 
-## 八、未来路线图
+## 九、未来路线图
 
-### 短期 (可立即实现)
+### 短期
 - [ ] PostgreSQL 持久化提供者
 - [ ] BullMQ + Redis 分布式任务队列
 - [ ] JWT 认证 + 多租户支持
-- [ ] 浏览器爬取 (Puppeteer/Playwright)
+- [ ] 测试意图 DSL / 自然语言测试用例解析
 
 ### 中期
-- [ ] 定时扫描 + 扫描对比
+- [ ] 自适应探索策略 (WebProber 模式)
+- [ ] 定时测试 + 结果对比
 - [ ] 白标报告
 - [ ] 反爬虫 / 代理支持
-- [ ] Kubernetes 部署 + Helm Charts
 
 ### 长期
-- [ ] 多 Agent 协作扫描
-- [ ] 自定义检测插件市场
+- [ ] 多 Agent 协作测试
+- [ ] Kubernetes 部署 + Helm Charts
 - [ ] 扫描历史趋势分析
 - [ ] 企业级 RBAC 权限控制
 
 ---
 
-## 九、快速启动
+## 十、快速启动
 
 ```bash
 # 安装
 git clone <repo-url> && cd Test-Harness
 pnpm install
 
-# CLI 扫描
-pnpm --filter @test-harness/th-cli scan https://example.com
+# CLI 测试
+pnpm --filter @test-harness/th-cli test https://example.com --instructions "测试登录功能"
 
 # 启动服务器
 node apps/server/th-server/dist/index.js
@@ -324,9 +379,9 @@ npx vitest run
 docker compose up -d
 
 # 构建
-pnpm run build   # 22 packages, 715ms
+pnpm run build   # 18 packages
 ```
 
 ---
 
-*报告生成时间: 2026-08-21 | 29/29 任务完成*
+*报告更新时间: 2026-09-03 | 37/37 任务完成*

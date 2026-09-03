@@ -96,27 +96,23 @@ apps/         Executable apps   (@test-harness/th-server)
 | `th-llm-ollama` | Ollama adapter |
 | `th-llm-openai` | OpenAI-compatible adapter |
 | `th-llm-deepseek` | DeepSeek adapter |
-| `th-detection` | Detection framework: registry, runner, composer, scoring |
-| `th-detect-security` | Security detections (headers, TLS, etc.) |
-| `th-detect-performance` | Performance detections |
-| `th-detect-seo` | SEO detections |
-| `th-detect-a11y` | Accessibility detections |
-| `th-tools` | Tool framework + built-in tools |
-| `th-crawl` | HTTP fetch + DOM extraction |
-| `th-agent` | Agent loop core (turn → model → tool → result) |
-| `th-persistence` | SQLite repositories |
+| `th-tools` | Tool framework + 16 built-in tools (browser/HTTP + 5 generalization tools) |
+| `th-browser` | Browser capability seam + Playwright MCP + Generalization Layer (DOM distillation, SmartLocator, SiteProfile) |
+| `th-agent` | Agent loop core (turn → model → tool → result) + workflow state machine |
+| `th-persistence` | JSON file repositories |
 | `th-queue` | In-process task queue |
+| `th-worker` | Test session job processor |
 | `th-report` | Report generator (JSON / Markdown / HTML) |
 | `th-api` | REST + WebSocket server |
-| `th-cli` | CLI (`th scan <url>`) |
+| `th-cli` | CLI (`th test <url>`) |
 
 ### Dependency rules
 
 - **`th-protocol` is the leaf** — nothing it depends on except Zod.
 - **`th-core` depends only on `th-protocol`**.
-- Domain packages (`th-llm`, `th-detection`, `th-tools`, `th-crawl`) depend
+- Domain packages (`th-llm`, `th-tools`, `th-browser`) depend
   on `th-core` + `th-protocol`.
-- Adapters (`th-llm-ollama`, `th-detect-security`, ...) depend on the
+- Adapters (`th-llm-ollama`, `th-llm-openai`, ...) depend on the
   framework package they implement.
 - Apps compose everything.
 
