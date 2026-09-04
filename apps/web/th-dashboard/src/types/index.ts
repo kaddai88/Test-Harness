@@ -93,3 +93,18 @@ export interface PaginatedResponse<T> {
   pageSize?: number;
   totalPages?: number;
 }
+
+/** Site profile — learned knowledge about a target website */
+export interface SiteProfile {
+  name: string;
+  baseUrl: string;
+  elementCache: Array<{
+    hint: string;
+    selector: string;
+    xpath?: string;
+    timestamp: number;
+    hitCount: number;
+    lastVerified: number;
+  }>;
+  updatedAt: number;
+}

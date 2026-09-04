@@ -4,6 +4,7 @@ import type {
   SessionCreateResponse,
   HealthStatus,
   PaginatedResponse,
+  SiteProfile,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -67,4 +68,21 @@ export const api = {
 
   getHealth: (): Promise<HealthStatus> =>
     fetch(`${API_BASE}/health`).then(handleResponse<HealthStatus>),
+
+  // Site profile endpoints
+  getSites: (): Promise<{ sites: SiteProfile[] }> =>
+    fetch(`${API_BASE}/sites`).then(handleResponse<{ sites: SiteProfile[] }>),
+
+  getSite: (id: string): Promise<{ site: SiteProfile }> =>
+    fetch(`${API_BASE}/sites/${id}`).then(handleResponse<{ site: SiteProfile }>),
+
+  updateSite: (id: string, data: { name?: string; baseUrl?: string; clearCache?: boolean }): Promise<{ success: boolean; site: SiteProfile }> =>
+    fetch(`${API_BASE}/sites/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse<{ success: boolean; site: SiteProfile }>),
+
+  deleteSite: (id: string): Promise<{ success: boolean }> =>
+    fetch(`${API_BASE}/sites/${id}`, { method: 'DELETE' }).then(handleResponse<{ success: boolean }>),
 };

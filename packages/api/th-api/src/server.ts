@@ -10,6 +10,7 @@ import { applyCors, getPathname, sendJson } from "./http.js";
 import { dispatchSessionRoute } from "./routes/sessions.js";
 import { dispatchReportRoute } from "./routes/reports.js";
 import { dispatchSettingsRoute } from "./routes/settings.js";
+import { dispatchSiteRoute } from "./routes/sites.js";
 import { handleHealth, handleStatus } from "./routes/health.js";
 import { WebSocketHandler } from "./websocket.js";
 
@@ -128,6 +129,10 @@ export class APIServer {
       envPath: this.envPath,
     }, pathname);
     if (handled4) return;
+
+    // Site profile routes
+    const handled5 = await dispatchSiteRoute(req, res, pathname);
+    if (handled5) return;
 
     // 404
     sendJson(res, 404, { error: "Not found" });

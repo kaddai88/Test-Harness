@@ -7,6 +7,7 @@ import { SessionDetail } from './pages/SessionDetail';
 import { SessionHistory } from './pages/SessionHistory';
 import { ReportView } from './pages/ReportView';
 import { Settings } from './pages/Settings';
+import { Sites } from './pages/Sites';
 
 const App: React.FC = () => (
   <Routes>
@@ -16,6 +17,7 @@ const App: React.FC = () => (
       <Route path="/sessions/:id/report" element={<ReportView />} />
       <Route path="/sessions/:id" element={<SessionDetail />} />
       <Route path="/history" element={<SessionHistory />} />
+      <Route path="/sites" element={<Sites />} />
       <Route path="/settings" element={<Settings />} />
     </Route>
   </Routes>
