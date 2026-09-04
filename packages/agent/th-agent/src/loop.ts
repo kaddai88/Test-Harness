@@ -546,6 +546,7 @@ export class AgentLoop {
           toolName: toolCall.name,
           success: result.success,
           duration,
+          data: result.data,
         });
       }
 

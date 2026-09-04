@@ -709,10 +709,78 @@ export class PlaywrightBrowserProvider implements BrowserDriver {
   async distillDom(): Promise<DistilledPage> {
     if (!this.page) throw new Error("Browser not launched");
     try {
-      const result = await this.page.evaluate(DISTILL_SCRIPT);
-      return typeof result === 'string' ? JSON.parse(result) : result as DistilledPage;
+      // Run DISTILL_SCRIPT on the main frame
+      // Wrap in self-executing function with empty prefix
+      const mainResult = await this.page.evaluate(`(${DISTILL_SCRIPT})('')`);
+      const mainPage = typeof mainResult === 'string' ? JSON.parse(mainResult) : mainResult as DistilledPage;
+
+      // Run DISTILL_SCRIPT on each child frame using frame.evaluate()
+      // This runs the script in each frame's own JS context, bypassing cross-origin restrictions
+      const allElements = [...mainPage.elements];
+      let totalForms = mainPage.structure.formCount;
+      let totalIframes = mainPage.structure.iframeCount;
+      let hasTables = mainPage.structure.hasTables;
+      const allArchHints = [...mainPage.structure.architectureHints];
+      let architecture = mainPage.structure.architecture;
+
+      const frames = this.page.frames();
+      for (const frame of frames) {
+        if (frame === this.page.mainFrame()) continue; // Skip main frame (already processed)
+        try {
+          // Get frame identifier for selector prefix
+          const frameUrl = frame.url();
+          const frameName = frame.name();
+          const framePrefix = frameName || frameUrl || `frame-${frames.indexOf(frame)}`;
+
+          // Run DISTILL_SCRIPT in this frame's context
+          // Wrap in self-executing function with framePrefix embedded
+          const frameResult = await frame.evaluate(`(${DISTILL_SCRIPT})(${JSON.stringify(framePrefix)})`);
+          const framePage = typeof frameResult === 'string' ? JSON.parse(frameResult) : frameResult as DistilledPage;
+
+          // Merge elements with re-indexed refs
+          for (const el of framePage.elements) {
+            el.index = allElements.length + 1;
+            el.ref = '@e' + el.index;
+            allElements.push(el);
+          }
+
+          totalForms += framePage.structure.formCount;
+          totalIframes += framePage.structure.iframeCount;
+          if (framePage.structure.hasTables) hasTables = true;
+          allArchHints.push(...framePage.structure.architectureHints);
+
+          // Use child frame's architecture if detected
+          if (framePage.structure.architecture !== 'unknown') {
+            architecture = framePage.structure.architecture;
+          }
+        } catch {
+          // Frame evaluation failed (e.g., frame navigated away), skip
+        }
+      }
+
+      // Re-index all elements
+      for (let i = 0; i < allElements.length; i++) {
+        allElements[i].index = i + 1;
+        allElements[i].ref = '@e' + (i + 1);
+      }
+
+      return {
+        url: mainPage.url,
+        title: mainPage.title,
+        elements: allElements,
+        elementCount: allElements.length,
+        structure: {
+          hasForms: totalForms > 0,
+          formCount: totalForms,
+          hasTables,
+          hasIframes: totalIframes > 0,
+          iframeCount: totalIframes,
+          architecture,
+          architectureHints: allArchHints,
+        },
+      };
     } catch {
-      return { url: '', title: '', elements: [], elementCount: 0, structure: { hasForms: false, formCount: 0, hasTables: false, hasIframes: false, iframeCount: 0 } };
+      return { url: '', title: '', elements: [], elementCount: 0, structure: { hasForms: false, formCount: 0, hasTables: false, hasIframes: false, iframeCount: 0, architecture: 'unknown', architectureHints: [] } };
     }
   }
 

@@ -197,13 +197,24 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
           collectedActivities.push(activity);
         }),
         container.events.on(AgentToolResultEvent, (d) => {
-          const activity = {
+          const activity: Record<string, unknown> = {
             kind: "tool_result",
             tool: d.toolName,
             success: d.success,
             turn: d.turnNumber,
             timestamp: Date.now(),
           };
+
+          // Capture screenshot data if available
+          const resultData = d.data as { images?: Array<{ data: string; mimeType: string }> } | undefined;
+          if (resultData?.images && resultData.images.length > 0) {
+            const img = resultData.images[0];
+            if (img) {
+              activity.screenshot = img.data;
+              activity.screenshotMimeType = img.mimeType;
+            }
+          }
+
           this.broadcast("agent:activity", sessionId, activity);
           collectedActivities.push(activity);
         }),
@@ -333,6 +344,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
 
   /**
    * Generate a structured execution summary from activities and findings.
+   * Creates a table format with test cases and screenshots.
    */
   private async generateExecutionSummary(
     activities: Array<Record<string, unknown>>,
@@ -341,11 +353,68 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
   ): Promise<Record<string, unknown> | null> {
     if (activities.length === 0) return null;
 
-    const prompt = `You just completed a test session. Based on the following execution data, generate a concise structured summary in JSON format.
+    // Group activities into test cases based on tool calls
+    const testCases: Array<{
+      name: string;
+      action: string;
+      result: string;
+      screenshot?: string;
+      screenshotMimeType?: string;
+    }> = [];
 
-Activities executed (${activities.length} total):
-${activities.slice(0, 50).map((a, i) => `${i+1}. [${a.kind}] ${a.tool ?? ''} - ${a.success !== undefined ? (a.success ? '✓' : '') : ''}`).join('\n')}
+    let currentTestCase: typeof testCases[0] | null = null;
 
+    for (const activity of activities) {
+      if (activity.kind === 'tool_call') {
+        const toolName = activity.tool as string;
+        const input = activity.input as Record<string, unknown> | undefined;
+
+        // Start a new test case for significant actions
+        if (['browser_click', 'browser_type', 'browser_fill_form', 'browser_navigate', 'browser_select_option'].includes(toolName)) {
+          // Save previous test case
+          if (currentTestCase) {
+            testCases.push(currentTestCase);
+          }
+
+          // Create new test case
+          let actionDesc = '';
+          if (toolName === 'browser_click') {
+            actionDesc = `Click: ${input?.element ?? 'unknown'}`;
+          } else if (toolName === 'browser_type') {
+            actionDesc = `Type "${input?.text ?? ''}" into ${input?.element ?? 'unknown'}`;
+          } else if (toolName === 'browser_fill_form') {
+            actionDesc = 'Fill form';
+          } else if (toolName === 'browser_navigate') {
+            actionDesc = `Navigate to ${input?.url ?? 'unknown'}`;
+          } else if (toolName === 'browser_select_option') {
+            actionDesc = `Select option: ${input?.value ?? 'unknown'}`;
+          }
+
+          currentTestCase = {
+            name: toolName,
+            action: actionDesc,
+            result: 'pending',
+          };
+        }
+      } else if (activity.kind === 'tool_result' && currentTestCase) {
+        // Update test case with result and screenshot
+        currentTestCase.result = activity.success ? 'success' : 'failed';
+        if (activity.screenshot) {
+          currentTestCase.screenshot = activity.screenshot as string;
+          currentTestCase.screenshotMimeType = activity.screenshotMimeType as string;
+        }
+      }
+    }
+
+    // Add last test case
+    if (currentTestCase) {
+      testCases.push(currentTestCase);
+    }
+
+    // Generate overview and conclusion using LLM
+    const prompt = `You just completed a test session. Based on the following data, generate a concise summary.
+
+Test cases executed: ${testCases.length}
 Findings discovered: ${findings.length}
 ${findings.map((f, i) => `${i+1}. [${f.severity}] ${f.title}`).join('\n')}
 
@@ -355,33 +424,38 @@ ${finalSummary}
 Generate a JSON object with this structure:
 {
   "overview": "1-2 sentence overview of what was tested",
-  "steps": [
-    {"action": "what was done", "result": "success/failed/skipped", "reason": "why this step was taken"}
-  ],
-  "findings": ${findings.length},
   "conclusion": "1-2 sentence conclusion"
 }
 
-Keep it concise. Use at most 10 steps (group similar actions). Respond with ONLY the JSON object, no markdown.`;
+Respond with ONLY the JSON object, no markdown.`;
+
+    let overview = '';
+    let conclusion = '';
 
     try {
       const response = await this.llm.complete({
         model: (this.llm as any).defaultModel ?? 'qwen-plus',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
-        maxTokens: 1000,
+        maxTokens: 500,
       });
 
       const content = response.content.trim();
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        overview = parsed.overview ?? '';
+        conclusion = parsed.conclusion ?? '';
       }
-      return null;
     } catch (err) {
       console.error('[Worker] LLM summary generation failed:', err);
-      return null;
     }
+
+    return {
+      overview,
+      conclusion,
+      testCases,
+      findings: findings.length,
+    };
   }
 }

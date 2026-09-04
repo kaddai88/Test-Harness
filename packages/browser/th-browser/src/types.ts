@@ -202,6 +202,10 @@ export interface DistilledPage {
     hasTables: boolean;
     hasIframes: boolean;
     iframeCount: number;
+    /** Detected application architecture/framework */
+    architecture: 'extjs3' | 'extjs-modern' | 'jeesite' | 'react-spa' | 'vue-spa' | 'traditional' | 'unknown';
+    /** Architecture-specific hints for testing */
+    architectureHints: string[];
   };
 }
 

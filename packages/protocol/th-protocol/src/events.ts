@@ -55,6 +55,7 @@ export interface AgentToolResultEventData {
   toolName: string;
   success: boolean;
   duration: number;
+  data?: unknown;
 }
 
 export const AgentToolResultEvent =

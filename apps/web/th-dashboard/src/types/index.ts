@@ -15,9 +15,15 @@ export interface Session {
   metadata?: Record<string, unknown> & {
     executionSummary?: {
       overview: string;
-      steps: Array<{ action: string; result: string; reason: string }>;
-      findings: number;
       conclusion: string;
+      findings: number;
+      testCases: Array<{
+        name: string;
+        action: string;
+        result: string;
+        screenshot?: string;
+        screenshotMimeType?: string;
+      }>;
     };
   };
   score?: number;

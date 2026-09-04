@@ -13,6 +13,12 @@
  * - Browser-Use DOM distillation
  * - Playwright MCP browser_snapshot
  * - Prune4Web (AAAI 2025)
+ *
+ * v2: DISTILL_SCRIPT only handles the current document.
+ *     Iframe traversal is done by the Provider using frame.evaluate(),
+ *     which runs the script in each frame's own JS context.
+ *     This bypasses cross-origin restrictions that prevent
+ *     contentDocument access from the main frame.
  */
 
 import type { DistilledElement, DistilledPage } from "./types.js";
@@ -20,18 +26,22 @@ import type { DistilledElement, DistilledPage } from "./types.js";
 export type { DistilledElement, DistilledPage };
 
 /**
- * JavaScript code to execute in the browser for DOM distillation.
- * This runs via browser_run_code_unsafe or browser_evaluate.
+ * JavaScript code to execute in a browser frame for DOM distillation.
+ * This runs via frame.evaluate() — once for the main frame, once for each child frame.
+ *
+ * When run via frame.evaluate(), the script executes in that frame's JS context,
+ * so it can access the frame's document directly — even for cross-origin iframes.
  *
  * Strategy:
- * 1. Walk the DOM, find all interactive elements
+ * 1. Walk the DOM of the CURRENT document (no iframe traversal)
  * 2. Skip hidden/disabled elements
  * 3. Extract semantic attributes (text, role, label, placeholder)
  * 4. Generate CSS selector and XPath for each
  * 5. Assign numbered refs (@e1, @e2, ...)
  */
 export const DISTILL_SCRIPT = `
-() => {
+(framePrefix) => {
+  framePrefix = framePrefix || '';
   const INTERACTIVE_TAGS = 'a,button,input,select,textarea,[role="button"],[role="link"],[role="textbox"],[role="checkbox"],[role="radio"],[role="tab"],[role="menuitem"],[onclick],[contenteditable="true"]';
   
   function getRole(el) {
@@ -65,7 +75,6 @@ export const DISTILL_SCRIPT = `
   function getSelector(el) {
     if (el.id) return '#' + CSS.escape(el.id);
     if (el.name && el.tagName) return el.tagName.toLowerCase() + '[name="' + el.name + '"]';
-    // Generate unique CSS path
     const parts = [];
     let current = el;
     while (current && current !== document.body && current !== document.documentElement) {
@@ -102,7 +111,6 @@ export const DISTILL_SCRIPT = `
   }
   
   function getText(el) {
-    // For inputs, use value/placeholder; for others, use textContent
     const tag = el.tagName.toLowerCase();
     if (tag === 'input' || tag === 'textarea') {
       return el.value || el.placeholder || '';
@@ -114,25 +122,16 @@ export const DISTILL_SCRIPT = `
     return (el.textContent || '').trim().slice(0, 100);
   }
   
-  // Main extraction
   const elements = [];
-  const seen = new Set();
   const allInteractive = document.querySelectorAll(INTERACTIVE_TAGS);
-  
-  let idx = 0;
   for (const el of allInteractive) {
-    // Skip duplicates (e.g., element matching multiple selectors)
-    if (seen.has(el)) continue;
-    seen.add(el);
-    
-    // Skip hidden/disabled elements
     if (!isVisible(el)) continue;
     if (el.disabled || el.readOnly) continue;
-    // Skip hidden inputs (they can't be interacted with via UI)
     if (el.tagName.toLowerCase() === 'input' && el.type === 'hidden') continue;
-    
-    idx++;
+
+    const idx = elements.length + 1;
     const rect = el.getBoundingClientRect();
+    const rawSelector = getSelector(el);
     elements.push({
       ref: '@e' + idx,
       index: idx,
@@ -145,27 +144,52 @@ export const DISTILL_SCRIPT = `
       type: el.type || '',
       id: el.id || '',
       interactive: true,
-      selector: getSelector(el),
+      selector: framePrefix ? framePrefix + ' >> ' + rawSelector : rawSelector,
       xpath: getXPath(el),
       box: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
     });
   }
-  
-  // Page structure summary
-  const forms = document.querySelectorAll('form');
-  const iframes = document.querySelectorAll('iframe');
-  
+
+  const totalForms = document.querySelectorAll('form').length;
+  const totalIframes = document.querySelectorAll('iframe').length;
+  const hasTables = document.querySelectorAll('table').length > 0;
+
+  // Detect architecture from current frame
+  const html = document.documentElement.outerHTML || '';
+  const url = location.href;
+  let architecture = 'unknown';
+  const architectureHints = [];
+
+  if (html.includes('/static/ext3/') || document.querySelector('.x-grid-row') || document.querySelector('.x-btn')) {
+    architecture = 'extjs3';
+    architectureHints.push('ExtJS 3 detected');
+  } else if (html.includes('xtype') || html.includes('Ext.') || document.querySelector('.x-component')) {
+    architecture = 'extjs-modern';
+    architectureHints.push('ExtJS modern detected');
+  } else if (html.includes('Powered By JeeSite') || html.includes('jeesite')) {
+    architecture = 'jeesite';
+    architectureHints.push('JeeSite platform detected');
+  } else if (document.querySelector('[data-reactroot]') || html.includes('__NEXT_DATA__')) {
+    architecture = 'react-spa';
+    architectureHints.push('React SPA detected');
+  } else if (document.querySelector('[data-v-') || html.includes('__NUXT__')) {
+    architecture = 'vue-spa';
+    architectureHints.push('Vue SPA detected');
+  }
+
   return JSON.stringify({
-    url: location.href,
+    url: url,
     title: document.title,
     elements: elements,
     elementCount: elements.length,
     structure: {
-      hasForms: forms.length > 0,
-      formCount: forms.length,
-      hasTables: document.querySelectorAll('table').length > 0,
-      hasIframes: iframes.length > 0,
-      iframeCount: iframes.length
+      hasForms: totalForms > 0,
+      formCount: totalForms,
+      hasTables,
+      hasIframes: totalIframes > 0,
+      iframeCount: totalIframes,
+      architecture,
+      architectureHints
     }
   });
 }
@@ -173,12 +197,15 @@ export const DISTILL_SCRIPT = `
 
 /**
  * Format distilled elements as a human-readable summary for LLM consumption.
- * This is the text that gets sent to the LLM as page context.
  */
 export function formatDistilledForLLM(page: DistilledPage): string {
   const lines: string[] = [];
   lines.push(`Page: ${page.title}`);
   lines.push(`URL: ${page.url}`);
+  lines.push(`Architecture: ${page.structure.architecture}`);
+  if (page.structure.architectureHints.length > 0) {
+    lines.push(`Hints: ${page.structure.architectureHints.join(', ')}`);
+  }
   lines.push(`Interactive elements: ${page.elementCount}`);
   if (page.structure.hasForms) lines.push(`Forms: ${page.structure.formCount}`);
   if (page.structure.hasIframes) lines.push(`Iframes: ${page.structure.iframeCount}`);

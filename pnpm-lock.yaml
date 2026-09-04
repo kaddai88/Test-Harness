@@ -156,8 +156,8 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(zod@3.25.76)
       '@playwright/mcp':
-        specifier: ^0.0.79
-        version: 0.0.79
+        specifier: ^0.0.80
+        version: 0.0.80
       '@test-harness/th-core':
         specifier: workspace:*
         version: link:../../core/th-core
@@ -319,6 +319,9 @@ importers:
 
   packages/tools/th-tools:
     dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.30.0
+        version: 1.30.0(zod@3.25.76)
       '@test-harness/th-browser':
         specifier: workspace:*
         version: link:../../browser/th-browser
@@ -817,8 +820,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@playwright/mcp@0.0.79':
-    resolution: {integrity: sha512-VpqD4a3vFyGQMY9sh3UJiO6wjcurggkljKfAyCHL0QWGY5m6Ehr3MNsAAHPDHO//n13g0PCjpHatAOiulrqdZQ==}
+  '@playwright/mcp@0.0.80':
+    resolution: {integrity: sha512-FOPXHm2SvFhAQylm10jMZ35B/SR2TaMLVkavAlwoG4N2qCb5RqbvhQYcu3zmXNyxR2DW0Ooxe+9XPVt5UjKRCQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -1769,8 +1772,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright-core@1.63.0-alpha-2026-08-05:
-    resolution: {integrity: sha512-YussvUybTfBtyYbGXWh43f+5kNP03wg98M6mu4DphYET7PSbNVajsdLGjWE1xrsjqOw32i2wFlRP7U5mcOpMZg==}
+  playwright-core@1.63.0-alpha-2026-08-31:
+    resolution: {integrity: sha512-1ek0Lyr12h6jcs/WTcNoVtzZkQp7D/90PsMuBW/Rm6h3AsWAbzpqj0geMv8+8Tzzr9CSUYvg9kznrVZINQMXXw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -1779,8 +1782,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.63.0-alpha-2026-08-05:
-    resolution: {integrity: sha512-zbGZUK+JYkoDV3cUgfvh2czTBJL34Gmz5gHVI25xiIpvYSR17Q1M7TS8hnwECUe+IkKaeXbKrSyJTyogm2DVWw==}
+  playwright@1.63.0-alpha-2026-08-31:
+    resolution: {integrity: sha512-3XAsuznfu8jBVJ4QxdGvBkt0+b8ZFwuwJYyOfiIw5ZjUOrNLNRhKxzLzLuydou3gJ9c6eMwVqgzdiOwhy54Kzw==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2616,10 +2619,10 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@playwright/mcp@0.0.79':
+  '@playwright/mcp@0.0.80':
     dependencies:
-      playwright: 1.63.0-alpha-2026-08-05
-      playwright-core: 1.63.0-alpha-2026-08-05
+      playwright: 1.63.0-alpha-2026-08-31
+      playwright-core: 1.63.0-alpha-2026-08-31
 
   '@remix-run/router@1.23.4': {}
 
@@ -3490,7 +3493,7 @@ snapshots:
 
   playwright-core@1.62.1: {}
 
-  playwright-core@1.63.0-alpha-2026-08-05: {}
+  playwright-core@1.63.0-alpha-2026-08-31: {}
 
   playwright@1.62.1:
     dependencies:
@@ -3498,11 +3501,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.63.0-alpha-2026-08-05:
+  playwright@1.63.0-alpha-2026-08-31:
     dependencies:
-      playwright-core: 1.63.0-alpha-2026-08-05
-    optionalDependencies:
-      fsevents: 2.3.2
+      playwright-core: 1.63.0-alpha-2026-08-31
 
   postcss-import@15.1.0(postcss@8.5.26):
     dependencies:

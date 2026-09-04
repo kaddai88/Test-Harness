@@ -231,31 +231,62 @@ export const SessionDetail: React.FC = () => {
           <h2 className="mb-3 text-lg font-semibold text-slate-100">Execution Summary</h2>
           <div className="space-y-4">
             {/* Overview */}
-            <div>
-              <p className="text-sm font-medium text-slate-200">Overview</p>
-              <p className="mt-1 text-sm text-slate-300">{currentSession.metadata.executionSummary.overview}</p>
-            </div>
-
-            {/* Steps */}
-            {currentSession.metadata.executionSummary.steps && currentSession.metadata.executionSummary.steps.length > 0 && (
+            {currentSession.metadata.executionSummary.overview && (
               <div>
-                <p className="text-sm font-medium text-slate-200">Key Steps</p>
-                <div className="mt-2 space-y-2">
-                  {currentSession.metadata.executionSummary.steps.map((step, i) => (
-                    <div key={i} className="flex items-start gap-2 rounded bg-slate-800/50 px-3 py-2">
-                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs ${
-                        step.result === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
-                        step.result === 'failed' ? 'bg-red-500/20 text-red-400' :
-                        'bg-slate-600/20 text-slate-400'
-                      }`}>
-                        {step.result === 'success' ? '✓' : step.result === 'failed' ? '✗' : '—'}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-200">{step.action}</p>
-                        {step.reason && <p className="text-xs text-slate-400 mt-0.5">{step.reason}</p>}
-                      </div>
-                    </div>
-                  ))}
+                <p className="text-sm font-medium text-slate-200">Overview</p>
+                <p className="mt-1 text-sm text-slate-300">{currentSession.metadata.executionSummary.overview}</p>
+              </div>
+            )}
+
+            {/* Test Cases Table */}
+            {currentSession.metadata.executionSummary.testCases && currentSession.metadata.executionSummary.testCases.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-slate-200 mb-2">Test Cases ({currentSession.metadata.executionSummary.testCases.length})</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-700">
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">#</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Action</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Result</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 uppercase">Screenshot</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentSession.metadata.executionSummary.testCases.map((tc, i) => (
+                        <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                          <td className="px-3 py-2 text-slate-500">{i + 1}</td>
+                          <td className="px-3 py-2 text-slate-200">{tc.action}</td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${
+                              tc.result === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                              tc.result === 'failed' ? 'bg-red-500/20 text-red-400' :
+                              'bg-slate-600/20 text-slate-400'
+                            }`}>
+                              {tc.result === 'success' ? '✓ Pass' : tc.result === 'failed' ? '✗ Fail' : '— Pending'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            {tc.screenshot ? (
+                              <img
+                                src={`data:${tc.screenshotMimeType ?? 'image/png'};base64,${tc.screenshot}`}
+                                alt={`Screenshot for ${tc.action}`}
+                                className="max-h-20 rounded border border-slate-700 cursor-pointer hover:border-slate-500 transition-colors"
+                                onClick={() => {
+                                  const w = window.open('', '_blank');
+                                  if (w) {
+                                    w.document.write(`<img src="data:${tc.screenshotMimeType ?? 'image/png'};base64,${tc.screenshot}" style="max-width:100%" />`);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-600">No screenshot</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

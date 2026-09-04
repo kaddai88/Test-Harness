@@ -11,13 +11,13 @@
 
 DSH 的核心哲学是 **"Everything is a Plugin"**（一切皆插件），基于 [Cordis](https://github.com/cordiverse/cordis) 框架构建。
 
-| 设计原则 | DSH 实现方式 | Test-Harness 借鉴 |
+| 设计原则 | DSH 实现方式 | Test-Harness 现状 |
 |---|---|---|
-| **一切皆插件** | 模型适配器、工具注册表、会话日志、Agent Loop 本身都是 Cordis 插件 | 检测模块、LLM 提供者、爬虫、存储后端都应是插件 |
-| **能力接缝 (Capability Seam)** | Service Definition → Provider → Consumer 三角色 | DetectionDefinition → DetectionProvider → AgentLoop |
-| **注册即可逆效果** | `ctx.effect()` / `ctx.on()` 返回 disposer，卸载时逆序回收 | 我们的 th-core 需要加入此能力 |
-| **会话日志是唯一真相** | append-only SessionEvent log，消息历史由 `deriveMessages()` 投影 | 需要引入 session log 概念 |
-| **Waterfall 中间件** | 核心扩展点都是 waterfall 事件（around-middleware 模式） | 当前缺少 waterfall 机制 |
+| **一切皆插件** | 模型适配器、工具注册表、会话日志、Agent Loop 本身都是 Cordis 插件 | ✅ 已实现：工具、LLM 提供者、浏览器驱动、存储后端均为插件 |
+| **能力接缝 (Capability Seam)** | Service Definition → Provider → Consumer 三角色 | ✅ 已实现：BrowserDriver → PlaywrightProvider → Agent |
+| **注册即可逆效果** | `ctx.effect()` / `ctx.on()` 返回 disposer，卸载时逆序回收 | ✅ 已实现：EffectStack 追踪 + 自动回收 |
+| **会话日志是唯一真相** | append-only SessionEvent log，消息历史由 `deriveMessages()` 投影 | ✅ 已实现：SessionLog + deriveMessages() |
+| **Waterfall 中间件** | 核心扩展点都是 waterfall 事件（around-middleware 模式） | ✅ 已实现：4 种分发模式 + 5 个 Waterfall 事件 |
 
 ### 1.2 仓库结构
 
