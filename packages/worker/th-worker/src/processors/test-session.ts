@@ -28,6 +28,9 @@ import {
   BrowserDriverDefinition,
   PlaywrightBrowserProvider,
   loadSiteProfile,
+  enrichSiteProfile,
+  saveSiteProfile,
+  createDefaultSiteProfile,
 } from "@test-harness/th-browser";
 import type { SiteHints } from "@test-harness/th-agent";
 import { ToolRegistry, createAllTools, createMCPModeTools, createReportFindingTool, closeBrowser } from "@test-harness/th-tools";
@@ -316,6 +319,47 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         findingCount: collectedFindings.length,
       });
 
+      // ── Self-learning: enrich site profile from this session ──
+      try {
+        const existingProfile = loadSiteProfile(targetUrl);
+        // Convert SiteProfileData to SiteProfile for enrichment
+        const siteProfile = existingProfile
+          ? {
+              ...createDefaultSiteProfile(existingProfile.name, existingProfile.baseUrl),
+              elementCache: existingProfile.elementCache,
+              updatedAt: existingProfile.updatedAt,
+            }
+          : null;
+
+        const enrichment = enrichSiteProfile(
+          siteProfile,
+          targetUrl,
+          collectedActivities.map(a => ({
+            kind: a.kind as string,
+            tool: a.tool as string | undefined,
+            input: a.input as Record<string, unknown> | undefined,
+            success: a.success as boolean | undefined,
+            turn: a.turn as number | undefined,
+            timestamp: a.timestamp as number | undefined,
+          })),
+          [] // No SmartLocator cache in MCP mode
+        );
+
+        if (enrichment.summary) {
+          console.log(`[Worker] Site profile enrichment: ${enrichment.summary}`);
+          // Save the enriched profile back to disk
+          const enrichedData = {
+            name: siteProfile?.name ?? extractHostname(targetUrl),
+            baseUrl: targetUrl,
+            elementCache: siteProfile?.elementCache ?? [],
+            updatedAt: Date.now(),
+          };
+          saveSiteProfile(enrichedData);
+        }
+      } catch (err) {
+        console.warn(`[Worker] Site profile enrichment failed:`, err);
+      }
+
       // Close browser to prevent orphan windows
       if (useMCPTools) {
         const mcpUrl = process.env.PLAYWRIGHT_MCP_URL ?? "http://localhost:3001/sse";
@@ -457,5 +501,14 @@ Respond with ONLY the JSON object, no markdown.`;
       testCases,
       findings: findings.length,
     };
+  }
+}
+
+/** Extract hostname from URL for site profile naming */
+function extractHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
   }
 }

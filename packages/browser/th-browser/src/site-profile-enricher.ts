@@ -176,14 +176,14 @@ function discoverAuthPattern(
     let successIndicator = 'Dashboard';
 
     for (const activity of activities) {
-      if (activity.tool === 'navigate_to' && activity.input?.url) {
+      if ((activity.tool === 'navigate_to' || activity.tool === 'browser_navigate') && activity.input?.url) {
         const url = String(activity.input.url).toLowerCase();
         if (url.includes('login') || url.includes('signin') || url.includes('auth')) {
           loginUrl = String(activity.input.url);
         }
       }
       // Look for success indicators after login
-      if (activity.tool === 'observe_page' && activity.success && loginUrl) {
+      if ((activity.tool === 'observe_page' || activity.tool === 'browser_snapshot') && activity.success && loginUrl) {
         const elements = (activity.input as any)?.elements as Array<{ text?: string; role?: string }> | undefined;
         if (elements) {
           const dashboardHint = elements.find(el =>
@@ -222,8 +222,9 @@ function discoverFormPatterns(
   activities: SessionActivity[]
 ): FormPattern[] {
   const patterns: FormPattern[] = [];
+  // Support both legacy and MCP tool names
   const formActivities = activities.filter(a =>
-    a.tool === 'fill_form' && a.success && a.input
+    (a.tool === 'fill_form' || a.tool === 'browser_fill_form') && a.success && a.input
   );
 
   // Group form fills by approximate URL/context
@@ -286,7 +287,7 @@ function discoverNavigationPatterns(
 ): NavigationPattern[] {
   const patterns: NavigationPattern[] = [];
   const navActivities = activities.filter(a =>
-    a.tool === 'navigate_to' && a.success && a.input?.url
+    (a.tool === 'navigate_to' || a.tool === 'browser_navigate') && a.success && a.input?.url
   );
 
   // Look for sequences: navigate → observe → navigate → observe
@@ -333,7 +334,7 @@ function discoverConstraints(
 
   // Check for slow page loads (many timeouts or long durations)
   const failedNavigations = activities.filter(a =>
-    a.tool === 'navigate_to' && !a.success
+    (a.tool === 'navigate_to' || a.tool === 'browser_navigate') && !a.success
   );
   if (failedNavigations.length >= 3) {
     constraints.slowLoad = true;
@@ -349,7 +350,7 @@ function discoverConstraints(
 
   // Check for CAPTCHA indicators
   const captchaIndicators = activities.filter(a =>
-    a.tool === 'observe_page' && a.success && a.input &&
+    (a.tool === 'observe_page' || a.tool === 'browser_snapshot') && a.success && a.input &&
     JSON.stringify(a.input).toLowerCase().includes('captcha')
   );
   if (captchaIndicators.length > 0) {

@@ -3,7 +3,7 @@
  *
  * Tool framework — registration, execution, and built-in tools.
  */
-import { THPlugin, type THContainer } from "@test-harness/th-core";
+import { THPlugin, THContainer } from "@test-harness/th-core";
 import { ToolRegistry } from "./registry.js";
 import { createHttpRequestTool } from "./builtins/http-request.js";
 import { createClickElementTool } from "./builtins/click-element.js";
@@ -94,6 +94,13 @@ export async function createMCPModeTools(
   const mcpTools = await createMCPNativeTools(mcpServerUrl);
   tools.push(...mcpTools);
   console.log(`[Tools] MCP native mode: ${mcpTools.length} browser tools registered`);
+
+  // Add site knowledge tools (don't need BrowserDriver, file-based only)
+  // configure_site: manual site profile configuration
+  // explore_site is NOT added — LLM explores via browser_snapshot in MCP mode
+  const emptyContainer = new THContainer();
+  tools.push(createConfigureSiteTool(emptyContainer));
+  console.log(`[Tools] MCP mode: configure_site registered for site knowledge management`);
 
   return tools;
 }
