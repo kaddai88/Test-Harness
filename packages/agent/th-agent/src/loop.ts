@@ -58,6 +58,7 @@ import {
   type WorkflowContext,
 } from "./workflow.js";
 import { verifyAction, getRecoveryGuidance } from "./verify.js";
+import { CognitiveEngine } from "@test-harness/th-cognition";
 
 /** Logger interface for the agent loop */
 export interface AgentLogger {
@@ -138,9 +139,21 @@ export class AgentLoop {
       abortSignal: abortController.signal,
       workflow: createInitialContext(options.config.maxTurns ?? 99),
       workflowState: WorkflowState.INIT,
+      cognition: new CognitiveEngine({ storagePath: '.cognition' }),
     };
 
     logger.info(`Starting session for ${options.target.url}`);
+
+    // ── Cognitive Engine: Session start — retrieve relevant experiences ──
+    if (context.cognition) {
+      const sessionStart = context.cognition.onSessionStart(options.target.url, options.config.strategy);
+      if (sessionStart.prompt) {
+        sessionLog.append("system/note", {
+          note: `[Cognition] 历史经验:\n${sessionStart.prompt}`,
+        });
+        logger.info(`[Cognition] Retrieved experiences for ${options.target.url}`);
+      }
+    }
 
     // Log the initial user message (session task)
     const availableTools = options.toolRegistry
@@ -650,6 +663,32 @@ export class AgentLoop {
             context.workflow.verificationFailures = 0;
             context.workflow.lastVerificationOutcome = 'success';
           }
+        }
+      }
+
+      // ── Cognitive Engine: Learn from action outcome ──
+      if (context.cognition) {
+        context.cognition.onBeforeAction(toolCall.name, toolCall.arguments as Record<string, unknown>);
+        const cogResult = context.cognition.onAfterAction(
+          toolCall.name,
+          toolCall.arguments as Record<string, unknown>,
+          result.success,
+          result.data,
+          result.error
+        );
+
+        // Inject recovery suggestions if available
+        if (cogResult.recoverySuggestions && cogResult.recoverySuggestions.length > 0) {
+          sessionLog.append("system/note", {
+            note: `[Cognition] 恢复建议: ${cogResult.recoverySuggestions.join('; ')}`,
+          });
+        }
+
+        // Inject strategy adjustment if available
+        if (cogResult.strategyAdjustment) {
+          sessionLog.append("system/note", {
+            note: `[Cognition] 策略调整: ${cogResult.strategyAdjustment.adjustment}`,
+          });
         }
       }
     }

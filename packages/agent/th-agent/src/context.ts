@@ -10,6 +10,7 @@ import type {
 import type { THContainer, EventBusImpl } from "@test-harness/th-core";
 import type { ToolRegistry } from "@test-harness/th-tools";
 import type { SessionLog } from "./session.js";
+import type { CognitiveEngine } from "@test-harness/th-cognition";
 
 /** Per-session agent context */
 export interface AgentContext {
@@ -48,6 +49,9 @@ export interface AgentContext {
 
   /** Abort signal for cancellation */
   abortSignal: AbortSignal;
+
+  /** Cognitive engine for memory, learning, and self-healing */
+  cognition?: CognitiveEngine;
 }
 
 /** Result from a complete agent loop run */
