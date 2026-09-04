@@ -500,4 +500,79 @@ export class CognitiveEngine {
     this.strategyAdapter.clear();
     this.knowledgeUpdater.clear();
   }
+  
+  // ─── User Feedback ───
+  
+  /**
+   * Flag knowledge as inaccurate (user feedback).
+   */
+  flagKnowledgeAsInaccurate(id: string, reason: string): boolean {
+    const knowledge = this.semanticMemory.get(id);
+    if (!knowledge) return false;
+    
+    // Weaken the knowledge
+    this.semanticMemory.weaken(id, 0.3);
+    
+    // Record the feedback
+    this.knowledgeUpdater.weaken(id, reason);
+    
+    return true;
+  }
+  
+  /**
+   * Add manual experience (user-provided).
+   */
+  addManualExperience(data: {
+    targetUrl: string;
+    description: string;
+    type: 'session_summary' | 'bug_found' | 'recovery_success' | 'site_discovery';
+    outcome: 'success' | 'failure' | 'partial' | 'neutral';
+    findings?: Array<{ severity: string; title: string; description: string }>;
+  }): string {
+    return this.episodicMemory.store({
+      type: data.type,
+      timestamp: Date.now(),
+      sessionId: `manual_${Date.now()}`,
+      targetUrl: data.targetUrl,
+      description: data.description,
+      actions: [],
+      outcome: data.outcome,
+      findings: data.findings,
+      tags: ['manual', 'user-provided'],
+      confidence: 0.9, // High confidence for user-provided data
+    });
+  }
+  
+  /**
+   * Adjust knowledge weight (boost or reduce confidence).
+   */
+  adjustKnowledgeWeight(id: string, factor: number): boolean {
+    if (factor > 0) {
+      return this.semanticMemory.reinforce(id, factor);
+    } else {
+      return this.semanticMemory.weaken(id, Math.abs(factor));
+    }
+  }
+  
+  /**
+   * Get all knowledge for a site (for user review).
+   */
+  getSiteKnowledgeForReview(targetUrl: string): Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    confidence: number;
+    verificationCount: number;
+  }> {
+    const knowledge = this.semanticMemory.getSiteKnowledge(targetUrl, 100);
+    return knowledge.map(k => ({
+      id: k.id,
+      type: k.type,
+      title: k.title,
+      description: k.description,
+      confidence: k.confidence,
+      verificationCount: k.verificationCount,
+    }));
+  }
 }

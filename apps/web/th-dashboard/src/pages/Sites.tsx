@@ -80,6 +80,45 @@ export const Sites: React.FC = () => {
     }
   };
 
+  const handleFlagKnowledge = async (site: SiteProfile, knowledgeId: string) => {
+    const reason = prompt('Why is this knowledge inaccurate?');
+    if (!reason) return;
+    try {
+      await api.flagKnowledge(site.baseUrl, knowledgeId, reason);
+      loadSites();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to flag knowledge');
+    }
+  };
+
+  const handleBoostKnowledge = async (site: SiteProfile, knowledgeId: string) => {
+    try {
+      await api.adjustKnowledgeWeight(site.baseUrl, knowledgeId, 0.1);
+      loadSites();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to boost knowledge');
+    }
+  };
+
+  const handleAddExperience = async (site: SiteProfile) => {
+    const description = prompt('Describe the experience (e.g., "Login requires email + password, no CAPTCHA"):');
+    if (!description) return;
+    const type = prompt('Type (session_summary, bug_found, recovery_success, site_discovery):', 'site_discovery');
+    if (!type) return;
+    const outcome = prompt('Outcome (success, failure, partial, neutral):', 'success');
+    if (!outcome) return;
+    try {
+      await api.addManualExperience(site.baseUrl, {
+        description,
+        type: type as any,
+        outcome: outcome as any,
+      });
+      loadSites();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add experience');
+    }
+  };
+
   const formatDate = (ts: number) => {
     if (!ts) return 'Never';
     return new Date(ts).toLocaleString();
@@ -251,13 +290,38 @@ export const Sites: React.FC = () => {
                   {/* Recent knowledge */}
                   {site.cognition.recentKnowledge.length > 0 && (
                     <div>
-                      <h5 className="mb-1 text-xs font-medium text-slate-400">Learned Knowledge</h5>
+                      <div className="mb-1 flex items-center justify-between">
+                        <h5 className="text-xs font-medium text-slate-400">Learned Knowledge</h5>
+                        <Button
+                          onClick={() => handleAddExperience(site)}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          + Add Experience
+                        </Button>
+                      </div>
                       <div className="max-h-32 overflow-y-auto">
                         {site.cognition.recentKnowledge.map((k) => (
                           <div key={k.id} className="flex items-center gap-2 border-b border-slate-700/50 py-1 text-xs">
                             <span className="rounded bg-blue-500/20 px-1 text-blue-400">{k.type}</span>
                             <span className="flex-1 truncate text-slate-300">{k.title}</span>
                             <span className="text-slate-500">{(k.confidence * 100).toFixed(0)}%</span>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleBoostKnowledge(site, k.id)}
+                                className="rounded bg-green-500/20 px-1 py-0.5 text-green-400 hover:bg-green-500/30"
+                                title="Boost confidence"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                onClick={() => handleFlagKnowledge(site, k.id)}
+                                className="rounded bg-red-500/20 px-1 py-0.5 text-red-400 hover:bg-red-500/30"
+                                title="Flag as inaccurate"
+                              >
+                                ▼
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

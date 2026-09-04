@@ -88,4 +88,31 @@ export const api = {
 
   clearSiteCognition: (id: string): Promise<{ success: boolean }> =>
     fetch(`${API_BASE}/sites/${encodeURIComponent(id)}/cognition`, { method: 'DELETE' }).then(handleResponse<{ success: boolean }>),
+
+  // Cognition feedback endpoints
+  flagKnowledge: (siteId: string, knowledgeId: string, reason: string): Promise<{ success: boolean; message: string }> =>
+    fetch(`${API_BASE}/sites/${encodeURIComponent(siteId)}/cognition/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ knowledgeId, reason }),
+    }).then(handleResponse<{ success: boolean; message: string }>),
+
+  addManualExperience: (siteId: string, data: {
+    description: string;
+    type: 'session_summary' | 'bug_found' | 'recovery_success' | 'site_discovery';
+    outcome: 'success' | 'failure' | 'partial' | 'neutral';
+    findings?: Array<{ severity: string; title: string; description: string }>;
+  }): Promise<{ success: boolean; episodeId: string; message: string }> =>
+    fetch(`${API_BASE}/sites/${encodeURIComponent(siteId)}/cognition/manual`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse<{ success: boolean; episodeId: string; message: string }>),
+
+  adjustKnowledgeWeight: (siteId: string, knowledgeId: string, factor: number): Promise<{ success: boolean; message: string }> =>
+    fetch(`${API_BASE}/sites/${encodeURIComponent(siteId)}/cognition/${encodeURIComponent(knowledgeId)}/weight`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ factor }),
+    }).then(handleResponse<{ success: boolean; message: string }>),
 };

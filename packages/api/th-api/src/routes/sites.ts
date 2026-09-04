@@ -8,6 +8,9 @@
  *   DELETE /api/v1/sites/:id          — delete a site profile (and cognition data)
  *   GET    /api/v1/sites/:id/cognition — get cognition data for a site
  *   DELETE /api/v1/sites/:id/cognition — clear cognition data for a site
+ *   POST   /api/v1/sites/:id/cognition/feedback — flag knowledge as inaccurate
+ *   POST   /api/v1/sites/:id/cognition/manual — add manual experience
+ *   POST   /api/v1/sites/:id/cognition/:knowledgeId/weight — adjust knowledge weight
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readJsonBody, sendJson, matchRoute } from "../http.js";
@@ -16,6 +19,7 @@ import {
   saveSiteProfile,
   type SiteProfileData,
 } from "@test-harness/th-browser";
+import { CognitiveEngine } from "@test-harness/th-cognition";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -301,6 +305,103 @@ async function handleClearCognition(
   sendJson(res, 200, { success: cleared, message: cleared ? `Cognition data cleared for "${hostname}"` : `No cognition data found for "${hostname}"` });
 }
 
+/** POST /api/v1/sites/:id/cognition/feedback — flag knowledge as inaccurate */
+async function handleFlagKnowledge(
+  req: IncomingMessage,
+  res: ServerResponse,
+  hostname: string,
+): Promise<void> {
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody<Record<string, unknown>>(req);
+  } catch {
+    sendJson(res, 400, { error: "Invalid JSON body" });
+    return;
+  }
+
+  const { knowledgeId, reason } = body;
+  if (!knowledgeId || !reason) {
+    sendJson(res, 400, { error: "Missing knowledgeId or reason" });
+    return;
+  }
+
+  try {
+    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
+    const success = engine.flagKnowledgeAsInaccurate(knowledgeId as string, reason as string);
+    sendJson(res, 200, { success, message: success ? `Knowledge flagged as inaccurate` : `Knowledge not found` });
+  } catch (err) {
+    console.error("[Sites] Failed to flag knowledge:", err);
+    sendJson(res, 500, { error: "Failed to flag knowledge" });
+  }
+}
+
+/** POST /api/v1/sites/:id/cognition/manual — add manual experience */
+async function handleAddManualExperience(
+  req: IncomingMessage,
+  res: ServerResponse,
+  hostname: string,
+): Promise<void> {
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody<Record<string, unknown>>(req);
+  } catch {
+    sendJson(res, 400, { error: "Invalid JSON body" });
+    return;
+  }
+
+  const { description, type, outcome, findings } = body;
+  if (!description || !type || !outcome) {
+    sendJson(res, 400, { error: "Missing required fields: description, type, outcome" });
+    return;
+  }
+
+  try {
+    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
+    const episodeId = engine.addManualExperience({
+      targetUrl: hostname,
+      description: description as string,
+      type: type as 'session_summary' | 'bug_found' | 'recovery_success' | 'site_discovery',
+      outcome: outcome as 'success' | 'failure' | 'partial' | 'neutral',
+      findings: findings as Array<{ severity: string; title: string; description: string }>,
+    });
+    sendJson(res, 201, { success: true, episodeId, message: "Manual experience added" });
+  } catch (err) {
+    console.error("[Sites] Failed to add manual experience:", err);
+    sendJson(res, 500, { error: "Failed to add manual experience" });
+  }
+}
+
+/** POST /api/v1/sites/:id/cognition/:knowledgeId/weight — adjust knowledge weight */
+async function handleAdjustWeight(
+  req: IncomingMessage,
+  res: ServerResponse,
+  hostname: string,
+  knowledgeId: string,
+): Promise<void> {
+  let body: Record<string, unknown>;
+  try {
+    body = await readJsonBody<Record<string, unknown>>(req);
+  } catch {
+    sendJson(res, 400, { error: "Invalid JSON body" });
+    return;
+  }
+
+  const { factor } = body;
+  if (typeof factor !== 'number') {
+    sendJson(res, 400, { error: "Missing or invalid factor (must be a number)" });
+    return;
+  }
+
+  try {
+    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
+    const success = engine.adjustKnowledgeWeight(knowledgeId, factor);
+    sendJson(res, 200, { success, message: success ? `Knowledge weight adjusted` : `Knowledge not found` });
+  } catch (err) {
+    console.error("[Sites] Failed to adjust weight:", err);
+    sendJson(res, 500, { error: "Failed to adjust knowledge weight" });
+  }
+}
+
 /** Route dispatcher for site profile endpoints */
 export async function dispatchSiteRoute(
   req: IncomingMessage,
@@ -310,6 +411,27 @@ export async function dispatchSiteRoute(
   // GET /api/v1/sites
   if (req.method === "GET" && pathname === "/api/v1/sites") {
     await handleListSites(req, res);
+    return true;
+  }
+
+  // POST /api/v1/sites/:id/cognition/feedback
+  const feedbackMatch = matchRoute("/api/v1/sites/:id/cognition/feedback", pathname);
+  if (feedbackMatch && req.method === "POST") {
+    await handleFlagKnowledge(req, res, feedbackMatch.id!);
+    return true;
+  }
+
+  // POST /api/v1/sites/:id/cognition/manual
+  const manualMatch = matchRoute("/api/v1/sites/:id/cognition/manual", pathname);
+  if (manualMatch && req.method === "POST") {
+    await handleAddManualExperience(req, res, manualMatch.id!);
+    return true;
+  }
+
+  // POST /api/v1/sites/:id/cognition/:knowledgeId/weight
+  const weightMatch = matchRoute("/api/v1/sites/:id/cognition/:knowledgeId/weight", pathname);
+  if (weightMatch && req.method === "POST") {
+    await handleAdjustWeight(req, res, weightMatch.id!, weightMatch.knowledgeId!);
     return true;
   }
 
