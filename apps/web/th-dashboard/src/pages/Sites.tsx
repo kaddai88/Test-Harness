@@ -70,6 +70,16 @@ export const Sites: React.FC = () => {
     }
   };
 
+  const handleClearCognition = async (site: SiteProfile) => {
+    if (!confirm(`Clear all cognition memory for "${site.name}"? This will remove learned episodes, knowledge, and procedures.`)) return;
+    try {
+      await api.clearSiteCognition(site.baseUrl);
+      loadSites();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear cognition data');
+    }
+  };
+
   const formatDate = (ts: number) => {
     if (!ts) return 'Never';
     return new Date(ts).toLocaleString();
@@ -172,6 +182,78 @@ export const Sites: React.FC = () => {
                       </p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Cognition stats */}
+              {site.cognition && (site.cognition.episodes > 0 || site.cognition.knowledge > 0) && (
+                <div className="mt-4 border-t border-slate-700 pt-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-slate-300">Cognition Memory</h4>
+                    <Button
+                      onClick={() => handleClearCognition(site)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Clear Memory
+                    </Button>
+                  </div>
+                  <div className="mb-3 grid grid-cols-4 gap-2">
+                    <div className="rounded bg-slate-800 p-2 text-center">
+                      <div className="text-lg font-bold text-blue-400">{site.cognition.episodes}</div>
+                      <div className="text-xs text-slate-400">Episodes</div>
+                    </div>
+                    <div className="rounded bg-slate-800 p-2 text-center">
+                      <div className="text-lg font-bold text-green-400">{site.cognition.knowledge}</div>
+                      <div className="text-xs text-slate-400">Knowledge</div>
+                    </div>
+                    <div className="rounded bg-slate-800 p-2 text-center">
+                      <div className="text-lg font-bold text-purple-400">{site.cognition.procedures}</div>
+                      <div className="text-xs text-slate-400">Procedures</div>
+                    </div>
+                    <div className="rounded bg-slate-800 p-2 text-center">
+                      <div className="text-lg font-bold text-orange-400">{site.cognition.patterns}</div>
+                      <div className="text-xs text-slate-400">Patterns</div>
+                    </div>
+                  </div>
+
+                  {/* Recent episodes */}
+                  {site.cognition.recentEpisodes.length > 0 && (
+                    <div className="mb-3">
+                      <h5 className="mb-1 text-xs font-medium text-slate-400">Recent Episodes</h5>
+                      <div className="max-h-32 overflow-y-auto">
+                        {site.cognition.recentEpisodes.map((ep) => (
+                          <div key={ep.id} className="flex items-center gap-2 border-b border-slate-700/50 py-1 text-xs">
+                            <span className={`rounded px-1 ${
+                              ep.outcome === 'success' ? 'bg-green-500/20 text-green-400' :
+                              ep.outcome === 'failure' ? 'bg-red-500/20 text-red-400' :
+                              'bg-slate-500/20 text-slate-400'
+                            }`}>
+                              {ep.outcome}
+                            </span>
+                            <span className="flex-1 truncate text-slate-300">{ep.description}</span>
+                            <span className="text-slate-500">{formatDate(ep.timestamp)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent knowledge */}
+                  {site.cognition.recentKnowledge.length > 0 && (
+                    <div>
+                      <h5 className="mb-1 text-xs font-medium text-slate-400">Learned Knowledge</h5>
+                      <div className="max-h-32 overflow-y-auto">
+                        {site.cognition.recentKnowledge.map((k) => (
+                          <div key={k.id} className="flex items-center gap-2 border-b border-slate-700/50 py-1 text-xs">
+                            <span className="rounded bg-blue-500/20 px-1 text-blue-400">{k.type}</span>
+                            <span className="flex-1 truncate text-slate-300">{k.title}</span>
+                            <span className="text-slate-500">{(k.confidence * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -85,4 +85,7 @@ export const api = {
 
   deleteSite: (id: string): Promise<{ success: boolean }> =>
     fetch(`${API_BASE}/sites/${id}`, { method: 'DELETE' }).then(handleResponse<{ success: boolean }>),
+
+  clearSiteCognition: (id: string): Promise<{ success: boolean }> =>
+    fetch(`${API_BASE}/sites/${encodeURIComponent(id)}/cognition`, { method: 'DELETE' }).then(handleResponse<{ success: boolean }>),
 };

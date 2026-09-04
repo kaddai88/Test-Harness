@@ -107,4 +107,24 @@ export interface SiteProfile {
     lastVerified: number;
   }>;
   updatedAt: number;
+  /** Cognition statistics and data */
+  cognition?: {
+    episodes: number;
+    knowledge: number;
+    procedures: number;
+    patterns: number;
+    recentEpisodes: Array<{
+      id: string;
+      type: string;
+      outcome: string;
+      description: string;
+      timestamp: number;
+    }>;
+    recentKnowledge: Array<{
+      id: string;
+      type: string;
+      title: string;
+      confidence: number;
+    }>;
+  };
 }

@@ -93705,10 +93705,10 @@
       "targetUrl": "https://www.bing.com",
       "targetConfig": {},
       "scanConfig": {},
-      "status": "planning",
+      "status": "cancelled",
       "createdAt": "2026-09-04T05:28:33.139Z",
       "startedAt": "2026-09-04T05:28:33.205Z",
-      "completedAt": null,
+      "completedAt": "2026-09-04T07:23:48.660Z",
       "createdBy": null,
       "metadata": {}
     },
