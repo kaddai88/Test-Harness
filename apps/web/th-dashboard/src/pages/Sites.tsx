@@ -185,34 +185,43 @@ export const Sites: React.FC = () => {
                 </div>
               )}
 
-              {/* Cognition stats */}
-              {site.cognition && (site.cognition.episodes > 0 || site.cognition.knowledge > 0) && (
+              {/* Cognition stats — always show to indicate the system exists */}
+              {site.cognition && (
                 <div className="mt-4 border-t border-slate-700 pt-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-slate-300">Cognition Memory</h4>
-                    <Button
-                      onClick={() => handleClearCognition(site)}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      Clear Memory
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium text-slate-300">Cognition Memory</h4>
+                      {(site.cognition.episodes === 0 && site.cognition.knowledge === 0) && (
+                        <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
+                          No data yet — will populate after test sessions
+                        </span>
+                      )}
+                    </div>
+                    {(site.cognition.episodes > 0 || site.cognition.knowledge > 0) && (
+                      <Button
+                        onClick={() => handleClearCognition(site)}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        Clear Memory
+                      </Button>
+                    )}
                   </div>
                   <div className="mb-3 grid grid-cols-4 gap-2">
                     <div className="rounded bg-slate-800 p-2 text-center">
-                      <div className="text-lg font-bold text-blue-400">{site.cognition.episodes}</div>
+                      <div className={`text-lg font-bold ${site.cognition.episodes > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{site.cognition.episodes}</div>
                       <div className="text-xs text-slate-400">Episodes</div>
                     </div>
                     <div className="rounded bg-slate-800 p-2 text-center">
-                      <div className="text-lg font-bold text-green-400">{site.cognition.knowledge}</div>
+                      <div className={`text-lg font-bold ${site.cognition.knowledge > 0 ? 'text-green-400' : 'text-slate-600'}`}>{site.cognition.knowledge}</div>
                       <div className="text-xs text-slate-400">Knowledge</div>
                     </div>
                     <div className="rounded bg-slate-800 p-2 text-center">
-                      <div className="text-lg font-bold text-purple-400">{site.cognition.procedures}</div>
+                      <div className={`text-lg font-bold ${site.cognition.procedures > 0 ? 'text-purple-400' : 'text-slate-600'}`}>{site.cognition.procedures}</div>
                       <div className="text-xs text-slate-400">Procedures</div>
                     </div>
                     <div className="rounded bg-slate-800 p-2 text-center">
-                      <div className="text-lg font-bold text-orange-400">{site.cognition.patterns}</div>
+                      <div className={`text-lg font-bold ${site.cognition.patterns > 0 ? 'text-orange-400' : 'text-slate-600'}`}>{site.cognition.patterns}</div>
                       <div className="text-xs text-slate-400">Patterns</div>
                     </div>
                   </div>
