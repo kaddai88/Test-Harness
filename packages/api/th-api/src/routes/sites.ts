@@ -1,5 +1,7 @@
 /**
- * Site Profile routes — manage site knowledge (learned patterns, auth hints, constraints).
+ * Site Profile routes — manage site knowledge and cognition data.
+ *
+ * All data is stored in the structured database (th-persistence).
  *
  * Endpoints:
  *   GET    /api/v1/sites              — list all site profiles (with cognition stats)
@@ -13,218 +15,271 @@
  *   POST   /api/v1/sites/:id/cognition/:knowledgeId/weight — adjust knowledge weight
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { DatabaseRepositories } from "@test-harness/th-persistence";
 import { readJsonBody, sendJson, matchRoute } from "../http.js";
-import {
-  loadSiteProfile,
-  saveSiteProfile,
-  type SiteProfileData,
-} from "@test-harness/th-browser";
-import { CognitiveEngine } from "@test-harness/th-cognition";
 import fs from "node:fs";
 import path from "node:path";
 
-/** Default directory for site profile storage */
-const DEFAULT_DIR = ".site-profiles";
-/** Default directory for cognition storage */
+export interface SiteRouteDeps {
+  repos: DatabaseRepositories;
+}
+
+// ── File Sync ──
+// The browser agent writes site profiles to .site-profiles/ files during sessions.
+// This syncs those files into the structured database so the API can serve them.
+
+const SITE_PROFILES_DIR = ".site-profiles";
 const COGNITION_DIR = ".cognition";
+let lastSyncTime = 0;
 
-/** Load cognition data for a specific site */
-function loadCognitionForSite(hostname: string): {
-  episodes: number;
-  knowledge: number;
-  procedures: number;
-  patterns: number;
-  recentEpisodes: Array<{
-    id: string;
-    type: string;
-    outcome: string;
-    description: string;
-    timestamp: number;
-  }>;
-  recentKnowledge: Array<{
-    id: string;
-    type: string;
-    title: string;
-    confidence: number;
-  }>;
-} {
-  const empty = {
-    episodes: 0,
-    knowledge: 0,
-    procedures: 0,
-    patterns: 0,
-    recentEpisodes: [],
-    recentKnowledge: [],
-  };
-
-  if (!fs.existsSync(COGNITION_DIR)) return empty;
+/** Sync site profile files into the database (incremental, based on file mtime) */
+async function syncSiteProfilesFromFiles(repos: DatabaseRepositories): Promise<void> {
+  if (!fs.existsSync(SITE_PROFILES_DIR)) return;
 
   try {
-    // Count episodes for this site
-    const episodesPath = path.join(COGNITION_DIR, "episodes.json");
-    let episodes: Array<{ id: string; type: string; outcome: string; description: string; timestamp: number; targetUrl: string }> = [];
-    if (fs.existsSync(episodesPath)) {
-      episodes = JSON.parse(fs.readFileSync(episodesPath, "utf-8"));
-    }
-    const siteEpisodes = episodes.filter(e => e.targetUrl?.includes(hostname));
-
-    // Count semantic knowledge for this site
-    const semanticPath = path.join(COGNITION_DIR, "semantic.json");
-    let knowledge: Array<{ id: string; type: string; title: string; confidence: number; targetUrl?: string }> = [];
-    if (fs.existsSync(semanticPath)) {
-      knowledge = JSON.parse(fs.readFileSync(semanticPath, "utf-8"));
-    }
-    const siteKnowledge = knowledge.filter(k => !k.targetUrl || k.targetUrl?.includes(hostname));
-
-    // Count procedures for this site
-    const proceduresPath = path.join(COGNITION_DIR, "procedures.json");
-    let procedures: Array<{ id: string; targetUrl?: string }> = [];
-    if (fs.existsSync(proceduresPath)) {
-      procedures = JSON.parse(fs.readFileSync(proceduresPath, "utf-8"));
-    }
-    const siteProcedures = procedures.filter(p => !p.targetUrl || p.targetUrl?.includes(hostname));
-
-    // Count patterns for this site
-    const patternsPath = path.join(COGNITION_DIR, "patterns.json");
-    let patterns: Array<{ id: string; targetUrl?: string }> = [];
-    if (fs.existsSync(patternsPath)) {
-      patterns = JSON.parse(fs.readFileSync(patternsPath, "utf-8"));
-    }
-    const sitePatterns = patterns.filter(p => !p.targetUrl || p.targetUrl?.includes(hostname));
-
-    return {
-      episodes: siteEpisodes.length,
-      knowledge: siteKnowledge.length,
-      procedures: siteProcedures.length,
-      patterns: sitePatterns.length,
-      recentEpisodes: siteEpisodes
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 5)
-        .map(e => ({
-          id: e.id,
-          type: e.type,
-          outcome: e.outcome,
-          description: e.description,
-          timestamp: e.timestamp,
-        })),
-      recentKnowledge: siteKnowledge
-        .sort((a, b) => b.confidence - a.confidence)
-        .slice(0, 5)
-        .map(k => ({
-          id: k.id,
-          type: k.type,
-          title: k.title,
-          confidence: k.confidence,
-        })),
-    };
-  } catch {
-    return empty;
-  }
-}
-
-/** Clear cognition data for a specific site */
-function clearCognitionForSite(hostname: string): boolean {
-  if (!fs.existsSync(COGNITION_DIR)) return false;
-
-  let cleared = false;
-  try {
-    // Filter episodes
-    const episodesPath = path.join(COGNITION_DIR, "episodes.json");
-    if (fs.existsSync(episodesPath)) {
-      const episodes = JSON.parse(fs.readFileSync(episodesPath, "utf-8"));
-      const filtered = episodes.filter((e: { targetUrl?: string }) => !e.targetUrl?.includes(hostname));
-      if (filtered.length < episodes.length) {
-        fs.writeFileSync(episodesPath, JSON.stringify(filtered, null, 2), "utf-8");
-        cleared = true;
-      }
-    }
-
-    // Filter semantic knowledge
-    const semanticPath = path.join(COGNITION_DIR, "semantic.json");
-    if (fs.existsSync(semanticPath)) {
-      const knowledge = JSON.parse(fs.readFileSync(semanticPath, "utf-8"));
-      const filtered = knowledge.filter((k: { targetUrl?: string }) => !k.targetUrl?.includes(hostname));
-      if (filtered.length < knowledge.length) {
-        fs.writeFileSync(semanticPath, JSON.stringify(filtered, null, 2), "utf-8");
-        cleared = true;
-      }
-    }
-
-    // Filter procedures
-    const proceduresPath = path.join(COGNITION_DIR, "procedures.json");
-    if (fs.existsSync(proceduresPath)) {
-      const procedures = JSON.parse(fs.readFileSync(proceduresPath, "utf-8"));
-      const filtered = procedures.filter((p: { targetUrl?: string }) => !p.targetUrl?.includes(hostname));
-      if (filtered.length < procedures.length) {
-        fs.writeFileSync(proceduresPath, JSON.stringify(filtered, null, 2), "utf-8");
-        cleared = true;
-      }
-    }
-
-    return cleared;
-  } catch {
-    return cleared;
-  }
-}
-
-/** List all site profiles from disk */
-function listAllProfiles(): SiteProfileData[] {
-  const dir = DEFAULT_DIR;
-  if (!fs.existsSync(dir)) return [];
-
-  try {
-    const files = fs.readdirSync(dir).filter(f => f.endsWith(".json"));
-    const profiles: SiteProfileData[] = [];
+    const files = fs.readdirSync(SITE_PROFILES_DIR).filter(f => f.endsWith(".json"));
     for (const file of files) {
+      const filePath = path.join(SITE_PROFILES_DIR, file);
+      const stat = fs.statSync(filePath);
+      // Only sync files modified since last sync
+      if (stat.mtimeMs <= lastSyncTime) continue;
+
       try {
-        const raw = fs.readFileSync(path.join(dir, file), "utf-8");
-        profiles.push(JSON.parse(raw) as SiteProfileData);
+        const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+        const baseUrl = raw.baseUrl ?? raw.name ?? file.replace(".json", "");
+        const existing = await repos.sites.findByBaseUrl(baseUrl);
+        if (existing) {
+          await repos.sites.update(existing.id, {
+            name: raw.name ?? existing.name,
+            elementCache: JSON.stringify(raw.elementCache ?? []),
+          });
+        } else {
+          await repos.sites.create({
+            name: raw.name ?? baseUrl,
+            baseUrl,
+            elementCache: raw.elementCache ?? [],
+          });
+        }
       } catch {
         // Skip corrupted files
       }
     }
-    return profiles;
+    lastSyncTime = Date.now();
   } catch {
-    return [];
+    // Directory read errors are non-fatal
   }
 }
 
-/** Delete a site profile file by hostname */
-function deleteProfile(hostname: string): boolean {
-  const dir = DEFAULT_DIR;
-  const filePath = path.join(dir, `${hostname}.json`);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
-  return true;
+/** Sync cognition files (.cognition/) into the structured database */
+async function syncCognitionFromFiles(repos: DatabaseRepositories): Promise<void> {
+  if (!fs.existsSync(COGNITION_DIR)) return;
+
+  try {
+    // Sync episodes
+    const episodesPath = path.join(COGNITION_DIR, "episodes.json");
+    if (fs.existsSync(episodesPath)) {
+      const episodes = JSON.parse(fs.readFileSync(episodesPath, "utf-8"));
+      for (const ep of episodes) {
+        if (!ep.id || !ep.targetUrl) continue;
+        // Check if already in DB (by checking count)
+        const existing = await repos.cognition.listEpisodes(ep.targetUrl);
+        const found = existing.find(e => e.id === ep.id);
+        if (!found) {
+          await repos.cognition.createEpisode({
+            targetUrl: ep.targetUrl,
+            type: ep.type ?? "session_summary",
+            outcome: ep.outcome ?? "neutral",
+            description: ep.description ?? "",
+            data: JSON.stringify(ep),
+            timestamp: ep.timestamp ?? Date.now(),
+          });
+        }
+      }
+    }
+
+    // Sync semantic knowledge
+    const semanticPath = path.join(COGNITION_DIR, "semantic.json");
+    if (fs.existsSync(semanticPath)) {
+      const knowledge = JSON.parse(fs.readFileSync(semanticPath, "utf-8"));
+      for (const k of knowledge) {
+        if (!k.id) continue;
+        const existing = await repos.cognition.getKnowledge(k.id);
+        if (!existing) {
+          await repos.cognition.createKnowledge({
+            targetUrl: k.targetUrl ?? null,
+            type: k.type ?? "site_characteristic",
+            title: k.title ?? "Untitled",
+            content: k.content ?? "",
+            confidence: k.confidence ?? 0.5,
+            tags: JSON.stringify(k.tags ?? []),
+          });
+        } else {
+          // Update confidence if changed
+          if (existing.confidence !== k.confidence) {
+            await repos.cognition.updateKnowledge(k.id, { confidence: k.confidence });
+          }
+        }
+      }
+    }
+
+    // Sync procedures
+    const proceduresPath = path.join(COGNITION_DIR, "procedures.json");
+    if (fs.existsSync(proceduresPath)) {
+      const procedures = JSON.parse(fs.readFileSync(proceduresPath, "utf-8"));
+      for (const p of procedures) {
+        if (!p.id) continue;
+        // Simple check: just count to see if we have roughly the same number
+        const count = await repos.cognition.countProcedures(p.targetUrl ?? undefined);
+        if (count === 0 && p.name) {
+          await repos.cognition.createProcedure({
+            targetUrl: p.targetUrl ?? null,
+            name: p.name,
+            steps: JSON.stringify(p.steps ?? []),
+            successRate: p.successRate ?? 0,
+          });
+        }
+      }
+    }
+
+    // Sync patterns
+    const patternsPath = path.join(COGNITION_DIR, "patterns.json");
+    if (fs.existsSync(patternsPath)) {
+      const patterns = JSON.parse(fs.readFileSync(patternsPath, "utf-8"));
+      for (const p of patterns) {
+        if (!p.id) continue;
+        const count = await repos.cognition.countPatterns(p.targetUrl ?? undefined);
+        if (count === 0 && p.description) {
+          await repos.cognition.createPattern({
+            targetUrl: p.targetUrl ?? null,
+            type: p.type ?? "behavioral",
+            description: p.description,
+            frequency: p.frequency ?? 0,
+            confidence: p.confidence ?? 0.5,
+            tags: JSON.stringify(p.tags ?? []),
+          });
+        }
+      }
+    }
+  } catch {
+    // Cognition sync errors are non-fatal
+  }
 }
+
+// ── Helpers ──
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function uuid(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+    /[xy]/g,
+    (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }
+  );
+}
+
+// ── Handlers ──
 
 /** GET /api/v1/sites — list all site profiles (with cognition stats) */
 async function handleListSites(
   _req: IncomingMessage,
   res: ServerResponse,
+  deps: SiteRouteDeps,
 ): Promise<void> {
-  const profiles = listAllProfiles();
-  // Enrich each profile with cognition stats
-  const enriched = profiles.map(profile => ({
-    ...profile,
-    cognition: loadCognitionForSite(profile.baseUrl),
-  }));
+  // Sync from file system (browser agent writes to .site-profiles/)
+  await syncSiteProfilesFromFiles(deps.repos);
+  await syncCognitionFromFiles(deps.repos);
+  const sites = await deps.repos.sites.findAll();
+  const enriched = await Promise.all(
+    sites.map(async (site) => {
+      const [episodes, knowledge, procedures, patterns] = await Promise.all([
+        deps.repos.cognition.listEpisodes(site.baseUrl),
+        deps.repos.cognition.listKnowledge(site.baseUrl),
+        deps.repos.cognition.listProcedures(site.baseUrl),
+        deps.repos.cognition.listPatterns(site.baseUrl),
+      ]);
+      return {
+        name: site.name,
+        baseUrl: site.baseUrl,
+        elementCache: JSON.parse(site.elementCache || "[]"),
+        updatedAt: site.updatedAt,
+        cognition: {
+          episodes: episodes.length,
+          knowledge: knowledge.length,
+          procedures: procedures.length,
+          patterns: patterns.length,
+          recentEpisodes: episodes.slice(0, 5).map((e) => ({
+            id: e.id,
+            type: e.type,
+            outcome: e.outcome,
+            description: e.description,
+            timestamp: e.timestamp,
+          })),
+          recentKnowledge: knowledge.slice(0, 5).map((k) => ({
+            id: k.id,
+            type: k.type,
+            title: k.title,
+            confidence: k.confidence,
+          })),
+        },
+      };
+    })
+  );
   sendJson(res, 200, { sites: enriched });
 }
 
 /** GET /api/v1/sites/:id — get a single site profile (with cognition data) */
 async function handleGetSite(
-  req: IncomingMessage,
+  _req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
-  const profile = loadSiteProfile(hostname);
-  if (!profile) {
+  // Sync from file system first
+  await syncSiteProfilesFromFiles(deps.repos);
+  await syncCognitionFromFiles(deps.repos);
+  const site = await deps.repos.sites.findByBaseUrl(hostname);
+  if (!site) {
     sendJson(res, 404, { error: `No site profile found for "${hostname}"` });
     return;
   }
-  const cognition = loadCognitionForSite(hostname);
-  sendJson(res, 200, { site: profile, cognition });
+  const [episodes, knowledge, procedures, patterns] = await Promise.all([
+    deps.repos.cognition.listEpisodes(hostname),
+    deps.repos.cognition.listKnowledge(hostname),
+    deps.repos.cognition.listProcedures(hostname),
+    deps.repos.cognition.listPatterns(hostname),
+  ]);
+  sendJson(res, 200, {
+    site: {
+      name: site.name,
+      baseUrl: site.baseUrl,
+      elementCache: JSON.parse(site.elementCache || "[]"),
+      updatedAt: site.updatedAt,
+    },
+    cognition: {
+      episodes: episodes.length,
+      knowledge: knowledge.length,
+      procedures: procedures.length,
+      patterns: patterns.length,
+      recentEpisodes: episodes.slice(0, 5).map((e) => ({
+        id: e.id,
+        type: e.type,
+        outcome: e.outcome,
+        description: e.description,
+        timestamp: e.timestamp,
+      })),
+      recentKnowledge: knowledge.slice(0, 5).map((k) => ({
+        id: k.id,
+        type: k.type,
+        title: k.title,
+        confidence: k.confidence,
+      })),
+    },
+  });
 }
 
 /** PUT /api/v1/sites/:id — update a site profile */
@@ -232,6 +287,7 @@ async function handleUpdateSite(
   req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
   let body: Record<string, unknown>;
   try {
@@ -242,27 +298,25 @@ async function handleUpdateSite(
   }
 
   try {
-    const existing = loadSiteProfile(hostname);
-    const profile: SiteProfileData = existing ?? {
-      name: hostname,
-      baseUrl: hostname,
-      elementCache: [],
-      updatedAt: Date.now(),
-    };
+    const existing = await deps.repos.sites.findByBaseUrl(hostname);
 
-    // Merge allowed fields
-    if (typeof body.name === "string") profile.name = body.name;
-    if (typeof body.baseUrl === "string") profile.baseUrl = body.baseUrl;
-
-    // Allow clearing element cache
-    if (body.clearCache === true) {
-      profile.elementCache = [];
+    if (existing) {
+      // Update existing
+      const updates: Record<string, unknown> = {};
+      if (typeof body.name === "string") updates.name = body.name;
+      if (typeof body.baseUrl === "string") updates.baseUrl = body.baseUrl;
+      if (body.clearCache === true) updates.elementCache = "[]";
+      await deps.repos.sites.update(existing.id, updates as any);
+      const updated = await deps.repos.sites.findById(existing.id);
+      sendJson(res, 200, { success: true, site: updated });
+    } else {
+      // Create new
+      const site = await deps.repos.sites.create({
+        name: (body.name as string) ?? hostname,
+        baseUrl: (body.baseUrl as string) ?? hostname,
+      });
+      sendJson(res, 201, { success: true, site });
     }
-
-    profile.updatedAt = Date.now();
-    saveSiteProfile(profile);
-
-    sendJson(res, 200, { success: true, site: profile });
   } catch (err) {
     console.error("[Sites] Failed to update:", err);
     sendJson(res, 500, { error: "Failed to update site profile" });
@@ -274,14 +328,16 @@ async function handleDeleteSite(
   _req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
-  const deleted = deleteProfile(hostname);
-  if (!deleted) {
+  const site = await deps.repos.sites.findByBaseUrl(hostname);
+  if (!site) {
     sendJson(res, 404, { error: `No site profile found for "${hostname}"` });
     return;
   }
+  await deps.repos.sites.delete(site.id);
   // Also clear cognition data
-  clearCognitionForSite(hostname);
+  await deps.repos.cognition.clearAll(hostname);
   sendJson(res, 200, { success: true, message: `Site profile "${hostname}" and related cognition data deleted` });
 }
 
@@ -290,9 +346,35 @@ async function handleGetCognition(
   _req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
-  const cognition = loadCognitionForSite(hostname);
-  sendJson(res, 200, { cognition });
+  const [episodes, knowledge, procedures, patterns] = await Promise.all([
+    deps.repos.cognition.listEpisodes(hostname),
+    deps.repos.cognition.listKnowledge(hostname),
+    deps.repos.cognition.listProcedures(hostname),
+    deps.repos.cognition.listPatterns(hostname),
+  ]);
+  sendJson(res, 200, {
+    cognition: {
+      episodes: episodes.length,
+      knowledge: knowledge.length,
+      procedures: procedures.length,
+      patterns: patterns.length,
+      recentEpisodes: episodes.slice(0, 10).map((e) => ({
+        id: e.id,
+        type: e.type,
+        outcome: e.outcome,
+        description: e.description,
+        timestamp: e.timestamp,
+      })),
+      recentKnowledge: knowledge.slice(0, 10).map((k) => ({
+        id: k.id,
+        type: k.type,
+        title: k.title,
+        confidence: k.confidence,
+      })),
+    },
+  });
 }
 
 /** DELETE /api/v1/sites/:id/cognition — clear cognition data for a site */
@@ -300,16 +382,18 @@ async function handleClearCognition(
   _req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
-  const cleared = clearCognitionForSite(hostname);
-  sendJson(res, 200, { success: cleared, message: cleared ? `Cognition data cleared for "${hostname}"` : `No cognition data found for "${hostname}"` });
+  await deps.repos.cognition.clearAll(hostname);
+  sendJson(res, 200, { success: true, message: `Cognition data cleared for "${hostname}"` });
 }
 
 /** POST /api/v1/sites/:id/cognition/feedback — flag knowledge as inaccurate */
 async function handleFlagKnowledge(
   req: IncomingMessage,
   res: ServerResponse,
-  hostname: string,
+  _hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
   let body: Record<string, unknown>;
   try {
@@ -325,14 +409,20 @@ async function handleFlagKnowledge(
     return;
   }
 
-  try {
-    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
-    const success = engine.flagKnowledgeAsInaccurate(knowledgeId as string, reason as string);
-    sendJson(res, 200, { success, message: success ? `Knowledge flagged as inaccurate` : `Knowledge not found` });
-  } catch (err) {
-    console.error("[Sites] Failed to flag knowledge:", err);
-    sendJson(res, 500, { error: "Failed to flag knowledge" });
+  const knowledge = await deps.repos.cognition.getKnowledge(knowledgeId as string);
+  if (!knowledge) {
+    sendJson(res, 404, { error: "Knowledge not found" });
+    return;
   }
+
+  // Weaken the knowledge confidence
+  const newConfidence = Math.max(0, knowledge.confidence - 0.3);
+  await deps.repos.cognition.updateKnowledge(knowledgeId as string, {
+    confidence: newConfidence,
+    lastUsed: nowIso(),
+  });
+
+  sendJson(res, 200, { success: true, message: `Knowledge flagged as inaccurate (confidence: ${knowledge.confidence} → ${newConfidence})` });
 }
 
 /** POST /api/v1/sites/:id/cognition/manual — add manual experience */
@@ -340,6 +430,7 @@ async function handleAddManualExperience(
   req: IncomingMessage,
   res: ServerResponse,
   hostname: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
   let body: Record<string, unknown>;
   try {
@@ -355,28 +446,25 @@ async function handleAddManualExperience(
     return;
   }
 
-  try {
-    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
-    const episodeId = engine.addManualExperience({
-      targetUrl: hostname,
-      description: description as string,
-      type: type as 'session_summary' | 'bug_found' | 'recovery_success' | 'site_discovery',
-      outcome: outcome as 'success' | 'failure' | 'partial' | 'neutral',
-      findings: findings as Array<{ severity: string; title: string; description: string }>,
-    });
-    sendJson(res, 201, { success: true, episodeId, message: "Manual experience added" });
-  } catch (err) {
-    console.error("[Sites] Failed to add manual experience:", err);
-    sendJson(res, 500, { error: "Failed to add manual experience" });
-  }
+  const episode = await deps.repos.cognition.createEpisode({
+    targetUrl: hostname,
+    type: type as string,
+    outcome: outcome as string,
+    description: description as string,
+    data: JSON.stringify({ findings, source: "manual", timestamp: Date.now() }),
+    timestamp: Date.now(),
+  });
+
+  sendJson(res, 201, { success: true, episodeId: episode.id, message: "Manual experience added" });
 }
 
 /** POST /api/v1/sites/:id/cognition/:knowledgeId/weight — adjust knowledge weight */
 async function handleAdjustWeight(
   req: IncomingMessage,
   res: ServerResponse,
-  hostname: string,
+  _hostname: string,
   knowledgeId: string,
+  deps: SiteRouteDeps,
 ): Promise<void> {
   let body: Record<string, unknown>;
   try {
@@ -387,86 +475,94 @@ async function handleAdjustWeight(
   }
 
   const { factor } = body;
-  if (typeof factor !== 'number') {
+  if (typeof factor !== "number") {
     sendJson(res, 400, { error: "Missing or invalid factor (must be a number)" });
     return;
   }
 
-  try {
-    const engine = new CognitiveEngine({ storagePath: path.resolve(process.cwd(), COGNITION_DIR) });
-    const success = engine.adjustKnowledgeWeight(knowledgeId, factor);
-    sendJson(res, 200, { success, message: success ? `Knowledge weight adjusted` : `Knowledge not found` });
-  } catch (err) {
-    console.error("[Sites] Failed to adjust weight:", err);
-    sendJson(res, 500, { error: "Failed to adjust knowledge weight" });
+  const knowledge = await deps.repos.cognition.getKnowledge(knowledgeId);
+  if (!knowledge) {
+    sendJson(res, 404, { error: "Knowledge not found" });
+    return;
   }
+
+  const newConfidence = Math.min(1, Math.max(0, knowledge.confidence + factor));
+  await deps.repos.cognition.updateKnowledge(knowledgeId, {
+    confidence: newConfidence,
+    lastUsed: nowIso(),
+  });
+
+  sendJson(res, 200, { success: true, message: `Knowledge weight adjusted (confidence: ${knowledge.confidence} → ${newConfidence})` });
 }
+
+// ── Route Dispatcher ──
 
 /** Route dispatcher for site profile endpoints */
 export async function dispatchSiteRoute(
   req: IncomingMessage,
   res: ServerResponse,
+  deps: SiteRouteDeps,
   pathname: string,
 ): Promise<boolean> {
   // GET /api/v1/sites
   if (req.method === "GET" && pathname === "/api/v1/sites") {
-    await handleListSites(req, res);
+    await handleListSites(req, res, deps);
     return true;
   }
 
   // POST /api/v1/sites/:id/cognition/feedback
   const feedbackMatch = matchRoute("/api/v1/sites/:id/cognition/feedback", pathname);
   if (feedbackMatch && req.method === "POST") {
-    await handleFlagKnowledge(req, res, feedbackMatch.id!);
+    await handleFlagKnowledge(req, res, feedbackMatch.id!, deps);
     return true;
   }
 
   // POST /api/v1/sites/:id/cognition/manual
   const manualMatch = matchRoute("/api/v1/sites/:id/cognition/manual", pathname);
   if (manualMatch && req.method === "POST") {
-    await handleAddManualExperience(req, res, manualMatch.id!);
+    await handleAddManualExperience(req, res, manualMatch.id!, deps);
     return true;
   }
 
   // POST /api/v1/sites/:id/cognition/:knowledgeId/weight
   const weightMatch = matchRoute("/api/v1/sites/:id/cognition/:knowledgeId/weight", pathname);
   if (weightMatch && req.method === "POST") {
-    await handleAdjustWeight(req, res, weightMatch.id!, weightMatch.knowledgeId!);
+    await handleAdjustWeight(req, res, weightMatch.id!, weightMatch.knowledgeId!, deps);
     return true;
   }
 
   // GET /api/v1/sites/:id/cognition
   const getCogMatch = matchRoute("/api/v1/sites/:id/cognition", pathname);
   if (getCogMatch && req.method === "GET") {
-    await handleGetCognition(req, res, getCogMatch.id!);
+    await handleGetCognition(req, res, getCogMatch.id!, deps);
     return true;
   }
 
   // DELETE /api/v1/sites/:id/cognition
   const delCogMatch = matchRoute("/api/v1/sites/:id/cognition", pathname);
   if (delCogMatch && req.method === "DELETE") {
-    await handleClearCognition(req, res, delCogMatch.id!);
+    await handleClearCognition(req, res, delCogMatch.id!, deps);
     return true;
   }
 
   // GET /api/v1/sites/:id
   const getMatch = matchRoute("/api/v1/sites/:id", pathname);
   if (getMatch && req.method === "GET") {
-    await handleGetSite(req, res, getMatch.id!);
+    await handleGetSite(req, res, getMatch.id!, deps);
     return true;
   }
 
   // PUT /api/v1/sites/:id
   const putMatch = matchRoute("/api/v1/sites/:id", pathname);
   if (putMatch && req.method === "PUT") {
-    await handleUpdateSite(req, res, putMatch.id!);
+    await handleUpdateSite(req, res, putMatch.id!, deps);
     return true;
   }
 
   // DELETE /api/v1/sites/:id
   const delMatch = matchRoute("/api/v1/sites/:id", pathname);
   if (delMatch && req.method === "DELETE") {
-    await handleDeleteSite(req, res, delMatch.id!);
+    await handleDeleteSite(req, res, delMatch.id!, deps);
     return true;
   }
 

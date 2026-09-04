@@ -131,7 +131,9 @@ export class APIServer {
     if (handled4) return;
 
     // Site profile routes
-    const handled5 = await dispatchSiteRoute(req, res, pathname);
+    const handled5 = await dispatchSiteRoute(req, res, {
+      repos: this.repos,
+    }, pathname);
     if (handled5) return;
 
     // 404

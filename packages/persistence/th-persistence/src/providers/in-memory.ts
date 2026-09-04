@@ -10,8 +10,11 @@ import type {
   SessionFilter,
   ReportRepository,
   CreateReportInput,
+  SiteProfileRepository,
+  CreateSiteProfileInput,
+  CognitionRepository,
 } from "../repositories/interfaces.js";
-import type { SessionRow, ReportRow } from "../schema.js";
+import type { SessionRow, ReportRow, SiteProfileRow, CognitionEpisodeRow, CognitionKnowledgeRow, CognitionProcedureRow, CognitionPatternRow } from "../schema.js";
 
 function uuid(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
@@ -136,5 +139,165 @@ export class InMemoryReportRepository implements ReportRepository {
 
   async delete(id: string): Promise<void> {
     this.store.delete(id);
+  }
+}
+
+// ── In-memory Site Profile Repository ──
+
+export class InMemorySiteProfileRepository implements SiteProfileRepository {
+  private store = new Map<string, SiteProfileRow>();
+
+  async findAll(): Promise<SiteProfileRow[]> {
+    return Array.from(this.store.values()).map((r) => ({ ...r }));
+  }
+
+  async findById(id: string): Promise<SiteProfileRow | null> {
+    const row = this.store.get(id);
+    return row ? { ...row } : null;
+  }
+
+  async findByBaseUrl(baseUrl: string): Promise<SiteProfileRow | null> {
+    for (const row of this.store.values()) {
+      if (row.baseUrl === baseUrl) return { ...row };
+    }
+    return null;
+  }
+
+  async create(input: CreateSiteProfileInput): Promise<SiteProfileRow> {
+    const row: SiteProfileRow = {
+      id: input.id ?? uuid(),
+      name: input.name,
+      baseUrl: input.baseUrl,
+      elementCache: JSON.stringify(input.elementCache ?? []),
+      updatedAt: now(),
+    };
+    this.store.set(row.id, row);
+    return { ...row };
+  }
+
+  async update(id: string, data: Partial<Pick<SiteProfileRow, 'name' | 'baseUrl' | 'elementCache'>>): Promise<void> {
+    const row = this.store.get(id);
+    if (row) {
+      if (data.name !== undefined) row.name = data.name;
+      if (data.baseUrl !== undefined) row.baseUrl = data.baseUrl;
+      if (data.elementCache !== undefined) row.elementCache = data.elementCache;
+      row.updatedAt = now();
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+}
+
+// ── In-memory Cognition Repository ──
+
+export class InMemoryCognitionRepository implements CognitionRepository {
+  private episodes = new Map<string, CognitionEpisodeRow>();
+  private knowledge = new Map<string, CognitionKnowledgeRow>();
+  private procedures = new Map<string, CognitionProcedureRow>();
+  private patterns = new Map<string, CognitionPatternRow>();
+
+  async listEpisodes(targetUrl?: string): Promise<CognitionEpisodeRow[]> {
+    const rows = Array.from(this.episodes.values());
+    if (targetUrl) return rows.filter((r) => r.targetUrl.includes(targetUrl)).sort((a, b) => b.timestamp - a.timestamp);
+    return rows.sort((a, b) => b.timestamp - a.timestamp);
+  }
+  async createEpisode(episode: Omit<CognitionEpisodeRow, 'id'>): Promise<CognitionEpisodeRow> {
+    const row: CognitionEpisodeRow = { id: uuid(), ...episode };
+    this.episodes.set(row.id, row);
+    return { ...row };
+  }
+  async deleteEpisodesByTargetUrl(targetUrl: string): Promise<void> {
+    for (const [id, row] of this.episodes) { if (row.targetUrl.includes(targetUrl)) this.episodes.delete(id); }
+  }
+  async countEpisodes(targetUrl?: string): Promise<number> {
+    if (!targetUrl) return this.episodes.size;
+    return Array.from(this.episodes.values()).filter((r) => r.targetUrl.includes(targetUrl)).length;
+  }
+
+  async listKnowledge(targetUrl?: string): Promise<CognitionKnowledgeRow[]> {
+    const rows = Array.from(this.knowledge.values());
+    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl));
+    return rows;
+  }
+  async getKnowledge(id: string): Promise<CognitionKnowledgeRow | null> {
+    const row = this.knowledge.get(id);
+    return row ? { ...row } : null;
+  }
+  async createKnowledge(k: Omit<CognitionKnowledgeRow, 'id' | 'useCount' | 'lastUsed' | 'createdAt'>): Promise<CognitionKnowledgeRow> {
+    const row: CognitionKnowledgeRow = { id: uuid(), ...k, useCount: 0, lastUsed: null, createdAt: now() };
+    this.knowledge.set(row.id, row);
+    return { ...row };
+  }
+  async updateKnowledge(id: string, data: Partial<Pick<CognitionKnowledgeRow, 'confidence' | 'useCount' | 'lastUsed'>>): Promise<void> {
+    const row = this.knowledge.get(id);
+    if (row) { Object.assign(row, data); }
+  }
+  async deleteKnowledge(id: string): Promise<void> { this.knowledge.delete(id); }
+  async deleteKnowledgeByTargetUrl(targetUrl: string): Promise<void> {
+    for (const [id, row] of this.knowledge) { if (row.targetUrl?.includes(targetUrl)) this.knowledge.delete(id); }
+  }
+  async countKnowledge(targetUrl?: string): Promise<number> {
+    if (!targetUrl) return this.knowledge.size;
+    return Array.from(this.knowledge.values()).filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
+  }
+
+  async listProcedures(targetUrl?: string): Promise<CognitionProcedureRow[]> {
+    const rows = Array.from(this.procedures.values());
+    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl));
+    return rows;
+  }
+  async createProcedure(p: Omit<CognitionProcedureRow, 'id' | 'useCount' | 'lastUsed'>): Promise<CognitionProcedureRow> {
+    const row: CognitionProcedureRow = { id: uuid(), ...p, useCount: 0, lastUsed: null };
+    this.procedures.set(row.id, row);
+    return { ...row };
+  }
+  async updateProcedure(id: string, data: Partial<Pick<CognitionProcedureRow, 'successRate' | 'useCount' | 'lastUsed' | 'steps'>>): Promise<void> {
+    const row = this.procedures.get(id);
+    if (row) { Object.assign(row, data); }
+  }
+  async deleteProceduresByTargetUrl(targetUrl: string): Promise<void> {
+    for (const [id, row] of this.procedures) { if (row.targetUrl?.includes(targetUrl)) this.procedures.delete(id); }
+  }
+  async countProcedures(targetUrl?: string): Promise<number> {
+    if (!targetUrl) return this.procedures.size;
+    return Array.from(this.procedures.values()).filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
+  }
+
+  async listPatterns(targetUrl?: string): Promise<CognitionPatternRow[]> {
+    const rows = Array.from(this.patterns.values());
+    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl));
+    return rows;
+  }
+  async createPattern(p: Omit<CognitionPatternRow, 'id' | 'lastSeen'>): Promise<CognitionPatternRow> {
+    const row: CognitionPatternRow = { id: uuid(), ...p, lastSeen: null };
+    this.patterns.set(row.id, row);
+    return { ...row };
+  }
+  async updatePattern(id: string, data: Partial<Pick<CognitionPatternRow, 'frequency' | 'confidence' | 'lastSeen'>>): Promise<void> {
+    const row = this.patterns.get(id);
+    if (row) { Object.assign(row, data); }
+  }
+  async deletePatternsByTargetUrl(targetUrl: string): Promise<void> {
+    for (const [id, row] of this.patterns) { if (row.targetUrl?.includes(targetUrl)) this.patterns.delete(id); }
+  }
+  async countPatterns(targetUrl?: string): Promise<number> {
+    if (!targetUrl) return this.patterns.size;
+    return Array.from(this.patterns.values()).filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
+  }
+
+  async clearAll(targetUrl?: string): Promise<void> {
+    if (!targetUrl) {
+      this.episodes.clear();
+      this.knowledge.clear();
+      this.procedures.clear();
+      this.patterns.clear();
+    } else {
+      await this.deleteEpisodesByTargetUrl(targetUrl);
+      await this.deleteKnowledgeByTargetUrl(targetUrl);
+      await this.deleteProceduresByTargetUrl(targetUrl);
+      await this.deletePatternsByTargetUrl(targetUrl);
+    }
   }
 }
