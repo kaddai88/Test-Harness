@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@test-harness/th-browser": "workspace:*",
     "@test-harness/th-core": "workspace:*",
     "@test-harness/th-protocol": "workspace:*",

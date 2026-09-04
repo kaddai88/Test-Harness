@@ -61,6 +61,11 @@ export interface WorkflowTransition {
   message: string;
 }
 
+export interface TestPlanItem {
+  description: string;
+  completed: boolean;
+}
+
 export interface WorkflowContext {
   loginSubmitted: boolean;
   loginConfirmed: boolean;
@@ -75,6 +80,16 @@ export interface WorkflowContext {
   traversedTransitions: string[];
   /** Invariant violations detected */
   invariantViolations: string[];
+  /** Test plan: LLM-generated tasks to complete before reporting */
+  testPlan: TestPlanItem[];
+  /** How many test actions (click/fill/assert) completed in TEST state */
+  testActionCount: number;
+  /** Distinct pages/views visited during testing */
+  visitedPages: string[];
+  /** Last action key for repetition detection (toolName:argHash) */
+  lastActionKey: string;
+  /** Consecutive repetitions of the same action */
+  repeatedActionCount: number;
 }
 
 // ─── State Invariants ───
@@ -91,7 +106,8 @@ function invariantFor(state: WorkflowState): (ctx: WorkflowContext) => { ok: boo
         const url = ctx.currentPageUrl.toLowerCase();
         const content = ctx.lastPageContent.toLowerCase();
         // Either we're on a login page, or we have credentials to submit
-        const onLoginPage = url.includes('login') || content.includes('type="password"');
+        // Aria snapshot: password field shows as 'password' in the tree
+        const onLoginPage = url.includes('login') || content.includes('password');
         const hasCredentials = ctx.loginSubmitted;
         if (onLoginPage || hasCredentials) return { ok: true };
         return { ok: false, reason: `LOGIN state but not on login page (url=${ctx.currentPageUrl}) and no credentials submitted` };
@@ -101,7 +117,7 @@ function invariantFor(state: WorkflowState): (ctx: WorkflowContext) => { ok: boo
       return (ctx) => {
         // Should not be on login page
         const onLogin = ctx.currentPageUrl.toLowerCase().includes('login') &&
-          ctx.lastPageContent.toLowerCase().includes('type="password"');
+          ctx.lastPageContent.toLowerCase().includes('password');
         if (onLogin) return { ok: false, reason: 'NAVIGATE state but still on login page' };
         return { ok: true };
       };
@@ -110,7 +126,7 @@ function invariantFor(state: WorkflowState): (ctx: WorkflowContext) => { ok: boo
       return (ctx) => {
         // Must have reached target and be logged in
         if (!ctx.targetReached) return { ok: false, reason: 'TEST state but targetReached is false' };
-        if (!ctx.loginConfirmed && ctx.lastPageContent.toLowerCase().includes('type="password"')) {
+        if (!ctx.loginConfirmed && ctx.lastPageContent.toLowerCase().includes('password')) {
           return { ok: false, reason: 'TEST state but login not confirmed and on login page' };
         }
         return { ok: true };
@@ -141,7 +157,7 @@ export const WORKFLOW_TRANSITIONS: WorkflowTransition[] = [
       const url = ctx.currentPageUrl.toLowerCase();
       const content = ctx.lastPageContent.toLowerCase();
       const urlHasLogin = url.includes('login') || url.includes('signin') || url.includes('auth');
-      const hasLoginForm = content.includes('type="password"') || content.includes('placeholder="密码"');
+      const hasLoginForm = content.includes('password') || content.includes('密码');
       // Cookie login: URL suggests login but content shows dashboard
       if (urlHasLogin && !hasLoginForm) {
         if (content.includes('dashboard') || content.includes('项目') ||
@@ -159,7 +175,7 @@ export const WORKFLOW_TRANSITIONS: WorkflowTransition[] = [
     guard: (ctx) => {
       const url = ctx.currentPageUrl.toLowerCase();
       const content = ctx.lastPageContent.toLowerCase();
-      const hasLoginForm = content.includes('type="password"');
+      const hasLoginForm = content.includes('password');
       const urlIsLogin = url.includes('login') || url.includes('signin');
       if (content && !hasLoginForm && !urlIsLogin) return true;
       if (!url && !content && ctx.totalTurns >= 1) return true;
@@ -176,12 +192,16 @@ export const WORKFLOW_TRANSITIONS: WorkflowTransition[] = [
       if (ctx.loginConfirmed) return true;
       const url = ctx.currentPageUrl.toLowerCase();
       const content = ctx.lastPageContent.toLowerCase();
-      const hasLoginForm = content.includes('type="password"') || content.includes('placeholder="密码"');
+      const hasLoginForm = content.includes('password') || content.includes('密码');
       const hasDashboard = content.includes('dashboard') || content.includes('项目') ||
-        content.includes('我的') || content.includes('admin') || content.includes('地盘');
+        content.includes('我的') || content.includes('admin') || content.includes('地盘') ||
+        content.includes('product') || content.includes('program') || content.includes('project');
+      // No login form + dashboard-like content → already logged in
       if (!hasLoginForm && hasDashboard && ctx.totalTurns >= 2) return true;
-      // If we're on a non-login URL with substantial content, assume logged in
+      // Non-login URL with substantial content → assume logged in
       if (url && !url.includes('login') && !hasLoginForm && content.length > 100) return true;
+      // Safety valve: stuck in LOGIN too long without login form → force advance
+      if (ctx.totalTurns >= 6 && !hasLoginForm) return true;
       return false;
     },
     invariant: invariantFor(WorkflowState.NAVIGATE),
@@ -201,16 +221,20 @@ export const WORKFLOW_TRANSITIONS: WorkflowTransition[] = [
     key: 'TEST→REPORT',
     guard: (ctx) => {
       if (!ctx.testExecuted) return false;
+      // Must have test plan AND all items completed
+      if (ctx.testPlan.length > 0) {
+        const completed = ctx.testPlan.filter(t => t.completed).length;
+        if (completed < ctx.testPlan.length) return false;
+        return true;
+      }
+      // Fallback: no plan, require minimum activity
+      if (ctx.testActionCount < 5) return false;
       if (ctx.stagnantTurns >= 5) return true;
-      // Transition if key coverage is sufficient (visited LOGIN→NAVIGATE and NAVIGATE→TEST)
-      const hasKeyTransitions = ctx.traversedTransitions.includes('LOGIN→NAVIGATE') &&
-        ctx.traversedTransitions.includes('NAVIGATE→TEST');
-      if (hasKeyTransitions && ctx.stagnantTurns >= 3) return true;
       if (ctx.maxTurns > 0 && ctx.totalTurns >= ctx.maxTurns - 3) return true;
       return false;
     },
     invariant: invariantFor(WorkflowState.REPORT),
-    message: 'Test steps completed — entering REPORT state',
+    message: 'Test plan completed — entering REPORT state',
   },
   {
     from: WorkflowState.REPORT,
@@ -223,25 +247,47 @@ export const WORKFLOW_TRANSITIONS: WorkflowTransition[] = [
 ];
 
 // ─── Allowed Tools ───
-// Phase 2: Generalization tools (observe_page, find_element, extract_data)
-// Phase 3: Exploration tools (explore_site, configure_site)
-// are added to every state where the agent interacts with the page.
+// All Playwright MCP native tools + our custom tools
+// MCP provides 24 tools: browser_snapshot, browser_click, browser_type, etc.
+
+const ALL_MCP_TOOLS = [
+  // Core interaction
+  'browser_snapshot', 'browser_click', 'browser_type', 'browser_fill_form',
+  'browser_select_option', 'browser_hover', 'browser_press_key',
+  'browser_check', 'browser_uncheck', 'browser_drag', 'browser_drop',
+  // Navigation
+  'browser_navigate', 'browser_navigate_back',
+  // Page info / diagnostics
+  'browser_evaluate', 'browser_find', 'browser_wait_for',
+  'browser_console_messages', 'browser_network_requests', 'browser_network_request',
+  // Screenshot
+  'browser_take_screenshot',
+  // Tabs
+  'browser_tabs',
+  // Dialog
+  'browser_handle_dialog',
+  // File upload
+  'browser_file_upload',
+  // Viewport
+  'browser_resize',
+  // Code execution
+  'browser_run_code_unsafe',
+  // Close
+  'browser_close',
+];
 
 export function getAllowedTools(state: WorkflowState): string[] | null {
   switch (state) {
     case WorkflowState.INIT:
-      return null; // All tools allowed during init (includes explore_site)
+      return null; // All tools allowed during init
     case WorkflowState.LOGIN:
-      return ['fill_form', 'click_element', 'browser_evaluate', 'take_screenshot', 'navigate_to',
-              'observe_page', 'find_element', 'extract_data', 'explore_site', 'configure_site'];
+      return [...ALL_MCP_TOOLS];
     case WorkflowState.NAVIGATE:
-      return ['navigate_to', 'browser_evaluate', 'take_screenshot', 'click_element',
-              'observe_page', 'find_element', 'explore_site'];
+      return [...ALL_MCP_TOOLS];
     case WorkflowState.TEST:
-      return ['navigate_to', 'click_element', 'fill_form', 'browser_evaluate', 'take_screenshot', 'assert_visible', 'assert_text', 'report_finding',
-              'observe_page', 'find_element', 'extract_data', 'explore_site', 'configure_site'];
+      return [...ALL_MCP_TOOLS, 'report_finding'];
     case WorkflowState.REPORT:
-      return ['report_finding', 'browser_evaluate', 'extract_data'];
+      return ['report_finding', 'browser_evaluate', 'browser_snapshot'];
     case WorkflowState.DONE:
       return [];
     default:
@@ -255,46 +301,61 @@ export function getStatePrompt(state: WorkflowState): string {
   switch (state) {
     case WorkflowState.INIT:
       return `## Current Phase: INIT
-Use observe_page (preferred) or browser_evaluate to check the current page. Look for login form elements (password inputs, login buttons). If login form detected → LOGIN. If dashboard/already logged in → NAVIGATE.`;
+Use browser_snapshot to check the current page. Look at the aria tree for login form elements (textbox for username/password, button for login). If login form detected → LOGIN. If dashboard/already logged in → NAVIGATE.`;
     case WorkflowState.LOGIN:
       return `## Current Phase: LOGIN
 
-**Check first:** Use observe_page to see what's on the page. If it shows dashboard (not login form) → already logged in → navigate_to target module.
+**CRITICAL FIRST CHECK:** Use browser_snapshot to check if you're ACTUALLY on a login page.
+- If the snapshot shows NO password/login fields → you are ALREADY LOGGED IN
+- If already logged in → IMMEDIATELY browser_navigate to the target module
+- If login form IS visible (textbox elements for username/password) → proceed below
+
 **If login form visible:**
-1. Use find_element to locate username field (hint: "用户名" or "username")
-2. Use find_element to locate password field (hint: "密码" or "password")
-3. Use find_element to locate submit button (hint: "登录" or "login")
-4. Use the returned selectors with fill_form / click_element
-5. Use observe_page to verify login succeeded
-6. Once not on login page → navigate_to the target module`;
+1. From browser_snapshot, find the username textbox ref (look for "用户名" or "username")
+2. Find the password textbox ref (look for "密码" or "password")
+3. Find the login button ref (look for "登录" or "login")
+4. Use browser_fill_form to fill username and password fields
+5. Use browser_click on the login button ref
+6. The snapshot after click will show if login succeeded
+7. Once not on login page → browser_navigate to the target module`;
     case WorkflowState.NAVIGATE:
       return `## Current Phase: NAVIGATE
 
 Navigate to the specific module the user wants to test.
-- Look at the user's instructions to find the target module name
-- Use navigate_to to go there, or click menu items to find it
-- After arriving, use observe_page to understand the new page
+- Use browser_navigate to go to the target URL, or browser_click on menu item refs
+- After arriving, browser_snapshot will automatically show the new page
 - Once on the target module page, you will enter TEST phase
 - Do NOT go back to login page`;
     case WorkflowState.TEST:
       return `## Current Phase: TEST
 
-Execute the user's test instructions on the current module:
-1. Use observe_page to understand the page structure first
-2. Use find_element to locate target elements by semantic description
-3. Interact with the page: click menus, buttons, open pages, fill forms
-4. Use observe_page after each action to verify results
-5. Check that expected functionality works correctly
-6. Use report_finding for any bugs or issues
-7. Be thorough — test multiple aspects of the module
+**STEP 1 — Create a test plan FIRST.** List 5-8 specific test actions.
 
-Stay in this phase until you have thoroughly tested the module. Do NOT go to REPORT prematurely.`;
+**STEP 2 — Execute the plan.** Work through each item. After each action, review the auto-returned snapshot.
+
+**STEP 3 — Report only when ALL plan items are done.**
+
+CRITICAL RULES:
+- Use browser_snapshot to understand the page first, then use refs to interact
+- When you see a FORM page, use browser_fill_form BEFORE browser_click on submit
+- NEVER click submit/save on an empty form
+- Use browser_click with refs from the snapshot for all interactions
+- After each action, review the returned snapshot to verify results
+- Use browser_handle_dialog for any modal dialogs
+- Use report_finding for any bugs found
+
+General guidance:
+1. browser_snapshot → understand page structure
+2. browser_click refs → navigate menus, open pages
+3. browser_fill_form / browser_type → fill forms
+4. Review auto-snapshots after each action
+5. Handle dialogs immediately`;
     case WorkflowState.REPORT:
       return `## Current Phase: REPORT
 
 Summarize your testing:
-1. Use report_finding to report each issue found (with severity, title, description, recommendation)
-2. If no issues found, report that the module works correctly
+1. Use report_finding for each issue found
+2. If no issues, report that the module works correctly
 3. After reporting, the session will end`;
     case WorkflowState.DONE:
       return '## Current Phase: DONE\nWorkflow complete.';
@@ -310,104 +371,122 @@ export function updateWorkflowContext(
   toolName: string,
   toolArgs: Record<string, unknown>,
   success: boolean,
-  resultData?: Record<string, unknown>
+  resultData?: Record<string, unknown>,
+  currentState?: WorkflowState
 ): WorkflowContext {
   const updated = { ...context };
 
-  // Login tracking: fill_form on login form
-  if (toolName === 'fill_form' && success) {
-    const inputData = JSON.stringify(toolArgs.data ?? '').toLowerCase();
-    const isLoginForm = inputData.includes('account') || inputData.includes('password') ||
+  // ── MCP native tool support ──
+  // MCP tool results come as { text: string, images?: [...] } from the adapter.
+  // The text contains the aria snapshot or JS evaluation result.
+
+  // URL tracking: browser_navigate
+  if (toolName === 'browser_navigate' && success) {
+    updated.currentPageUrl = String(toolArgs.url ?? '');
+  }
+
+  // browser_snapshot: aria tree text → update lastPageContent for guard checks
+  if (toolName === 'browser_snapshot' && success && resultData) {
+    const text = String(resultData.text ?? '');
+    if (text) {
+      updated.lastPageContent = text.toLowerCase();
+    }
+    // Target reached: snapshot has substantial content
+    if (text.length > 200 && currentState === WorkflowState.NAVIGATE) {
+      updated.targetReached = true;
+    }
+  }
+
+  // Login tracking: browser_fill_form on login form
+  if (toolName === 'browser_fill_form' && success) {
+    const inputData = JSON.stringify(toolArgs).toLowerCase();
+    const isLoginForm = inputData.includes('password') ||
       inputData.includes('用户') || inputData.includes('密码') ||
       inputData.includes('username') || inputData.includes('passwd') ||
-      inputData.includes('pwd') || inputData.includes('admin');
+      inputData.includes('pwd') || inputData.includes('account');
     if (isLoginForm) {
       updated.loginSubmitted = true;
     }
   }
 
-  // URL from navigate_to
-  if (toolName === 'navigate_to' && success) {
-    updated.currentPageUrl = String(toolArgs.url ?? '');
+  // Login tracking: browser_type on login field
+  if (toolName === 'browser_type' && success) {
+    const element = String(toolArgs.element ?? '').toLowerCase();
+    if (element.includes('password') || element.includes('用户') ||
+        element.includes('密码') || element.includes('username')) {
+      updated.loginSubmitted = true;
+    }
   }
 
-  // URL and HTML from browser_evaluate
+  // browser_evaluate: JS result text
   if (toolName === 'browser_evaluate' && success && resultData) {
-    const observedUrl = String(resultData.url ?? '').toLowerCase();
-    if (observedUrl && observedUrl !== 'about:blank') {
-      updated.currentPageUrl = observedUrl;
-    }
-    const html = String(resultData.html ?? '');
-    if (html) {
-      updated.lastPageContent = html;
+    const text = String(resultData.text ?? '');
+    if (text) {
+      updated.lastPageContent = text.toLowerCase();
     }
   }
 
-  // Phase 2: observe_page — provides distilled element summary instead of raw HTML.
-  // We store a summary as lastPageContent for guard checks.
-  if (toolName === 'observe_page' && success && resultData) {
-    const observedUrl = String(resultData.url ?? '').toLowerCase();
-    if (observedUrl && observedUrl !== 'about:blank') {
-      updated.currentPageUrl = observedUrl;
-    }
-    // Build a content summary from the distilled elements for guard matching
-    const elements = (resultData.elements as Array<Record<string, unknown>>) ?? [];
-    const elementSummary = elements.map(el =>
-      `[${el.role}] ${el.text ?? ''} ${el.name ?? ''} ${el.ariaLabel ?? ''}`
-    ).join(' ').toLowerCase();
-    if (elementSummary) {
-      updated.lastPageContent = elementSummary;
-    }
-  }
-
-  // Phase 2: find_element — semantic element location success
-  // Counts as page interaction (test execution) when it succeeds
-  if (toolName === 'find_element' && success) {
-    // find_element itself doesn't confirm test execution,
-    // but it shows the agent is actively locating elements
-  }
-
-  // Login confirmation: Agent filled a form and is now on a non-login page.
-  // Don't require loginSubmitted — it may not be set if field names don't match keywords.
-  if (toolName === 'browser_evaluate' && success && !context.loginConfirmed && context.totalTurns >= 2) {
+  // Login confirmation: after snapshot shows non-login page
+  if (toolName === 'browser_snapshot' && success && !context.loginConfirmed && context.totalTurns >= 2) {
     const url = updated.currentPageUrl.toLowerCase();
     const content = updated.lastPageContent.toLowerCase();
-    const stillOnLogin = url.includes('login') && content.includes('type="password"');
-    if (!stillOnLogin && content && content.length > 100) {
-      updated.loginConfirmed = true;
-    }
-  }
-
-  // Phase 2: Login confirmation via observe_page
-  if (toolName === 'observe_page' && success && !context.loginConfirmed && context.totalTurns >= 2) {
-    const url = updated.currentPageUrl.toLowerCase();
-    const content = updated.lastPageContent.toLowerCase();
-    // If observe_page shows no password-related elements and we're not on a login URL
-    const hasPasswordElement = content.includes('password') || content.includes('密码') || content.includes('passwd');
-    const onLoginPage = url.includes('login') && hasPasswordElement;
+    const hasPassword = content.includes('password') || content.includes('密码') || content.includes('passwd');
+    const onLoginPage = url.includes('login') && hasPassword;
     if (!onLoginPage && content && content.length > 50) {
       updated.loginConfirmed = true;
     }
   }
 
-  // Target reached
-  if (toolName === 'navigate_to' && success) {
-    updated.targetReached = true;
+  // Login confirmation: after evaluate shows non-login page
+  if (toolName === 'browser_evaluate' && success && !context.loginConfirmed && context.totalTurns >= 2) {
+    const url = updated.currentPageUrl.toLowerCase();
+    const content = updated.lastPageContent.toLowerCase();
+    const stillOnLogin = url.includes('login') && content.includes('password');
+    if (!stillOnLogin && content && content.length > 100) {
+      updated.loginConfirmed = true;
+    }
   }
 
-  // Test execution — Phase 2: includes generalization tools
-  if (['click_element', 'fill_form', 'assert_visible', 'assert_text', 'find_element'].includes(toolName) && success) {
+  // Test execution: MCP interaction tools
+  const mcpActionTools = [
+    'browser_click', 'browser_fill_form', 'browser_type',
+    'browser_select_option', 'browser_check', 'browser_uncheck',
+    'browser_hover', 'browser_press_key',
+  ];
+  if (mcpActionTools.includes(toolName) && success) {
     updated.testExecuted = true;
+    updated.testActionCount = (context.testActionCount ?? 0) + 1;
+  }
+
+  // Track visited pages
+  if (toolName === 'browser_navigate' && success) {
+    const url = String(toolArgs.url ?? '');
+    if (url && !updated.visitedPages.includes(url)) {
+      updated.visitedPages = [...(context.visitedPages ?? []), url];
+    }
   }
 
   // Stagnation
   if (!success) {
     updated.stagnantTurns = (context.stagnantTurns ?? 0) + 1;
-  } else if (toolName === 'take_screenshot') {
+  } else if (toolName === 'browser_take_screenshot' || toolName === 'browser_snapshot') {
+    // Read-only tools don't count as progress for stagnation
     updated.stagnantTurns = (context.stagnantTurns ?? 0) + 1;
   } else {
     updated.stagnantTurns = 0;
   }
+
+  // Repetition detection
+  const actionKey = `${toolName}:${JSON.stringify(toolArgs)}`;
+  if (actionKey === context.lastActionKey && success) {
+    updated.repeatedActionCount = (context.repeatedActionCount ?? 0) + 1;
+    if (updated.repeatedActionCount >= 3) {
+      updated.stagnantTurns = (context.stagnantTurns ?? 0) + 1;
+    }
+  } else {
+    updated.repeatedActionCount = 0;
+  }
+  updated.lastActionKey = actionKey;
 
   updated.totalTurns = (context.totalTurns ?? 0) + 1;
 
@@ -470,5 +549,10 @@ export function createInitialContext(maxTurns: number = 99): WorkflowContext {
     maxTurns,
     traversedTransitions: [],
     invariantViolations: [],
+    testPlan: [],
+    testActionCount: 0,
+    visitedPages: [],
+    lastActionKey: '',
+    repeatedActionCount: 0,
   };
 }

@@ -15,7 +15,7 @@
  * Config (opt-in): browser_get_config
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { spawn } from "node:child_process";
 import type { BrowserDriver, BrowserLaunchOptions, NavigationOptions, ElementActionOptions, FormData, ScreenshotOptions, PageInfo, PerformanceMetrics, ConsoleMessage, NetworkRequest, DiscoveredFeature, ElementInfo, DistilledPage, FindElementResult } from "./types.js";
 import type { CachedElement } from "./site-profile.js";
@@ -40,7 +40,7 @@ export class PlaywrightMCPProvider implements BrowserDriver {
   private smartLocator: SmartLocator;
 
   constructor(config?: PlaywrightMCPConfig) {
-    this.config = { serverUrl: "http://localhost:3001", timeout: 30000, ...config };
+    this.config = { serverUrl: "http://localhost:3001/sse", timeout: 30000, ...config };
     this.smartLocator = new SmartLocator(this as unknown as BrowserDriver);
   }
 
@@ -53,7 +53,7 @@ export class PlaywrightMCPProvider implements BrowserDriver {
       await new Promise((r) => setTimeout(r, 2000));
     }
     this.client = new Client({ name: "test-harness", version: "1.0.0" }, { capabilities: {} });
-    const transport = new StreamableHTTPClientTransport(new URL(this.config.serverUrl!));
+    const transport = new SSEClientTransport(new URL(this.config.serverUrl!));
     await this.client.connect(transport);
     this.isConnected = true;
     console.log('[MCP] Connected to Playwright MCP server');
@@ -128,6 +128,106 @@ export class PlaywrightMCPProvider implements BrowserDriver {
       }
       return els;
     }`;
+
+  /**
+   * Universal cross-frame action executor.
+   * Iterates ALL frames (including cross-origin via page.frames()) and performs
+   * the requested action on the first matching element found.
+   * This is the single entry point for ALL element interactions — click, type,
+   * fill, select, isVisible, getText, getElementInfo — ensuring consistent
+   * iframe penetration across the entire MCP Provider.
+   *
+   * Supports two selector formats:
+   * 1. Simple CSS selector (e.g. "button.submit") — searches all frames
+   * 2. Frame-prefixed selector (e.g. "myFrame >> button.submit") — targets
+   *    a specific frame first, then searches within it
+   */
+  private async crossFrameAction(
+    action: 'click' | 'type' | 'fill' | 'select' | 'isVisible' | 'getText' | 'getElementInfo',
+    selector: string,
+    extra?: string,
+  ): Promise<string> {
+    const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+
+    // Parse frame-prefixed selector: "frameSelector >> innerSelector"
+    let frameHint = '';
+    let innerSel = selector;
+    if (selector.includes(' >> ')) {
+      const idx = selector.indexOf(' >> ');
+      frameHint = selector.substring(0, idx);
+      innerSel = selector.substring(idx + 4);
+    }
+
+    const sSel = esc(innerSel);
+    const sFrame = frameHint ? esc(frameHint) : '';
+    const sExtra = extra ? esc(extra) : '';
+
+    // Build the per-action code snippet
+    let actionCode = '';
+    switch (action) {
+      case 'click':
+        actionCode = `el.click(); return 'ok';`;
+        break;
+      case 'type':
+        actionCode = `el.focus(); el.value=''; el.dispatchEvent(new Event('input',{bubbles:true}));
+          var txt='${sExtra}'; for(var ci=0;ci<txt.length;ci++){el.value+=txt[ci];el.dispatchEvent(new Event('input',{bubbles:true}));}
+          el.dispatchEvent(new Event('change',{bubbles:true})); return 'ok';`;
+        break;
+      case 'fill':
+        // extra = value
+        actionCode = `el.focus(); el.value='${sExtra}';
+          el.dispatchEvent(new Event('input',{bubbles:true}));
+          el.dispatchEvent(new Event('change',{bubbles:true})); return 'ok';`;
+        break;
+      case 'select':
+        // extra = option value
+        actionCode = `el.value='${sExtra}';
+          el.dispatchEvent(new Event('change',{bubbles:true})); return 'ok';`;
+        break;
+      case 'isVisible':
+        actionCode = `var r=el.getBoundingClientRect(),w=getComputedStyle(el);
+          return (r.width>0&&r.height>0&&w.visibility!=='hidden'&&w.display!=='none')?'true':'false';`;
+        break;
+      case 'getText':
+        actionCode = `return el.innerText||el.textContent||el.value||'';`;
+        break;
+      case 'getElementInfo':
+        actionCode = `var a={};for(var ai=0;ai<el.attributes.length;ai++){var at=el.attributes[ai];a[at.name]=at.value;}
+          return JSON.stringify({exists:true,visible:el.offsetWidth>0&&el.offsetHeight>0,text:(el.innerText||'').slice(0,200),tagName:el.tagName.toLowerCase(),attributes:a});`;
+        break;
+    }
+
+    const code = `async (page) => {
+      const frames = page.frames();
+      ${frameHint ? `
+      // Frame-hint mode: find the frame matching the hint first
+      for (const frame of frames) {
+        try {
+          const url = frame.url();
+          const name = frame.name();
+          if (name === '${sFrame}' || url.includes('${sFrame}')) {
+            const el = await frame.$('${sSel}');
+            if (el) { ${actionCode} }
+          }
+        } catch(e) {}
+      }
+      ` : ''}
+      // Universal mode: search all frames for the selector
+      for (const frame of frames) {
+        try {
+          const el = await frame.$('${sSel}');
+          if (el) { ${actionCode} }
+        } catch(e) {}
+      }
+      ${action === 'getElementInfo' ? `return JSON.stringify({exists:false});` : ''}
+      ${action === 'isVisible' ? `return 'false';` : ''}
+      ${action === 'getText' ? `return '';` : ''}
+      throw new Error('Element not found: ${sSel}');
+    }`;
+
+    const result = await this.callTool('browser_run_code_unsafe', { code });
+    return this.extractText(result);
+  }
 
   private async callTool(name: string, args: Record<string, unknown>): Promise<any> {
     if (!this.client || !this.isConnected) throw new Error("MCP client not connected");
@@ -256,47 +356,42 @@ export class PlaywrightMCPProvider implements BrowserDriver {
   // ─── Element Interaction (official: browser_click/browser_type with target param) ──
 
   async click(selector: string, _options?: ElementActionOptions): Promise<void> {
-    const r = await this.callTool("browser_click", {
-      element: `Click ${selector}`,
-      target: selector,
-    });
-    if (r?.isError) throw new Error(`Click failed: ${this.extractText(r).slice(0, 200)}`);
+    try {
+      await this.crossFrameAction('click', selector);
+    } catch (err) {
+      throw new Error(`Click failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   async type(selector: string, text: string, _options?: ElementActionOptions): Promise<void> {
-    const r = await this.callTool("browser_type", {
-      element: `Type into ${selector}`,
-      target: selector,
-      text,
-    });
-    if (r?.isError) throw new Error(`Type failed: ${this.extractText(r).slice(0, 200)}`);
+    try {
+      await this.crossFrameAction('type', selector, text);
+    } catch (err) {
+      throw new Error(`Type failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /** Official browser_fill_form: fields = [{ target, name, value, type }] */
   async fillForm(formSelector: string, data: FormData): Promise<void> {
-    const fields = Object.entries(data).map(([name, value]) => ({
-      target: `${formSelector} [name="${name}"], ${formSelector} #${name}, [name="${name}"], #${name}`,
-      name,
-      value,
-      type: 'textbox' as const,
-    }));
-
-    const r = await this.callTool("browser_fill_form", { fields });
-    if (r?.isError) {
-      // Fallback: cross-frame evaluate to fill fields
-      const fs = formSelector.replace(/'/g, "\\'");
-      const assignments = Object.entries(data).map(([field, value]) => {
-        const ev = value.replace(/'/g, "\\'");
-        return `var e=cfq('${fs} [name="${field}"]')||cfq('${fs} #${field}')||cfq('[name="${field}"]')||cfq('#${field}');if(e){e.value='${ev}';e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}`;
-      }).join('');
-      await this.callTool("browser_evaluate", { function: `() => { ${PlaywrightMCPProvider.CROSS_FRAME_QUERY} ${assignments} return 'ok'; }` });
+    // Fill each field via cross-frame action
+    for (const [name, value] of Object.entries(data)) {
+      // Try multiple selector strategies for each field
+      const selectors = [
+        `${formSelector} [name="${name}"]`,
+        `${formSelector} #${name}`,
+        `[name="${name}"]`,
+        `#${name}`,
+      ];
+      let filled = false;
+      for (const sel of selectors) {
+        try {
+          await this.crossFrameAction('fill', sel, value);
+          filled = true;
+          break;
+        } catch { /* try next selector */ }
+      }
+      if (!filled) throw new Error(`Could not find form field: ${name}`);
     }
-
-    // Verify (cross-frame)
-    const checks = Object.entries(data).map(([field, value]) =>
-      `var e=cfq('[name="${field}"]')||cfq('#${field}');if(!e||e.value!=='${value.replace(/'/g, "\\'")}')throw new Error('${field} not filled');`
-    ).join('');
-    await this.callTool("browser_evaluate", { function: `() => { ${PlaywrightMCPProvider.CROSS_FRAME_QUERY} ${checks} return 'ok'; }` });
   }
 
   async submitForm(formSelector: string): Promise<void> {
@@ -321,12 +416,11 @@ export class PlaywrightMCPProvider implements BrowserDriver {
   }
 
   async select(selector: string, value: string, _options?: ElementActionOptions): Promise<void> {
-    const r = await this.callTool("browser_select_option", {
-      element: `Select in ${selector}`,
-      target: selector,
-      values: [value],
-    });
-    if (r?.isError) throw new Error(`Select failed: ${this.extractText(r).slice(0, 200)}`);
+    try {
+      await this.crossFrameAction('select', selector, value);
+    } catch (err) {
+      throw new Error(`Select failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   // ─── Screenshot (official: browser_take_screenshot) ───
@@ -388,27 +482,23 @@ export class PlaywrightMCPProvider implements BrowserDriver {
   // ─── DOM Queries (cross-frame via browser_evaluate) ───
 
   async getElementInfo(selector: string): Promise<ElementInfo> {
-    const s = selector.replace(/'/g, "\\'");
-    const r = await this.callTool("browser_evaluate", {
-      function: `() => { ${PlaywrightMCPProvider.CROSS_FRAME_QUERY} var el=cfq('${s}');if(!el)return JSON.stringify({exists:false});const a={};for(const attr of el.attributes)a[attr.name]=attr.value;return JSON.stringify({exists:true,visible:el.offsetWidth>0&&el.offsetHeight>0,text:(el.innerText||'').slice(0,200),tagName:el.tagName.toLowerCase(),attributes:a}); }`,
-    });
-    try { return this.extractJson(r); } catch { return { exists: false, visible: false, text: '', tagName: '', attributes: {} }; }
+    try {
+      const text = await this.crossFrameAction('getElementInfo', selector);
+      return JSON.parse(text) as ElementInfo;
+    } catch { return { exists: false, visible: false, text: '', tagName: '', attributes: {} }; }
   }
 
   async isVisible(selector: string): Promise<boolean> {
-    const s = selector.replace(/'/g, "\\'");
-    const r = await this.callTool("browser_evaluate", {
-      function: `() => { ${PlaywrightMCPProvider.CROSS_FRAME_QUERY} var el=cfq('${s}');if(!el)return false;const r=el.getBoundingClientRect(),w=getComputedStyle(el);return r.width>0&&r.height>0&&w.visibility!=='hidden'&&w.display!=='none'; }`,
-    });
-    return this.extractText(r) === 'true';
+    try {
+      const text = await this.crossFrameAction('isVisible', selector);
+      return text === 'true';
+    } catch { return false; }
   }
 
   async getText(selector: string): Promise<string> {
-    const s = selector.replace(/'/g, "\\'");
-    const r = await this.callTool("browser_evaluate", {
-      function: `() => { ${PlaywrightMCPProvider.CROSS_FRAME_QUERY} var el=cfq('${s}');return el?(el.innerText||el.textContent||''):''; }`,
-    });
-    return this.extractText(r);
+    try {
+      return await this.crossFrameAction('getText', selector);
+    } catch { return ''; }
   }
 
   // ─── discoverFeatures/getLinks via browser_run_code_unsafe ───
@@ -630,12 +720,46 @@ export class PlaywrightMCPProvider implements BrowserDriver {
   // ─── Generalization Layer ───
 
   async distillDom(): Promise<DistilledPage> {
-    const result = await this.callTool("browser_evaluate", { function: DISTILL_SCRIPT });
+    // Use browser_run_code_unsafe to traverse all frames (like Playwright Provider)
+    const result = await this.callTool("browser_run_code_unsafe", {
+      code: `async (page) => {
+        const DISTILL_SCRIPT = ${JSON.stringify(DISTILL_SCRIPT)};
+        
+        // Execute on main frame
+        const mainResult = await page.evaluate(\`(\${DISTILL_SCRIPT})('')\`);
+        const mainPage = typeof mainResult === 'string' ? JSON.parse(mainResult) : mainResult;
+        const allElements = [...mainPage.elements];
+        
+        // Traverse all child frames
+        const frames = page.frames();
+        for (const frame of frames) {
+          if (frame === page.mainFrame()) continue;
+          try {
+            const framePrefix = frame.name() || frame.url() || \`frame-\${frames.indexOf(frame)}\`;
+            const frameResult = await frame.evaluate(\`(\${DISTILL_SCRIPT})(\${JSON.stringify(framePrefix)})\`);
+            const framePage = typeof frameResult === 'string' ? JSON.parse(frameResult) : frameResult;
+            allElements.push(...framePage.elements);
+          } catch (e) {
+            // Frame may be detached or inaccessible
+          }
+        }
+        
+        // Re-index elements and return
+        allElements.forEach((el, idx) => { el.index = idx; });
+        return JSON.stringify({
+          url: mainPage.url,
+          title: mainPage.title,
+          elements: allElements,
+          elementCount: allElements.length,
+          structure: mainPage.structure
+        });
+      }`,
+    });
     const text = this.extractText(result);
     try {
       return JSON.parse(text) as DistilledPage;
     } catch {
-      return { url: '', title: '', elements: [], elementCount: 0, structure: { hasForms: false, formCount: 0, hasTables: false, hasIframes: false, iframeCount: 0 } };
+      return { url: '', title: '', elements: [], elementCount: 0, structure: { hasForms: false, formCount: 0, hasTables: false, hasIframes: false, iframeCount: 0, architecture: 'unknown', architectureHints: [] } };
     }
   }
 

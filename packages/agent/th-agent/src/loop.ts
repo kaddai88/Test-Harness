@@ -424,11 +424,11 @@ export class AgentLoop {
 
       // ── LOGIN GUARD: Track login success and block re-login ──
       // Login is confirmed when agent navigates to a NON-login page.
-      // Once logged in, block any navigate_to to login page URLs.
+      // Once logged in, block any browser_navigate to login page URLs.
       const toolArgs = toolCall.arguments as Record<string, unknown>;
 
       // Detect login success: navigating to a non-login URL means login worked
-      if (toolCall.name === "navigate_to") {
+      if (toolCall.name === "browser_navigate" || toolCall.name === "navigate_to") {
         const navUrl = String(toolArgs.url ?? "");
         const loginConfirmed = context.state.get("loginConfirmed") as boolean ?? false;
 
@@ -447,7 +447,7 @@ export class AgentLoop {
 
         // Block re-login navigation
         if (loginConfirmed && navUrl.toLowerCase().includes("login")) {
-          logger.warn(`[LoginGuard] BLOCKED navigate_to: ${navUrl}`);
+          logger.warn(`[LoginGuard] BLOCKED ${toolCall.name}: ${navUrl}`);
           const errorMsg = `BLOCKED: You are already logged in. Do NOT navigate to login pages. Navigate to the target module instead. URL: "${navUrl}"`;
           sessionLog.append("tool/result", {
             turn: context.turnCount, step, callId: toolCall.id,
@@ -601,7 +601,8 @@ export class AgentLoop {
         toolCall.name,
         toolCall.arguments as Record<string, unknown>,
         result.success,
-        result.data as Record<string, unknown> | undefined
+        result.data as Record<string, unknown> | undefined,
+        context.workflowState
       );
     }
 
@@ -640,6 +641,124 @@ export class AgentLoop {
         newState: context.workflowState,
         message: transitionResult.message,
       });
+
+      // ── Auto-generate test plan when entering TEST state ──
+      if (context.workflowState === WorkflowState.TEST && context.workflow.testPlan.length === 0) {
+        logger.info('[Workflow] Entering TEST state — analyzing page via snapshot...');
+        try {
+          // Use MCP browser_snapshot to analyze page complexity
+          const snapshotTool = context.toolRegistry.get('browser_snapshot');
+          let snapshotText = '';
+          if (snapshotTool) {
+            const snapResult = await snapshotTool.execute({}, {
+              sessionId: context.sessionId,
+              abortSignal: context.abortSignal,
+            });
+            if (snapResult.success && snapResult.data) {
+              snapshotText = String((snapResult.data as any).text ?? '');
+            }
+          }
+
+          // Estimate complexity from snapshot text length
+          // Aria snapshot: ~50 chars per interactive element roughly
+          const estimatedElements = snapshotText ? Math.max(5, Math.floor(snapshotText.length / 50)) : 20;
+          const hasForms = snapshotText.toLowerCase().includes('textbox') || snapshotText.toLowerCase().includes('combobox');
+          const hasTables = snapshotText.toLowerCase().includes('table') || snapshotText.toLowerCase().includes('grid');
+
+          let targetTestCount: number;
+          if (estimatedElements < 10) {
+            targetTestCount = 10;
+          } else if (estimatedElements < 30) {
+            targetTestCount = 15 + Math.floor((estimatedElements - 10) / 2);
+          } else if (estimatedElements < 60) {
+            targetTestCount = 25 + Math.floor((estimatedElements - 30) / 3);
+          } else {
+            targetTestCount = 35 + Math.floor((estimatedElements - 60) / 5);
+          }
+          targetTestCount = Math.min(targetTestCount, 50);
+
+          logger.info(`[Workflow] Page: ~${estimatedElements} elements, forms=${hasForms}, tables=${hasTables}, targeting ${targetTestCount} tests`);
+
+          const planPrompt = `You are testing a module at: ${context.target.url}
+
+Page analysis from accessibility snapshot:
+- ~${estimatedElements} interactive elements found
+- ${hasForms ? 'Contains forms (textbox/combobox elements detected)' : 'No forms detected'}
+- ${hasTables ? 'Contains data tables/grids' : 'No data tables detected'}
+- Snapshot length: ${snapshotText.length} chars
+
+Generate a comprehensive test plan with ${targetTestCount} specific test actions. Cover:
+- All major UI components and their interactions
+- Form validation (if forms exist)
+- Data display and navigation (if tables exist)
+- Error handling and edge cases
+- Business logic workflows
+
+Each test should be:
+- A concrete, executable operation using browser_click/browser_fill_form/browser_type with refs
+- Clearly describe what to do and what to verify
+- Ordered logically (setup → execute → verify → cleanup)
+
+Output ONLY a JSON array:
+[{"description": "Verify page loads with correct title and layout", "completed": false}, ...]
+
+Test plan:`;
+
+          const planStream = context.llm.stream({
+            model: requestConfig.model,
+            messages: [{ role: 'user', content: planPrompt }],
+            temperature: 0.3,
+            signal: context.abortSignal,
+          });
+
+          const planAssembler = new StreamAssembler();
+          for await (const chunk of planStream) {
+            planAssembler.push(chunk);
+          }
+          const planText = planAssembler.partialContent;
+
+          const jsonMatch = planText.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const plan = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(plan) && plan.length > 0) {
+              context.workflow.testPlan = plan.map((item: any) => ({
+                description: item.description || String(item),
+                completed: false,
+              }));
+              logger.info(`[Workflow] Test plan generated: ${context.workflow.testPlan.length} items`);
+              sessionLog.append("system/note", {
+                note: `[Test Plan] Generated ${context.workflow.testPlan.length} test items:\n${context.workflow.testPlan.map((t, i) => `${i + 1}. ${t.description}`).join('\n')}`,
+              });
+            }
+          }
+        } catch (err) {
+          logger.warn(`[Workflow] Failed to generate test plan: ${err instanceof Error ? err.message : String(err)}`);
+          context.workflow.testPlan = [
+            { description: 'Take browser_snapshot and document page structure', completed: false },
+            { description: 'Verify all navigation links work', completed: false },
+            { description: 'Test all buttons and their actions', completed: false },
+            { description: 'Validate form inputs if present', completed: false },
+            { description: 'Check data display and formatting', completed: false },
+            { description: 'Test search/filter functionality if available', completed: false },
+            { description: 'Verify error handling and validation messages', completed: false },
+            { description: 'Test pagination if data tables exist', completed: false },
+            { description: 'Check responsive layout and UI consistency', completed: false },
+            { description: 'Verify business logic workflows', completed: false },
+          ];
+        }
+      }
+    }
+
+    // ─ Stagnation Detection: Check for modal dialogs when stuck ──
+    if (context.workflow.stagnantTurns >= 2 && context.workflowState === WorkflowState.TEST) {
+      const lastTool = context.state.get("lastTool") as string | undefined;
+      // If agent is stuck and last action was a click, likely a modal appeared
+      if (lastTool === 'browser_click' || lastTool === 'click_element') {
+        sessionLog.append("system/note", {
+          note: `⚠️ STUCK DETECTION: You've been stuck for ${context.workflow.stagnantTurns} turns after clicking. A modal dialog or confirmation popup may have appeared. Use browser_snapshot to check for dialogs and browser_handle_dialog or browser_click "确认"/"确定"/"OK" button if found.`,
+        });
+        logger.warn(`[Stagnation] ${context.workflow.stagnantTurns} turns stuck after click — checking for modal dialogs`);
+      }
     }
 
     // Check if workflow is done

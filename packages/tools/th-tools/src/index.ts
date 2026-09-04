@@ -21,6 +21,7 @@ import { createExtractDataTool } from "./builtins/extract-data.js";
 import { createExploreSiteTool } from "./builtins/explore-site.js";
 import { createConfigureSiteTool } from "./builtins/configure-site.js";
 import { BrowserDriverDefinition } from "@test-harness/th-browser";
+import { createMCPNativeTools } from "./builtins/mcp-tools.js";
 import type { Tool } from "@test-harness/th-protocol";
 
 export { ToolRegistry } from "./registry.js";
@@ -39,6 +40,7 @@ export { createObservePageTool } from "./builtins/observe-page.js";
 export { createExtractDataTool } from "./builtins/extract-data.js";
 export { createExploreSiteTool } from "./builtins/explore-site.js";
 export { createConfigureSiteTool } from "./builtins/configure-site.js";
+export { createMCPNativeTools, getMCPClient, closeMCPClient } from "./builtins/mcp-tools.js";
 
 /** Build the full set of built-in tools for a container. */
 export function createAllTools(container: THContainer): Tool[] {
@@ -68,6 +70,30 @@ export function createAllTools(container: THContainer): Tool[] {
   } catch {
     // BrowserDriver not available — skip browser tools
   }
+
+  return tools;
+}
+
+/**
+ * Build tools for MCP-native mode.
+ * 
+ * Exposes Playwright MCP's native tools directly to the LLM.
+ * The LLM uses browser_snapshot, browser_click, browser_fill_form, etc.
+ * No wrapper layer — direct MCP protocol.
+ * 
+ * @param mcpServerUrl MCP server URL (default: http://localhost:3001/sse)
+ */
+export async function createMCPModeTools(
+  mcpServerUrl = "http://localhost:3001/sse",
+): Promise<Tool[]> {
+  const tools: Tool[] = [
+    createHttpRequestTool(),
+  ];
+
+  // Add MCP native browser tools — direct from Playwright MCP server
+  const mcpTools = await createMCPNativeTools(mcpServerUrl);
+  tools.push(...mcpTools);
+  console.log(`[Tools] MCP native mode: ${mcpTools.length} browser tools registered`);
 
   return tools;
 }

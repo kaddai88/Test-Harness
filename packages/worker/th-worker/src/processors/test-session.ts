@@ -27,16 +27,10 @@ import { THContainer, valueProvider } from "@test-harness/th-core";
 import {
   BrowserDriverDefinition,
   PlaywrightBrowserProvider,
-  PlaywrightMCPProvider,
-  loadSiteCache,
-  persistSiteCache,
   loadSiteProfile,
-  saveSiteProfile,
-  enrichSiteProfile,
 } from "@test-harness/th-browser";
-import type { SessionActivity } from "@test-harness/th-browser";
 import type { SiteHints } from "@test-harness/th-agent";
-import { ToolRegistry, createAllTools, createReportFindingTool } from "@test-harness/th-tools";
+import { ToolRegistry, createAllTools, createMCPModeTools, createReportFindingTool } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import { calculateScore } from "@test-harness/th-report";
 import fs from "node:fs";
@@ -63,40 +57,28 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
     this.wsHandler?.broadcast({ type, sessionId, ...data });
   }
 
-  /** Launch a headless Chrome browser and register it in the container. */
+  /** Launch a headless Chrome browser (legacy mode only). MCP mode doesn't need this. */
   private async launchBrowser(container: THContainer): Promise<boolean> {
     try {
-      const useMCP = process.env.BROWSER_MODE === "mcp";
+      // Use local Playwright (legacy fallback mode)
+      const chromePaths = [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+      ];
 
-      if (useMCP) {
-        // Use Playwright MCP server
-        const browserProvider = new PlaywrightMCPProvider({
-          serverUrl: process.env.PLAYWRIGHT_MCP_URL ?? "http://localhost:3001",
-        });
-        container.register(BrowserDriverDefinition, valueProvider(browserProvider));
-        await browserProvider.launch({ headless: true });
-        console.log('[Worker] Using Playwright MCP server');
-      } else {
-        // Use local Playwright
-        const chromePaths = [
-          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-          'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-          process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
-        ];
-
-        let executablePath: string | undefined;
-        for (const path of chromePaths) {
-          if (path && fs.existsSync(path)) {
-            executablePath = path;
-            break;
-          }
+      let executablePath: string | undefined;
+      for (const path of chromePaths) {
+        if (path && fs.existsSync(path)) {
+          executablePath = path;
+          break;
         }
-
-        const browserProvider = new PlaywrightBrowserProvider({ executablePath });
-        container.register(BrowserDriverDefinition, valueProvider(browserProvider));
-        await browserProvider.launch({ headless: true });
-        console.log('[Worker] Using local Playwright');
       }
+
+      const browserProvider = new PlaywrightBrowserProvider({ executablePath });
+      container.register(BrowserDriverDefinition, valueProvider(browserProvider));
+      await browserProvider.launch({ headless: true });
+      console.log('[Worker] Using local Playwright');
       return true;
     } catch (err) {
       console.log('[Worker] Browser not available:', err instanceof Error ? err.message : String(err));
@@ -128,31 +110,30 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
     try {
       // ── Build container & dependencies ──
       const container = new THContainer();
-
-      // Browser driver (if available)
-      const browserReady = await this.launchBrowser(container);
-      if (browserReady) {
-        this.broadcast("session:status", sessionId, { status: "executing", message: "Browser ready" });
-
-        // Phase 2: Load site cache from previous sessions
-        try {
-          const browser = container.get(BrowserDriverDefinition) as import("@test-harness/th-browser").BrowserDriver;
-          const cachedElements = loadSiteCache(targetUrl);
-          if (cachedElements.length > 0) {
-            browser.setSiteCache(cachedElements);
-            console.log(`[Worker] Loaded ${cachedElements.length} cached selectors for ${targetUrl}`);
-          }
-        } catch (err) {
-          console.warn('[Worker] Failed to load site cache:', err instanceof Error ? err.message : String(err));
-        }
-      } else {
-        this.broadcast("session:status", sessionId, { status: "executing", message: "Crawling without browser" });
-      }
+      const useMCPTools = process.env.BROWSER_MODE === "mcp";
 
       // ── Tool registry ──
       const registry = new ToolRegistry();
-      for (const tool of createAllTools(container)) {
-        registry.register(tool);
+      if (useMCPTools) {
+        // MCP mode: connect to Playwright MCP server directly, no wrapper needed
+        const mcpUrl = process.env.PLAYWRIGHT_MCP_URL ?? "http://localhost:3001/sse";
+        const mcpTools = await createMCPModeTools(mcpUrl);
+        for (const tool of mcpTools) {
+          registry.register(tool);
+        }
+        console.log(`[Worker] MCP mode: ${mcpTools.length} tools registered`);
+        this.broadcast("session:status", sessionId, { status: "executing", message: "MCP browser ready" });
+      } else {
+        // Legacy mode: launch local Playwright + use wrapper tools
+        const browserReady = await this.launchBrowser(container);
+        if (browserReady) {
+          this.broadcast("session:status", sessionId, { status: "executing", message: "Browser ready" });
+        } else {
+          this.broadcast("session:status", sessionId, { status: "executing", message: "Crawling without browser" });
+        }
+        for (const tool of createAllTools(container)) {
+          registry.register(tool);
+        }
       }
       registry.register(createReportFindingTool(collectedFindings, sessionId));
 
@@ -265,48 +246,6 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
 
       // ── Persist results ──
       disposables.forEach((d) => d.dispose());
-
-      // Phase 2: Persist updated site cache after session
-      if (browserReady) {
-        try {
-          const browser = container.get(BrowserDriverDefinition) as import("@test-harness/th-browser").BrowserDriver;
-          const updatedCache = browser.getSiteCache();
-          if (updatedCache.length > 0) {
-            persistSiteCache(targetUrl, updatedCache);
-            console.log(`[Worker] Saved ${updatedCache.length} cached selectors for ${targetUrl}`);
-          }
-
-          // Phase 3: Enrich site profile with learned patterns
-          const existingProfile = loadSiteProfile(targetUrl);
-          const activities: SessionActivity[] = collectedActivities.map(a => ({
-            kind: String(a.kind ?? ''),
-            tool: a.tool as string | undefined,
-            input: a.input as Record<string, unknown> | undefined,
-            success: a.success as boolean | undefined,
-            turn: a.turn as number | undefined,
-            timestamp: a.timestamp as number | undefined,
-          }));
-          const enrichment = enrichSiteProfile(
-            existingProfile ? {
-              name: existingProfile.name,
-              baseUrl: existingProfile.baseUrl,
-              forms: [],
-              navigations: [],
-              constraints: {},
-              elementCache: existingProfile.elementCache,
-              updatedAt: existingProfile.updatedAt,
-            } : null,
-            targetUrl,
-            activities,
-            updatedCache
-          );
-          if (enrichment.authDiscovered || enrichment.formsDiscovered > 0 || enrichment.navigationsDiscovered > 0 || enrichment.constraintsDiscovered) {
-            console.log(`[Worker] Enriched site profile: ${enrichment.summary}`);
-          }
-        } catch (err) {
-          console.warn('[Worker] Failed to enrich site profile:', err instanceof Error ? err.message : String(err));
-        }
-      }
 
       const status =
         result.status === "failed"

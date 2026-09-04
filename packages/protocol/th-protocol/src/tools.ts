@@ -47,6 +47,14 @@ export interface Tool {
   readonly inputSchema: z.ZodType;
   readonly outputSchema: z.ZodType;
 
+  /**
+   * Raw JSON Schema from the original tool source (e.g. MCP server).
+   * When present, ToolRegistry.getSchemas() uses this instead of
+   * converting inputSchema (Zod) → JSON Schema, preserving the
+   * exact schema the LLM should see.
+   */
+  readonly rawJsonSchema?: Record<string, unknown>;
+
   /** Execution timeout in milliseconds (default: 30000) */
   readonly timeoutMs?: number;
 

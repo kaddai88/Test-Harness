@@ -63,7 +63,8 @@ export class ToolRegistry {
     return this.getAll().map((tool) => ({
       name: tool.id,
       description: tool.description,
-      inputSchema: zodToJsonSchema(tool.inputSchema),
+      // Prefer raw JSON Schema (e.g. from MCP server) over Zod conversion
+      inputSchema: tool.rawJsonSchema ?? zodToJsonSchema(tool.inputSchema),
     }));
   }
 
