@@ -30,7 +30,7 @@ import {
   loadSiteProfile,
 } from "@test-harness/th-browser";
 import type { SiteHints } from "@test-harness/th-agent";
-import { ToolRegistry, createAllTools, createMCPModeTools, createReportFindingTool } from "@test-harness/th-tools";
+import { ToolRegistry, createAllTools, createMCPModeTools, createReportFindingTool, closeBrowser } from "@test-harness/th-tools";
 import { AgentLoop } from "@test-harness/th-agent";
 import { calculateScore } from "@test-harness/th-report";
 import fs from "node:fs";
@@ -232,6 +232,22 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       })();
 
       // ── Run the Agent Loop ──
+      const abortController = new AbortController();
+
+      // Poll for cancellation every 2 seconds
+      const cancelCheck = setInterval(async () => {
+        try {
+          const session = await this.repos.sessions.findById(sessionId);
+          if (session?.status === "cancelled") {
+            console.log(`[Worker] Session ${sessionId} cancelled by user, aborting...`);
+            abortController.abort();
+            clearInterval(cancelCheck);
+          }
+        } catch {
+          // Ignore polling errors
+        }
+      }, 2000);
+
       const loop = new AgentLoop();
       const result = await loop.run({
         sessionId: sessionId,
@@ -242,7 +258,10 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         eventBus: container.events,
         container,
         siteHints,
+        signal: abortController.signal,
       });
+
+      clearInterval(cancelCheck);
 
       // ── Persist results ──
       disposables.forEach((d) => d.dispose());
@@ -285,6 +304,12 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         summary: result.summary ?? "",
         findingCount: collectedFindings.length,
       });
+
+      // Close browser to prevent orphan windows
+      if (useMCPTools) {
+        const mcpUrl = process.env.PLAYWRIGHT_MCP_URL ?? "http://localhost:3001/sse";
+        await closeBrowser(mcpUrl);
+      }
 
       return {
         sessionId,

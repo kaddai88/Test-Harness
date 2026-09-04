@@ -40,7 +40,7 @@ export { createObservePageTool } from "./builtins/observe-page.js";
 export { createExtractDataTool } from "./builtins/extract-data.js";
 export { createExploreSiteTool } from "./builtins/explore-site.js";
 export { createConfigureSiteTool } from "./builtins/configure-site.js";
-export { createMCPNativeTools, getMCPClient, closeMCPClient } from "./builtins/mcp-tools.js";
+export { createMCPNativeTools, getMCPClient, closeMCPClient, closeBrowser } from "./builtins/mcp-tools.js";
 
 /** Build the full set of built-in tools for a container. */
 export function createAllTools(container: THContainer): Tool[] {

@@ -52,6 +52,23 @@ export async function closeMCPClient(): Promise<void> {
   mcpConnectPromise = null;
 }
 
+/**
+ * Close the browser via MCP browser_close tool.
+ * Call this when a session completes to prevent orphan browser windows.
+ */
+export async function closeBrowser(serverUrl = "http://localhost:3001/sse"): Promise<void> {
+  try {
+    const client = await getMCPClient(serverUrl);
+    await client.callTool({
+      name: "browser_close",
+      arguments: {},
+    });
+    console.log("[MCPTools] Browser closed via browser_close");
+  } catch (err) {
+    console.warn("[MCPTools] Failed to close browser:", err);
+  }
+}
+
 // ─── MCP Tool Discovery ───
 
 interface MCPToolSchema {
