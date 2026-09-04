@@ -40,6 +40,7 @@ export const api = {
         targetUrl: data.targetUrl ?? data.url,
         scanConfig: {
           instructions: data.instructions,
+          images: data.images,
           maxTurns: data.maxTurns,
           maxRetriesPerAction: data.maxRetriesPerAction,
         },

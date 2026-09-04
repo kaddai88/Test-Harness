@@ -95,6 +95,8 @@ export interface AgentLoopOptions {
   signal?: AbortSignal;
   /** Phase 2: Site-specific hints from SiteProfile for generalized testing */
   siteHints?: SiteHints;
+  /** Uploaded images (base64 data URLs) for vision-capable LLMs */
+  images?: string[];
 }
 
 export class AgentLoop {
@@ -169,6 +171,7 @@ export class AgentLoop {
         options.config.instructions as string | undefined,
         options.siteHints
       ),
+      images: options.images,
     });
 
     // Log a system note about session configuration

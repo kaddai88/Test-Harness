@@ -74,6 +74,8 @@ export interface SessionCreateRequest {
   targetUrl: string;
   url?: string;
   instructions?: string;
+  /** Uploaded images as base64 data URLs for vision-capable LLMs */
+  images?: string[];
   maxTurns?: number;
   maxRetriesPerAction?: number;
   timeout?: number;

@@ -30,7 +30,7 @@ export interface OpenAIProviderConfig {
 
 interface OpenAIMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
+  content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> | null;
   name?: string;
   tool_call_id?: string;
   tool_calls?: Array<{
@@ -213,7 +213,7 @@ export class OpenAIProvider implements LLMProvider {
 
             // Stream text content
             const delta = data.choices[0]?.delta;
-            if (delta?.content) {
+            if (delta?.content && typeof delta.content === "string") {
               yield { type: "content", data: delta.content };
             }
 
@@ -298,9 +298,18 @@ export class OpenAIProvider implements LLMProvider {
 
   private convertMessages(messages: Message[]): OpenAIMessage[] {
     return messages.map((m) => {
+      // If message has images and this is a user message, use vision array format
+      let content: OpenAIMessage["content"] = m.content;
+      if (m.images && m.images.length > 0 && m.role === "user") {
+        content = [
+          { type: "text", text: m.content },
+          ...m.images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+        ];
+      }
+
       const msg: OpenAIMessage = {
         role: m.role,
-        content: m.content,
+        content,
       };
       if (m.name) msg.name = m.name;
       if (m.toolCallId) msg.tool_call_id = m.toolCallId;
@@ -358,9 +367,15 @@ export class OpenAIProvider implements LLMProvider {
       totalTokens: data.usage?.total_tokens ?? 0,
     };
 
+    // Extract text content (may be string or array from vision responses)
+    const rawContent = choice.message.content;
+    const textContent = Array.isArray(rawContent)
+      ? rawContent.filter((c): c is { type: "text"; text: string } => c.type === "text").map(c => c.text).join("")
+      : (rawContent ?? "");
+
     return {
       id: data.id,
-      content: choice.message.content ?? "",
+      content: textContent,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       usage,
       finishReason:

@@ -25,7 +25,8 @@ interface SessionStore {
     url: string,
     instructions?: string,
     maxTurns?: number,
-    maxRetriesPerAction?: number
+    maxRetriesPerAction?: number,
+    images?: string[]
   ) => Promise<string>;
   cancelSession: (id: string) => Promise<void>;
   setPage: (page: number) => void;
@@ -83,7 +84,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }
   },
 
-  createSession: async (url, instructions?: string, maxTurns?: number, maxRetriesPerAction?: number) => {
+  createSession: async (url, instructions?: string, maxTurns?: number, maxRetriesPerAction?: number, images?: string[]) => {
     set({ loading: true, error: null });
     try {
       const result = await api.createSession({
@@ -91,6 +92,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         instructions,
         maxTurns,
         maxRetriesPerAction,
+        images,
       });
       set({ loading: false });
       return result.id;

@@ -18,6 +18,8 @@ export type MessageRole = "system" | "user" | "assistant" | "tool";
 export interface Message {
   role: MessageRole;
   content: string;
+  /** Base64 data URLs for vision-capable models (e.g. uploaded images) */
+  images?: string[];
   name?: string;
   toolCallId?: string;
   toolCalls?: ToolCall[];

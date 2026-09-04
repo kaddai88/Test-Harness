@@ -66,6 +66,8 @@ export interface StepEndEvent {
 export interface UserMessageEvent {
   turn: number;
   content: string;
+  /** Base64 data URLs for vision-capable models */
+  images?: string[];
 }
 
 export interface AssistantMessageEvent {
@@ -228,6 +230,7 @@ export class SessionLog {
           messages.push({
             role: "user",
             content: data.content,
+            images: data.images,
           });
           break;
         }

@@ -268,6 +268,8 @@ export class JsonFileSiteProfileRepository implements SiteProfileRepository {
       name: input.name,
       baseUrl: input.baseUrl,
       elementCache: JSON.stringify(input.elementCache ?? []),
+      testCount: 0,
+      lastTestedAt: null,
       updatedAt: now(),
     };
     this.db.getData().sites[id] = row;
@@ -275,12 +277,24 @@ export class JsonFileSiteProfileRepository implements SiteProfileRepository {
     return { ...row };
   }
 
-  async update(id: string, data: Partial<Pick<SiteProfileRow, 'name' | 'baseUrl' | 'elementCache'>>): Promise<void> {
+  async update(id: string, data: Partial<Pick<SiteProfileRow, 'name' | 'baseUrl' | 'elementCache' | 'testCount' | 'lastTestedAt'>>): Promise<void> {
     const row = this.db.getData().sites[id];
     if (row) {
       if (data.name !== undefined) row.name = data.name;
       if (data.baseUrl !== undefined) row.baseUrl = data.baseUrl;
       if (data.elementCache !== undefined) row.elementCache = data.elementCache;
+      if (data.testCount !== undefined) row.testCount = data.testCount;
+      if (data.lastTestedAt !== undefined) row.lastTestedAt = data.lastTestedAt;
+      row.updatedAt = now();
+      this.db.save();
+    }
+  }
+
+  async incrementTestCount(id: string): Promise<void> {
+    const row = this.db.getData().sites[id];
+    if (row) {
+      row.testCount++;
+      row.lastTestedAt = now();
       row.updatedAt = now();
       this.db.save();
     }
@@ -293,15 +307,17 @@ export class JsonFileSiteProfileRepository implements SiteProfileRepository {
 }
 
 // ── JSON File Cognition Repository ──
+// All queries use `siteId` (FK to site_profiles) for categorization.
 
 export class JsonFileCognitionRepository implements CognitionRepository {
   constructor(private db: JsonFileDatabase) {}
 
-  // Episodes
-  async listEpisodes(targetUrl?: string): Promise<CognitionEpisodeRow[]> {
-    const rows = Object.values(this.db.getData().cognition_episodes);
-    if (targetUrl) return rows.filter((r) => r.targetUrl.includes(targetUrl)).sort((a, b) => b.timestamp - a.timestamp);
-    return rows.sort((a, b) => b.timestamp - a.timestamp);
+  // Episodes — linked to site via siteId
+  async listEpisodesBySite(siteId: string): Promise<CognitionEpisodeRow[]> {
+    return Object.values(this.db.getData().cognition_episodes)
+      .filter((r) => r.siteId === siteId)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map((r) => ({ ...r }));
   }
 
   async createEpisode(episode: Omit<CognitionEpisodeRow, 'id'>): Promise<CognitionEpisodeRow> {
@@ -312,25 +328,32 @@ export class JsonFileCognitionRepository implements CognitionRepository {
     return { ...row };
   }
 
-  async deleteEpisodesByTargetUrl(targetUrl: string): Promise<void> {
+  async deleteEpisodesBySite(siteId: string): Promise<void> {
     const data = this.db.getData().cognition_episodes;
     for (const [id, row] of Object.entries(data)) {
-      if (row.targetUrl.includes(targetUrl)) delete data[id];
+      if (row.siteId === siteId) delete data[id];
     }
     this.db.save();
   }
 
-  async countEpisodes(targetUrl?: string): Promise<number> {
-    const rows = Object.values(this.db.getData().cognition_episodes);
-    if (targetUrl) return rows.filter((r) => r.targetUrl.includes(targetUrl)).length;
-    return rows.length;
+  async countEpisodesBySite(siteId: string): Promise<number> {
+    return Object.values(this.db.getData().cognition_episodes)
+      .filter((r) => r.siteId === siteId).length;
   }
 
-  // Knowledge
-  async listKnowledge(targetUrl?: string): Promise<CognitionKnowledgeRow[]> {
-    const rows = Object.values(this.db.getData().cognition_knowledge);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).sort((a, b) => b.confidence - a.confidence);
-    return rows.sort((a, b) => b.confidence - a.confidence);
+  // Knowledge — linked to site via siteId (nullable for general knowledge)
+  async listKnowledgeBySite(siteId: string): Promise<CognitionKnowledgeRow[]> {
+    return Object.values(this.db.getData().cognition_knowledge)
+      .filter((r) => r.siteId === siteId)
+      .sort((a, b) => b.confidence - a.confidence)
+      .map((r) => ({ ...r }));
+  }
+
+  async listGeneralKnowledge(): Promise<CognitionKnowledgeRow[]> {
+    return Object.values(this.db.getData().cognition_knowledge)
+      .filter((r) => r.siteId === null)
+      .sort((a, b) => b.confidence - a.confidence)
+      .map((r) => ({ ...r }));
   }
 
   async getKnowledge(id: string): Promise<CognitionKnowledgeRow | null> {
@@ -367,25 +390,24 @@ export class JsonFileCognitionRepository implements CognitionRepository {
     this.db.save();
   }
 
-  async deleteKnowledgeByTargetUrl(targetUrl: string): Promise<void> {
+  async deleteKnowledgeBySite(siteId: string): Promise<void> {
     const data = this.db.getData().cognition_knowledge;
     for (const [id, row] of Object.entries(data)) {
-      if (row.targetUrl?.includes(targetUrl)) delete data[id];
+      if (row.siteId === siteId) delete data[id];
     }
     this.db.save();
   }
 
-  async countKnowledge(targetUrl?: string): Promise<number> {
-    const rows = Object.values(this.db.getData().cognition_knowledge);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
-    return rows.length;
+  async countKnowledgeBySite(siteId: string): Promise<number> {
+    return Object.values(this.db.getData().cognition_knowledge)
+      .filter((r) => r.siteId === siteId).length;
   }
 
-  // Procedures
-  async listProcedures(targetUrl?: string): Promise<CognitionProcedureRow[]> {
-    const rows = Object.values(this.db.getData().cognition_procedures);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl));
-    return rows;
+  // Procedures — linked to site via siteId
+  async listProceduresBySite(siteId: string): Promise<CognitionProcedureRow[]> {
+    return Object.values(this.db.getData().cognition_procedures)
+      .filter((r) => r.siteId === siteId)
+      .map((r) => ({ ...r }));
   }
 
   async createProcedure(procedure: Omit<CognitionProcedureRow, 'id' | 'useCount' | 'lastUsed'>): Promise<CognitionProcedureRow> {
@@ -412,25 +434,24 @@ export class JsonFileCognitionRepository implements CognitionRepository {
     }
   }
 
-  async deleteProceduresByTargetUrl(targetUrl: string): Promise<void> {
+  async deleteProceduresBySite(siteId: string): Promise<void> {
     const data = this.db.getData().cognition_procedures;
     for (const [id, row] of Object.entries(data)) {
-      if (row.targetUrl?.includes(targetUrl)) delete data[id];
+      if (row.siteId === siteId) delete data[id];
     }
     this.db.save();
   }
 
-  async countProcedures(targetUrl?: string): Promise<number> {
-    const rows = Object.values(this.db.getData().cognition_procedures);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
-    return rows.length;
+  async countProceduresBySite(siteId: string): Promise<number> {
+    return Object.values(this.db.getData().cognition_procedures)
+      .filter((r) => r.siteId === siteId).length;
   }
 
-  // Patterns
-  async listPatterns(targetUrl?: string): Promise<CognitionPatternRow[]> {
-    const rows = Object.values(this.db.getData().cognition_patterns);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl));
-    return rows;
+  // Patterns — linked to site via siteId
+  async listPatternsBySite(siteId: string): Promise<CognitionPatternRow[]> {
+    return Object.values(this.db.getData().cognition_patterns)
+      .filter((r) => r.siteId === siteId)
+      .map((r) => ({ ...r }));
   }
 
   async createPattern(pattern: Omit<CognitionPatternRow, 'id' | 'lastSeen'>): Promise<CognitionPatternRow> {
@@ -455,33 +476,25 @@ export class JsonFileCognitionRepository implements CognitionRepository {
     }
   }
 
-  async deletePatternsByTargetUrl(targetUrl: string): Promise<void> {
+  async deletePatternsBySite(siteId: string): Promise<void> {
     const data = this.db.getData().cognition_patterns;
     for (const [id, row] of Object.entries(data)) {
-      if (row.targetUrl?.includes(targetUrl)) delete data[id];
+      if (row.siteId === siteId) delete data[id];
     }
     this.db.save();
   }
 
-  async countPatterns(targetUrl?: string): Promise<number> {
-    const rows = Object.values(this.db.getData().cognition_patterns);
-    if (targetUrl) return rows.filter((r) => !r.targetUrl || r.targetUrl.includes(targetUrl)).length;
-    return rows.length;
+  async countPatternsBySite(siteId: string): Promise<number> {
+    return Object.values(this.db.getData().cognition_patterns)
+      .filter((r) => r.siteId === siteId).length;
   }
 
-  // Bulk clear
-  async clearAll(targetUrl?: string): Promise<void> {
-    if (!targetUrl) {
-      this.db.getData().cognition_episodes = {};
-      this.db.getData().cognition_knowledge = {};
-      this.db.getData().cognition_procedures = {};
-      this.db.getData().cognition_patterns = {};
-    } else {
-      await this.deleteEpisodesByTargetUrl(targetUrl);
-      await this.deleteKnowledgeByTargetUrl(targetUrl);
-      await this.deleteProceduresByTargetUrl(targetUrl);
-      await this.deletePatternsByTargetUrl(targetUrl);
-    }
+  // Bulk — delete all cognition data for a site
+  async clearAllBySite(siteId: string): Promise<void> {
+    await this.deleteEpisodesBySite(siteId);
+    await this.deleteKnowledgeBySite(siteId);
+    await this.deleteProceduresBySite(siteId);
+    await this.deletePatternsBySite(siteId);
     this.db.save();
   }
 }

@@ -42,14 +42,20 @@ export async function handleCreateSession(
     return;
   }
 
+  // Extract images from scanConfig for vision-capable LLMs
+  const scanConfig = (body.scanConfig ?? {}) as Record<string, unknown>;
+  const uploadedImages = Array.isArray(scanConfig.images) 
+    ? scanConfig.images.filter((img): img is string => typeof img === "string")
+    : [];
+
   const session = await deps.repos.sessions.create({
     targetUrl: body.targetUrl,
     targetConfig: body.targetConfig ?? {},
     scanConfig: body.scanConfig ?? {},
+    metadata: uploadedImages.length > 0 ? { uploadedImages } : {},
   });
 
   // Enqueue a test:execute job
-  const scanConfig = (body.scanConfig ?? {}) as Record<string, unknown>;
   await deps.queue.add(
     "test:execute",
     {

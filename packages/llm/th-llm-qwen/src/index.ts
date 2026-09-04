@@ -36,7 +36,7 @@ const QWEN_DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1
 // Reuse the same wire format as OpenAI
 interface QwenMessage {
   role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
+  content: string | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> | null;
   name?: string;
   tool_call_id?: string;
   tool_calls?: Array<{
@@ -228,7 +228,7 @@ export class QwenProvider implements LLMProvider {
             const data = JSON.parse(payload) as QwenStreamChunk;
 
             const delta = data.choices[0]?.delta;
-            if (delta?.content) {
+            if (delta?.content && typeof delta.content === "string") {
               yield { type: "content", data: delta.content };
             }
 
@@ -307,9 +307,18 @@ export class QwenProvider implements LLMProvider {
 
   private convertMessages(messages: Message[]): QwenMessage[] {
     return messages.map((m) => {
+      // If message has images and this is a user message, use vision array format
+      let content: QwenMessage["content"] = m.content;
+      if (m.images && m.images.length > 0 && m.role === "user") {
+        content = [
+          { type: "text", text: m.content },
+          ...m.images.map((url: string) => ({ type: "image_url" as const, image_url: { url } })),
+        ];
+      }
+
       const msg: QwenMessage = {
         role: m.role,
-        content: m.content,
+        content,
       };
       if (m.name) msg.name = m.name;
       if (m.toolCallId) msg.tool_call_id = m.toolCallId;
@@ -361,9 +370,15 @@ export class QwenProvider implements LLMProvider {
       }
     }
 
+    // Extract text content (may be string or array from vision responses)
+    const rawContent = choice.message.content;
+    const textContent = Array.isArray(rawContent)
+      ? rawContent.filter((c): c is { type: "text"; text: string } => c.type === "text").map(c => c.text).join("")
+      : (rawContent ?? "");
+
     return {
       id: data.id,
-      content: choice.message.content ?? "",
+      content: textContent,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       usage: {
         promptTokens: data.usage?.prompt_tokens ?? 0,

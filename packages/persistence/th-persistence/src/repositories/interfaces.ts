@@ -3,6 +3,9 @@
  *
  * These interfaces are provider-neutral. Implementations exist for
  * both PostgreSQL (production) and SQLite (development).
+ *
+ * Key design: All cognition data is linked to sites via `siteId` (FK).
+ * No more free-text `targetUrl` matching — data is categorized by site.
  */
 import type { SessionRow, ReportRow, SiteProfileRow, CognitionEpisodeRow, CognitionKnowledgeRow, CognitionProcedureRow, CognitionPatternRow } from "../schema.js";
 
@@ -59,7 +62,7 @@ export interface ReportRepository {
 export interface CreateSiteProfileInput {
   id?: string;
   name: string;
-  baseUrl: string;
+  baseUrl: string;       // Normalized hostname
   elementCache?: unknown[];
 }
 
@@ -68,42 +71,45 @@ export interface SiteProfileRepository {
   findById(id: string): Promise<SiteProfileRow | null>;
   findByBaseUrl(baseUrl: string): Promise<SiteProfileRow | null>;
   create(input: CreateSiteProfileInput): Promise<SiteProfileRow>;
-  update(id: string, data: Partial<Pick<SiteProfileRow, 'name' | 'baseUrl' | 'elementCache'>>): Promise<void>;
+  update(id: string, data: Partial<Pick<SiteProfileRow, 'name' | 'baseUrl' | 'elementCache' | 'testCount' | 'lastTestedAt'>>): Promise<void>;
+  incrementTestCount(id: string): Promise<void>;
   delete(id: string): Promise<void>;
 }
 
 // ── Cognition Repository ──
+// All queries use `siteId` (FK to site_profiles) for categorization.
 
 export interface CognitionRepository {
-  // Episodes
-  listEpisodes(targetUrl?: string): Promise<CognitionEpisodeRow[]>;
+  // Episodes — linked to site via siteId
+  listEpisodesBySite(siteId: string): Promise<CognitionEpisodeRow[]>;
   createEpisode(episode: Omit<CognitionEpisodeRow, 'id'>): Promise<CognitionEpisodeRow>;
-  deleteEpisodesByTargetUrl(targetUrl: string): Promise<void>;
-  countEpisodes(targetUrl?: string): Promise<number>;
+  deleteEpisodesBySite(siteId: string): Promise<void>;
+  countEpisodesBySite(siteId: string): Promise<number>;
 
-  // Knowledge
-  listKnowledge(targetUrl?: string): Promise<CognitionKnowledgeRow[]>;
+  // Knowledge — linked to site via siteId (nullable for general knowledge)
+  listKnowledgeBySite(siteId: string): Promise<CognitionKnowledgeRow[]>;
+  listGeneralKnowledge(): Promise<CognitionKnowledgeRow[]>;
   getKnowledge(id: string): Promise<CognitionKnowledgeRow | null>;
   createKnowledge(knowledge: Omit<CognitionKnowledgeRow, 'id' | 'useCount' | 'lastUsed' | 'createdAt'>): Promise<CognitionKnowledgeRow>;
   updateKnowledge(id: string, data: Partial<Pick<CognitionKnowledgeRow, 'confidence' | 'useCount' | 'lastUsed'>>): Promise<void>;
   deleteKnowledge(id: string): Promise<void>;
-  deleteKnowledgeByTargetUrl(targetUrl: string): Promise<void>;
-  countKnowledge(targetUrl?: string): Promise<number>;
+  deleteKnowledgeBySite(siteId: string): Promise<void>;
+  countKnowledgeBySite(siteId: string): Promise<number>;
 
-  // Procedures
-  listProcedures(targetUrl?: string): Promise<CognitionProcedureRow[]>;
+  // Procedures — linked to site via siteId
+  listProceduresBySite(siteId: string): Promise<CognitionProcedureRow[]>;
   createProcedure(procedure: Omit<CognitionProcedureRow, 'id' | 'useCount' | 'lastUsed'>): Promise<CognitionProcedureRow>;
   updateProcedure(id: string, data: Partial<Pick<CognitionProcedureRow, 'successRate' | 'useCount' | 'lastUsed' | 'steps'>>): Promise<void>;
-  deleteProceduresByTargetUrl(targetUrl: string): Promise<void>;
-  countProcedures(targetUrl?: string): Promise<number>;
+  deleteProceduresBySite(siteId: string): Promise<void>;
+  countProceduresBySite(siteId: string): Promise<number>;
 
-  // Patterns
-  listPatterns(targetUrl?: string): Promise<CognitionPatternRow[]>;
+  // Patterns — linked to site via siteId
+  listPatternsBySite(siteId: string): Promise<CognitionPatternRow[]>;
   createPattern(pattern: Omit<CognitionPatternRow, 'id' | 'lastSeen'>): Promise<CognitionPatternRow>;
   updatePattern(id: string, data: Partial<Pick<CognitionPatternRow, 'frequency' | 'confidence' | 'lastSeen'>>): Promise<void>;
-  deletePatternsByTargetUrl(targetUrl: string): Promise<void>;
-  countPatterns(targetUrl?: string): Promise<number>;
+  deletePatternsBySite(siteId: string): Promise<void>;
+  countPatternsBySite(siteId: string): Promise<number>;
 
-  // Bulk
-  clearAll(targetUrl?: string): Promise<void>;
+  // Bulk — delete all cognition data for a site
+  clearAllBySite(siteId: string): Promise<void>;
 }

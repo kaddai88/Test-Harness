@@ -2,6 +2,8 @@
  * Site Profile routes — manage site knowledge and cognition data.
  *
  * All data is stored in the structured database (th-persistence).
+ * Sites are keyed by NORMALIZED hostname (e.g., "bing.com").
+ * All cognition data links to sites via `siteId` FK.
  *
  * Endpoints:
  *   GET    /api/v1/sites              — list all site profiles (with cognition stats)
@@ -24,9 +26,54 @@ export interface SiteRouteDeps {
   repos: DatabaseRepositories;
 }
 
+// ── URL Normalization ──
+// All URLs are normalized to hostname for consistent key naming.
+// "https://www.bing.com/search?q=test" → "bing.com"
+// "https://bing.com/" → "bing.com"
+
+/** Normalize any URL to its hostname (without www. prefix) */
+function normalizeToHostname(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Remove www. prefix for consistency
+    let hostname = parsed.hostname.toLowerCase();
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+    return hostname;
+  } catch {
+    // If not a valid URL, treat as hostname already
+    let hostname = url.toLowerCase().trim();
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+    // Remove any path/query fragments
+    const slashIdx = hostname.indexOf("/");
+    if (slashIdx > 0) hostname = hostname.slice(0, slashIdx);
+    return hostname;
+  }
+}
+
+/** Ensure a site profile exists for the given hostname, creating if needed */
+async function ensureSiteProfile(
+  repos: DatabaseRepositories,
+  hostname: string,
+): Promise<{ id: string; name: string; baseUrl: string }> {
+  const existing = await repos.sites.findByBaseUrl(hostname);
+  if (existing) return existing;
+
+  // Auto-create site profile for this hostname
+  const site = await repos.sites.create({
+    name: hostname,
+    baseUrl: hostname,
+  });
+  return site;
+}
+
 // ── File Sync ──
 // The browser agent writes site profiles to .site-profiles/ files during sessions.
-// This syncs those files into the structured database so the API can serve them.
+// The cognitive engine writes to .cognition/ files.
+// This syncs those files into the structured database.
 
 const SITE_PROFILES_DIR = ".site-profiles";
 const COGNITION_DIR = ".cognition";
@@ -46,8 +93,11 @@ async function syncSiteProfilesFromFiles(repos: DatabaseRepositories): Promise<v
 
       try {
         const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-        const baseUrl = raw.baseUrl ?? raw.name ?? file.replace(".json", "");
-        const existing = await repos.sites.findByBaseUrl(baseUrl);
+        // Normalize the URL to hostname
+        const rawUrl = raw.baseUrl ?? raw.name ?? file.replace(".json", "");
+        const hostname = normalizeToHostname(rawUrl);
+
+        const existing = await repos.sites.findByBaseUrl(hostname);
         if (existing) {
           await repos.sites.update(existing.id, {
             name: raw.name ?? existing.name,
@@ -55,8 +105,8 @@ async function syncSiteProfilesFromFiles(repos: DatabaseRepositories): Promise<v
           });
         } else {
           await repos.sites.create({
-            name: raw.name ?? baseUrl,
-            baseUrl,
+            name: raw.name ?? hostname,
+            baseUrl: hostname,
             elementCache: raw.elementCache ?? [],
           });
         }
@@ -81,18 +131,28 @@ async function syncCognitionFromFiles(repos: DatabaseRepositories): Promise<void
       const episodes = JSON.parse(fs.readFileSync(episodesPath, "utf-8"));
       for (const ep of episodes) {
         if (!ep.id || !ep.targetUrl) continue;
-        // Check if already in DB (by checking count)
-        const existing = await repos.cognition.listEpisodes(ep.targetUrl);
-        const found = existing.find(e => e.id === ep.id);
+
+        // Normalize URL to hostname and ensure site exists
+        const hostname = normalizeToHostname(ep.targetUrl);
+        const site = await ensureSiteProfile(repos, hostname);
+
+        // Check if episode already exists in DB
+        const existingEpisodes = await repos.cognition.listEpisodesBySite(site.id);
+        const found = existingEpisodes.find(e => e.id === ep.id);
         if (!found) {
           await repos.cognition.createEpisode({
-            targetUrl: ep.targetUrl,
+            siteId: site.id,
+            sessionId: ep.sessionId ?? null,
             type: ep.type ?? "session_summary",
             outcome: ep.outcome ?? "neutral",
             description: ep.description ?? "",
             data: JSON.stringify(ep),
             timestamp: ep.timestamp ?? Date.now(),
           });
+          // Increment test count for session_summary episodes
+          if (ep.type === "session_summary") {
+            await repos.sites.incrementTestCount(site.id);
+          }
         }
       }
     }
@@ -103,10 +163,19 @@ async function syncCognitionFromFiles(repos: DatabaseRepositories): Promise<void
       const knowledge = JSON.parse(fs.readFileSync(semanticPath, "utf-8"));
       for (const k of knowledge) {
         if (!k.id) continue;
+
         const existing = await repos.cognition.getKnowledge(k.id);
         if (!existing) {
+          // Determine siteId from targetUrl
+          let siteId: string | null = null;
+          if (k.targetUrl) {
+            const hostname = normalizeToHostname(k.targetUrl);
+            const site = await ensureSiteProfile(repos, hostname);
+            siteId = site.id;
+          }
+
           await repos.cognition.createKnowledge({
-            targetUrl: k.targetUrl ?? null,
+            siteId,
             type: k.type ?? "site_characteristic",
             title: k.title ?? "Untitled",
             content: k.content ?? "",
@@ -127,12 +196,21 @@ async function syncCognitionFromFiles(repos: DatabaseRepositories): Promise<void
     if (fs.existsSync(proceduresPath)) {
       const procedures = JSON.parse(fs.readFileSync(proceduresPath, "utf-8"));
       for (const p of procedures) {
-        if (!p.id) continue;
-        // Simple check: just count to see if we have roughly the same number
-        const count = await repos.cognition.countProcedures(p.targetUrl ?? undefined);
-        if (count === 0 && p.name) {
+        if (!p.id || !p.name) continue;
+
+        let siteId: string | null = null;
+        if (p.targetUrl) {
+          const hostname = normalizeToHostname(p.targetUrl);
+          const site = await ensureSiteProfile(repos, hostname);
+          siteId = site.id;
+        }
+
+        // Check if already synced
+        const existing = await repos.cognition.listProceduresBySite(siteId ?? "");
+        const found = existing.find(proc => proc.name === p.name);
+        if (!found) {
           await repos.cognition.createProcedure({
-            targetUrl: p.targetUrl ?? null,
+            siteId,
             name: p.name,
             steps: JSON.stringify(p.steps ?? []),
             successRate: p.successRate ?? 0,
@@ -146,11 +224,21 @@ async function syncCognitionFromFiles(repos: DatabaseRepositories): Promise<void
     if (fs.existsSync(patternsPath)) {
       const patterns = JSON.parse(fs.readFileSync(patternsPath, "utf-8"));
       for (const p of patterns) {
-        if (!p.id) continue;
-        const count = await repos.cognition.countPatterns(p.targetUrl ?? undefined);
-        if (count === 0 && p.description) {
+        if (!p.id || !p.description) continue;
+
+        let siteId: string | null = null;
+        if (p.targetUrl) {
+          const hostname = normalizeToHostname(p.targetUrl);
+          const site = await ensureSiteProfile(repos, hostname);
+          siteId = site.id;
+        }
+
+        // Check if already synced
+        const existing = await repos.cognition.listPatternsBySite(siteId ?? "");
+        const found = existing.find(pat => pat.description === p.description);
+        if (!found) {
           await repos.cognition.createPattern({
-            targetUrl: p.targetUrl ?? null,
+            siteId,
             type: p.type ?? "behavioral",
             description: p.description,
             frequency: p.frequency ?? 0,
@@ -171,17 +259,6 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function uuid(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
-    /[xy]/g,
-    (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    }
-  );
-}
-
 // ── Handlers ──
 
 /** GET /api/v1/sites — list all site profiles (with cognition stats) */
@@ -190,36 +267,41 @@ async function handleListSites(
   res: ServerResponse,
   deps: SiteRouteDeps,
 ): Promise<void> {
-  // Sync from file system (browser agent writes to .site-profiles/)
+  // Sync from file system (browser agent writes to .site-profiles/ and .cognition/)
   await syncSiteProfilesFromFiles(deps.repos);
   await syncCognitionFromFiles(deps.repos);
+
   const sites = await deps.repos.sites.findAll();
   const enriched = await Promise.all(
     sites.map(async (site) => {
-      const [episodes, knowledge, procedures, patterns] = await Promise.all([
-        deps.repos.cognition.listEpisodes(site.baseUrl),
-        deps.repos.cognition.listKnowledge(site.baseUrl),
-        deps.repos.cognition.listProcedures(site.baseUrl),
-        deps.repos.cognition.listPatterns(site.baseUrl),
+      const [ep, kn, pr, pa] = await Promise.all([
+        deps.repos.cognition.listEpisodesBySite(site.id),
+        deps.repos.cognition.listKnowledgeBySite(site.id),
+        deps.repos.cognition.listProceduresBySite(site.id),
+        deps.repos.cognition.listPatternsBySite(site.id),
       ]);
+
       return {
+        id: site.id,
         name: site.name,
         baseUrl: site.baseUrl,
         elementCache: JSON.parse(site.elementCache || "[]"),
+        testCount: site.testCount,
+        lastTestedAt: site.lastTestedAt,
         updatedAt: site.updatedAt,
         cognition: {
-          episodes: episodes.length,
-          knowledge: knowledge.length,
-          procedures: procedures.length,
-          patterns: patterns.length,
-          recentEpisodes: episodes.slice(0, 5).map((e) => ({
+          episodes: ep.length,
+          knowledge: kn.length,
+          procedures: pr.length,
+          patterns: pa.length,
+          recentEpisodes: ep.slice(0, 5).map((e) => ({
             id: e.id,
             type: e.type,
             outcome: e.outcome,
             description: e.description,
             timestamp: e.timestamp,
           })),
-          recentKnowledge: knowledge.slice(0, 5).map((k) => ({
+          recentKnowledge: kn.slice(0, 5).map((k) => ({
             id: k.id,
             type: k.type,
             title: k.title,
@@ -242,22 +324,30 @@ async function handleGetSite(
   // Sync from file system first
   await syncSiteProfilesFromFiles(deps.repos);
   await syncCognitionFromFiles(deps.repos);
-  const site = await deps.repos.sites.findByBaseUrl(hostname);
+
+  // Normalize the hostname
+  const normalizedHostname = normalizeToHostname(hostname);
+  const site = await deps.repos.sites.findByBaseUrl(normalizedHostname);
   if (!site) {
-    sendJson(res, 404, { error: `No site profile found for "${hostname}"` });
+    sendJson(res, 404, { error: `No site profile found for "${normalizedHostname}"` });
     return;
   }
+
   const [episodes, knowledge, procedures, patterns] = await Promise.all([
-    deps.repos.cognition.listEpisodes(hostname),
-    deps.repos.cognition.listKnowledge(hostname),
-    deps.repos.cognition.listProcedures(hostname),
-    deps.repos.cognition.listPatterns(hostname),
+    deps.repos.cognition.listEpisodesBySite(site.id),
+    deps.repos.cognition.listKnowledgeBySite(site.id),
+    deps.repos.cognition.listProceduresBySite(site.id),
+    deps.repos.cognition.listPatternsBySite(site.id),
   ]);
+
   sendJson(res, 200, {
     site: {
+      id: site.id,
       name: site.name,
       baseUrl: site.baseUrl,
       elementCache: JSON.parse(site.elementCache || "[]"),
+      testCount: site.testCount,
+      lastTestedAt: site.lastTestedAt,
       updatedAt: site.updatedAt,
     },
     cognition: {
@@ -265,14 +355,14 @@ async function handleGetSite(
       knowledge: knowledge.length,
       procedures: procedures.length,
       patterns: patterns.length,
-      recentEpisodes: episodes.slice(0, 5).map((e) => ({
+      recentEpisodes: episodes.slice(0, 10).map((e) => ({
         id: e.id,
         type: e.type,
         outcome: e.outcome,
         description: e.description,
         timestamp: e.timestamp,
       })),
-      recentKnowledge: knowledge.slice(0, 5).map((k) => ({
+      recentKnowledge: knowledge.slice(0, 10).map((k) => ({
         id: k.id,
         type: k.type,
         title: k.title,
@@ -297,14 +387,16 @@ async function handleUpdateSite(
     return;
   }
 
+  const normalizedHostname = normalizeToHostname(hostname);
+
   try {
-    const existing = await deps.repos.sites.findByBaseUrl(hostname);
+    const existing = await deps.repos.sites.findByBaseUrl(normalizedHostname);
 
     if (existing) {
       // Update existing
       const updates: Record<string, unknown> = {};
       if (typeof body.name === "string") updates.name = body.name;
-      if (typeof body.baseUrl === "string") updates.baseUrl = body.baseUrl;
+      if (typeof body.baseUrl === "string") updates.baseUrl = normalizeToHostname(body.baseUrl);
       if (body.clearCache === true) updates.elementCache = "[]";
       await deps.repos.sites.update(existing.id, updates as any);
       const updated = await deps.repos.sites.findById(existing.id);
@@ -312,8 +404,8 @@ async function handleUpdateSite(
     } else {
       // Create new
       const site = await deps.repos.sites.create({
-        name: (body.name as string) ?? hostname,
-        baseUrl: (body.baseUrl as string) ?? hostname,
+        name: (body.name as string) ?? normalizedHostname,
+        baseUrl: normalizedHostname,
       });
       sendJson(res, 201, { success: true, site });
     }
@@ -330,15 +422,17 @@ async function handleDeleteSite(
   hostname: string,
   deps: SiteRouteDeps,
 ): Promise<void> {
-  const site = await deps.repos.sites.findByBaseUrl(hostname);
+  const normalizedHostname = normalizeToHostname(hostname);
+  const site = await deps.repos.sites.findByBaseUrl(normalizedHostname);
   if (!site) {
-    sendJson(res, 404, { error: `No site profile found for "${hostname}"` });
+    sendJson(res, 404, { error: `No site profile found for "${normalizedHostname}"` });
     return;
   }
+  // Delete cognition data first (via siteId)
+  await deps.repos.cognition.clearAllBySite(site.id);
+  // Then delete the site profile
   await deps.repos.sites.delete(site.id);
-  // Also clear cognition data
-  await deps.repos.cognition.clearAll(hostname);
-  sendJson(res, 200, { success: true, message: `Site profile "${hostname}" and related cognition data deleted` });
+  sendJson(res, 200, { success: true, message: `Site profile "${normalizedHostname}" and all related cognition data deleted` });
 }
 
 /** GET /api/v1/sites/:id/cognition — get cognition data for a site */
@@ -348,13 +442,23 @@ async function handleGetCognition(
   hostname: string,
   deps: SiteRouteDeps,
 ): Promise<void> {
+  const normalizedHostname = normalizeToHostname(hostname);
+  const site = await deps.repos.sites.findByBaseUrl(normalizedHostname);
+  if (!site) {
+    sendJson(res, 404, { error: `No site profile found for "${normalizedHostname}"` });
+    return;
+  }
+
   const [episodes, knowledge, procedures, patterns] = await Promise.all([
-    deps.repos.cognition.listEpisodes(hostname),
-    deps.repos.cognition.listKnowledge(hostname),
-    deps.repos.cognition.listProcedures(hostname),
-    deps.repos.cognition.listPatterns(hostname),
+    deps.repos.cognition.listEpisodesBySite(site.id),
+    deps.repos.cognition.listKnowledgeBySite(site.id),
+    deps.repos.cognition.listProceduresBySite(site.id),
+    deps.repos.cognition.listPatternsBySite(site.id),
   ]);
+
   sendJson(res, 200, {
+    siteId: site.id,
+    siteName: site.name,
     cognition: {
       episodes: episodes.length,
       knowledge: knowledge.length,
@@ -384,8 +488,15 @@ async function handleClearCognition(
   hostname: string,
   deps: SiteRouteDeps,
 ): Promise<void> {
-  await deps.repos.cognition.clearAll(hostname);
-  sendJson(res, 200, { success: true, message: `Cognition data cleared for "${hostname}"` });
+  const normalizedHostname = normalizeToHostname(hostname);
+  const site = await deps.repos.sites.findByBaseUrl(normalizedHostname);
+  if (!site) {
+    sendJson(res, 404, { error: `No site profile found for "${normalizedHostname}"` });
+    return;
+  }
+
+  await deps.repos.cognition.clearAllBySite(site.id);
+  sendJson(res, 200, { success: true, message: `Cognition data cleared for "${normalizedHostname}"` });
 }
 
 /** POST /api/v1/sites/:id/cognition/feedback — flag knowledge as inaccurate */
@@ -446,8 +557,13 @@ async function handleAddManualExperience(
     return;
   }
 
+  // Normalize hostname and ensure site exists
+  const normalizedHostname = normalizeToHostname(hostname);
+  const site = await ensureSiteProfile(deps.repos, normalizedHostname);
+
   const episode = await deps.repos.cognition.createEpisode({
-    targetUrl: hostname,
+    siteId: site.id,
+    sessionId: null,
     type: type as string,
     outcome: outcome as string,
     description: description as string,

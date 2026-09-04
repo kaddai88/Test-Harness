@@ -37,6 +37,7 @@ import { ToolRegistry, createAllTools, createMCPModeTools, createReportFindingTo
 import { AgentLoop } from "@test-harness/th-agent";
 import { calculateScore } from "@test-harness/th-report";
 import fs from "node:fs";
+import path from "node:path";
 
 export interface TestSessionJobProcessorOptions {
   repos: DatabaseRepositories;
@@ -101,10 +102,21 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       throw new Error(`Session "${sessionId}" not found`);
     }
 
+    // ── Ensure site profile exists in DB ──
+    const siteHostname = normalizeToHostname(session.targetUrl);
+    let siteProfile = await this.repos.sites.findByBaseUrl(siteHostname);
+    if (!siteProfile) {
+      siteProfile = await this.repos.sites.create({
+        name: siteHostname,
+        baseUrl: siteHostname,
+      });
+      console.log(`[Worker] Created site profile: ${siteHostname} (${siteProfile.id})`);
+    }
+
     // Update status to planning
     await this.repos.sessions.updateStatus(sessionId, "planning");
     await this.repos.sessions.updateStartedAt(sessionId);
-    this.broadcast("session:status", sessionId, { status: "planning", message: "AI is generating test plan..." });
+    this.broadcast("session:update", sessionId, { status: "planning", message: "AI is generating test plan..." });
 
     const collectedFindings: Finding[] = [];
     const collectedActivities: Record<string, unknown>[] = [];
@@ -125,14 +137,14 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
           registry.register(tool);
         }
         console.log(`[Worker] MCP mode: ${mcpTools.length} tools registered`);
-        this.broadcast("session:status", sessionId, { status: "executing", message: "MCP browser ready" });
+        this.broadcast("session:update", sessionId, { status: "executing", message: "MCP browser ready" });
       } else {
         // Legacy mode: launch local Playwright + use wrapper tools
         const browserReady = await this.launchBrowser(container);
         if (browserReady) {
-          this.broadcast("session:status", sessionId, { status: "executing", message: "Browser ready" });
+          this.broadcast("session:update", sessionId, { status: "executing", message: "Browser ready" });
         } else {
-          this.broadcast("session:status", sessionId, { status: "executing", message: "Crawling without browser" });
+          this.broadcast("session:update", sessionId, { status: "executing", message: "Crawling without browser" });
         }
         for (const tool of createAllTools(container)) {
           registry.register(tool);
@@ -263,6 +275,10 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       }, 2000);
 
       const loop = new AgentLoop();
+      
+      // Extract uploaded images from session metadata for vision-capable LLMs
+      const uploadedImages = (session.metadata?.uploadedImages as string[] | undefined) ?? [];
+      
       const result = await loop.run({
         sessionId: sessionId,
         target,
@@ -273,6 +289,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
         container,
         siteHints,
         signal: abortController.signal,
+        images: uploadedImages,
       });
 
       clearInterval(cancelCheck);
@@ -323,7 +340,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
       try {
         const existingProfile = loadSiteProfile(targetUrl);
         // Convert SiteProfileData to SiteProfile for enrichment
-        const siteProfile = existingProfile
+        const siteProfileForEnrich = existingProfile
           ? {
               ...createDefaultSiteProfile(existingProfile.name, existingProfile.baseUrl),
               elementCache: existingProfile.elementCache,
@@ -332,7 +349,7 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
           : null;
 
         const enrichment = enrichSiteProfile(
-          siteProfile,
+          siteProfileForEnrich,
           targetUrl,
           collectedActivities.map(a => ({
             kind: a.kind as string,
@@ -345,20 +362,30 @@ export class TestSessionJobProcessor implements JobProcessor<JobData> {
           [] // No SmartLocator cache in MCP mode
         );
 
-        if (enrichment.summary) {
-          console.log(`[Worker] Site profile enrichment: ${enrichment.summary}`);
-          // Save the enriched profile back to disk
-          const enrichedData = {
-            name: siteProfile?.name ?? extractHostname(targetUrl),
-            baseUrl: targetUrl,
-            elementCache: siteProfile?.elementCache ?? [],
-            updatedAt: Date.now(),
-          };
-          saveSiteProfile(enrichedData);
-        }
+        console.log(`[Worker] Site profile enrichment: ${enrichment.summary}`);
+        // Always save the enriched profile back to disk
+        const enrichedData = {
+          name: siteProfileForEnrich?.name ?? extractHostname(targetUrl),
+          baseUrl: targetUrl,
+          elementCache: siteProfileForEnrich?.elementCache ?? [],
+          updatedAt: Date.now(),
+        };
+        saveSiteProfile(enrichedData);
       } catch (err) {
         console.warn(`[Worker] Site profile enrichment failed:`, err);
       }
+
+      // ── Sync cognition data from files to DB ──
+      // CognitiveEngine.onSessionEnd() writes to .cognition/ files;
+      // we sync those into the structured DB so the Sites page can display them.
+      try {
+        await syncCognitionFilesToDB(this.repos, siteProfile.id, sessionId, targetUrl);
+      } catch (err) {
+        console.warn(`[Worker] Cognition sync to DB failed:`, err);
+      }
+
+      // Increment test count for this site
+      await this.repos.sites.incrementTestCount(siteProfile.id);
 
       // Close browser to prevent orphan windows
       if (useMCPTools) {
@@ -510,5 +537,91 @@ function extractHostname(url: string): string {
     return new URL(url).hostname;
   } catch {
     return url;
+  }
+}
+
+/** Normalize URL to hostname (without www. prefix) — matches API normalization */
+function normalizeToHostname(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let hostname = parsed.hostname.toLowerCase();
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+    return hostname;
+  } catch {
+    let hostname = url.toLowerCase().trim();
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+    const slashIdx = hostname.indexOf("/");
+    if (slashIdx > 0) hostname = hostname.slice(0, slashIdx);
+    return hostname;
+  }
+}
+
+/**
+ * Sync cognition data from .cognition/ files into the structured DB.
+ * The CognitiveEngine writes episodes/knowledge to JSON files during onSessionEnd().
+ * This function reads those files and creates corresponding DB records.
+ */
+const COGNITION_DIR = ".cognition";
+
+async function syncCognitionFilesToDB(
+  repos: DatabaseRepositories,
+  siteId: string,
+  sessionId: string,
+  targetUrl: string,
+): Promise<void> {
+  if (!fs.existsSync(COGNITION_DIR)) return;
+
+  // Sync episodes
+  const episodesPath = path.join(COGNITION_DIR, "episodes.json");
+  if (fs.existsSync(episodesPath)) {
+    try {
+      const episodes = JSON.parse(fs.readFileSync(episodesPath, "utf-8"));
+      for (const ep of episodes) {
+        if (!ep.id) continue;
+        // Check if already synced
+        const existing = await repos.cognition.listEpisodesBySite(siteId);
+        if (existing.find(e => e.id === ep.id)) continue;
+
+        await repos.cognition.createEpisode({
+          siteId,
+          sessionId: ep.sessionId ?? sessionId,
+          type: ep.type ?? "session_summary",
+          outcome: ep.outcome ?? "neutral",
+          description: ep.description ?? "",
+          data: JSON.stringify(ep),
+          timestamp: ep.timestamp ?? Date.now(),
+        });
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  // Sync semantic knowledge
+  const semanticPath = path.join(COGNITION_DIR, "semantic.json");
+  if (fs.existsSync(semanticPath)) {
+    try {
+      const knowledge = JSON.parse(fs.readFileSync(semanticPath, "utf-8"));
+      for (const k of knowledge) {
+        if (!k.id) continue;
+        const existing = await repos.cognition.getKnowledge(k.id);
+        if (existing) continue;
+
+        await repos.cognition.createKnowledge({
+          siteId,
+          type: k.type ?? "site_characteristic",
+          title: k.title ?? "Untitled",
+          content: k.content ?? "",
+          confidence: k.confidence ?? 0.5,
+          tags: JSON.stringify(k.tags ?? []),
+        });
+      }
+    } catch {
+      // Ignore parse errors
+    }
   }
 }
