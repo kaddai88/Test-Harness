@@ -59,6 +59,7 @@ import {
 } from "./workflow.js";
 import { verifyAction, getRecoveryGuidance } from "./verify.js";
 import { CognitiveEngine } from "@test-harness/th-cognition";
+import * as path from "path";
 
 /** Logger interface for the agent loop */
 export interface AgentLogger {
@@ -139,7 +140,7 @@ export class AgentLoop {
       abortSignal: abortController.signal,
       workflow: createInitialContext(options.config.maxTurns ?? 99),
       workflowState: WorkflowState.INIT,
-      cognition: new CognitiveEngine({ storagePath: '.cognition' }),
+      cognition: new CognitiveEngine({ storagePath: path.resolve(process.cwd(), '.cognition') }),
     };
 
     logger.info(`Starting session for ${options.target.url}`);
@@ -204,6 +205,10 @@ export class AgentLoop {
           });
 
           logger.info("Session complete.");
+          
+          // ── Cognitive Engine: Session end — save memories ──
+          await this.finalizeSession(context, "completed", result.response.content, logger);
+          
           return {
             sessionId: options.sessionId,
             status: "completed",
@@ -228,6 +233,10 @@ export class AgentLoop {
         });
 
         logger.error(`Turn failed: ${error.message}`);
+        
+        // ── Cognitive Engine: Session end — save memories ──
+        await this.finalizeSession(context, "failed", error.message, logger);
+        
         return {
           sessionId: options.sessionId,
           status: "failed",
@@ -246,19 +255,77 @@ export class AgentLoop {
     });
 
     if (abortController.signal.aborted) {
+      // ── Cognitive Engine: Session end — save memories ──
+      await this.finalizeSession(context, "cancelled", "User cancelled", logger);
+        
       return {
         sessionId: options.sessionId,
         status: "cancelled",
         turns: context.turnCount,
       };
     }
-
+      
+    // ── Cognitive Engine: Session end — save memories ──
+    await this.finalizeSession(context, "timeout", "Maximum turns reached", logger);
+      
     return {
       sessionId: options.sessionId,
       status: "timeout",
       turns: context.turnCount,
       summary: "Maximum turns reached",
     };
+  }
+  
+  /**
+   * Finalize session: save memories and learn from outcomes.
+   */
+  private async finalizeSession(
+    context: AgentContext & { workflow: WorkflowContext; workflowState: WorkflowState },
+    status: 'completed' | 'failed' | 'cancelled' | 'timeout',
+    summary: string | undefined,
+    logger: AgentLogger
+  ): Promise<void> {
+    if (!context.cognition) return;
+      
+    try {
+      // Determine outcome
+      const outcome = status === 'completed' ? 'success' : 'failure';
+        
+      // Collect actions from session log
+      const actions: Array<{ tool: string; input: Record<string, unknown>; success: boolean }> = [];
+      const logEntries = context.sessionLog.getEvents();
+      for (const entry of logEntries) {
+        if (entry.type === 'tool/result') {
+          const data = entry.data as unknown as Record<string, unknown>;
+          actions.push({
+            tool: data.name as string,
+            input: {},
+            success: data.success as boolean,
+          });
+        }
+      }
+        
+      // Collect findings (detected errors)
+      const findings = context.workflow.detectedErrors.map(e => ({
+        severity: 'medium',
+        title: `操作失败: ${e.tool}`,
+        description: e.error,
+      }));
+        
+      // Save to cognitive engine
+      context.cognition.onSessionEnd(
+        context.target.url,
+        outcome,
+        findings,
+        actions
+      );
+        
+      // Log stats
+      const stats = context.cognition.getStats();
+      logger.info(`[Cognition] Session saved. Memory: ${stats.episodes} episodes, ${stats.knowledge} knowledge, ${stats.procedures} procedures`);
+    } catch (err) {
+      logger.warn(`[Cognition] Failed to save session: ${err}`);
+    }
   }
 
   /**
