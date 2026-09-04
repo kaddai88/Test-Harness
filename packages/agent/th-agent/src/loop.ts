@@ -57,6 +57,7 @@ import {
   createInitialContext,
   type WorkflowContext,
 } from "./workflow.js";
+import { verifyAction, getRecoveryGuidance } from "./verify.js";
 
 /** Logger interface for the agent loop */
 export interface AgentLogger {
@@ -605,6 +606,52 @@ export class AgentLoop {
         result.data as Record<string, unknown> | undefined,
         context.workflowState
       );
+
+      // ── Action Verification: Validate action had intended effect ──
+      const actionTools = ['browser_click', 'browser_type', 'browser_fill_form',
+        'browser_navigate', 'browser_select_option', 'browser_check',
+        'browser_uncheck', 'browser_press_key'];
+      if (actionTools.includes(toolCall.name) && result.success) {
+        const beforeSnapshot = context.workflow.lastSnapshot;
+        const afterSnapshot = context.workflow.lastPageContent;
+        const currentUrl = context.workflow.currentPageUrl;
+
+        if (beforeSnapshot && afterSnapshot) {
+          const verification = verifyAction(
+            toolCall.name,
+            toolCall.arguments as Record<string, unknown>,
+            beforeSnapshot,
+            afterSnapshot,
+            currentUrl
+          );
+
+          // Track verification outcome
+          if (verification.outcome !== 'success') {
+            context.workflow.verificationFailures++;
+            context.workflow.lastVerificationOutcome = verification.outcome;
+
+            // Record detected errors for reporting
+            if (verification.outcome === 'error_appeared') {
+              context.workflow.detectedErrors.push({
+                tool: toolCall.name,
+                error: verification.details,
+                turn: context.turnCount,
+              });
+            }
+
+            // Inject recovery guidance
+            const guidance = getRecoveryGuidance(verification, context.workflow.verificationFailures);
+            if (guidance) {
+              sessionLog.append("system/note", { note: guidance });
+              logger.warn(`[Verify] ${verification.outcome}: ${verification.details}`);
+            }
+          } else {
+            // Reset failure counter on success
+            context.workflow.verificationFailures = 0;
+            context.workflow.lastVerificationOutcome = 'success';
+          }
+        }
+      }
     }
 
     // ── Workflow: Check state transitions ──
@@ -760,6 +807,35 @@ Test plan:`;
         });
         logger.warn(`[Stagnation] ${context.workflow.stagnantTurns} turns stuck after click — checking for modal dialogs`);
       }
+    }
+
+    // ─ Verification Failure Escalation ──
+    // If multiple consecutive verification failures, force strategy change
+    if (context.workflow.verificationFailures >= 3) {
+      const lastOutcome = context.workflow.lastVerificationOutcome;
+      let escalationNote: string;
+
+      if (lastOutcome === 'error_appeared') {
+        escalationNote = `⚠️ VERIFICATION ESCALATION: ${context.workflow.verificationFailures} consecutive actions resulted in errors. ` +
+          `This may indicate a bug OR a fundamental misunderstanding of the page. ` +
+          `ACTION REQUIRED: Use report_finding to document the errors, then try a completely different approach.`;
+      } else if (lastOutcome === 'no_change') {
+        escalationNote = `⚠️ VERIFICATION ESCALATION: ${context.workflow.verificationFailures} consecutive actions had no effect on the page. ` +
+          `The element you're trying to interact with may be: disabled, covered by an overlay, in an iframe, or not actually clickable. ` +
+          `ACTION REQUIRED: Take a fresh browser_snapshot and find a DIFFERENT element to interact with.`;
+      } else if (lastOutcome === 'dialog_blocked') {
+        escalationNote = `⚠️ VERIFICATION ESCALATION: Dialog is blocking your actions. ` +
+          `You MUST handle the dialog first using browser_handle_dialog or by clicking the dialog button.`;
+      } else {
+        escalationNote = `⚠️ VERIFICATION ESCALATION: ${context.workflow.verificationFailures} consecutive action failures. ` +
+          `STOP and reassess. Take browser_snapshot to understand the current state.`;
+      }
+
+      sessionLog.append("system/note", { note: escalationNote });
+      logger.warn(`[Verify] Escalation: ${context.workflow.verificationFailures} failures, outcome=${lastOutcome}`);
+
+      // Reset to prevent repeated escalation messages
+      context.workflow.verificationFailures = 0;
     }
 
     // Check if workflow is done

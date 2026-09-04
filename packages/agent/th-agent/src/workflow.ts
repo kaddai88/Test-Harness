@@ -90,6 +90,14 @@ export interface WorkflowContext {
   lastActionKey: string;
   /** Consecutive repetitions of the same action */
   repeatedActionCount: number;
+  /** Last aria snapshot (before current action) — for verification diff */
+  lastSnapshot: string;
+  /** Action verification: consecutive failures detected by verify module */
+  verificationFailures: number;
+  /** Action verification: last outcome */
+  lastVerificationOutcome: string;
+  /** Errors detected during testing (for reporting) */
+  detectedErrors: Array<{ tool: string; error: string; turn: number }>;
 }
 
 // ─── State Invariants ───
@@ -389,6 +397,8 @@ export function updateWorkflowContext(
   if (toolName === 'browser_snapshot' && success && resultData) {
     const text = String(resultData.text ?? '');
     if (text) {
+      // Save previous snapshot for verification diff, then update
+      updated.lastSnapshot = updated.lastPageContent;
       updated.lastPageContent = text.toLowerCase();
     }
     // Target reached: snapshot has substantial content
@@ -554,5 +564,9 @@ export function createInitialContext(maxTurns: number = 99): WorkflowContext {
     visitedPages: [],
     lastActionKey: '',
     repeatedActionCount: 0,
+    lastSnapshot: '',
+    verificationFailures: 0,
+    lastVerificationOutcome: '',
+    detectedErrors: [],
   };
 }
